@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Base de Datos SQL</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗄️ Simulador de Base de Datos</h1>
+            <p>Practica SQL en tu navegador sin instalar nada</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Panel de información -->
+            <div class="info-panel">
+                <h3>📊 Tablas disponibles</h3>
+                <div id="tableInfo">
+                    <p>Cargando...</p>
+                </div>
+            </div>
+
+            <!-- Editor SQL -->
+            <div class="query-panel">
+                <h3>✏️ Escribe tu consulta SQL</h3>
+                <textarea id="sqlEditor" rows="6" placeholder="Ejemplo: SELECT * FROM estudiantes;">SELECT * FROM estudiantes;</textarea>
+                
+                <div class="button-group">
+                    <button id="executeBtn" onclick="runQuery()">▶️ Ejecutar</button>
+                    <button onclick="resetDatabase()">🔄 Reiniciar Base de Datos</button>
+                    <button onclick="showExamples()">📚 Ver ejemplos</button>
+                </div>
+
+                <div id="resultArea">
+                    <h4>📋 Resultados</h4>
+                    <div id="resultOutput">Esperando consulta...</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Proyecto educativo - SQL Simulator v1.0</p>
+        </footer>
+    </div>
+
+    <!-- Cargar sql.js desde CDN (o local) -->
+    <script src="https://sql.js.org/dist/sql-wasm.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
