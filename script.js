@@ -195,6 +195,7 @@ function showExamples() {
     const currentExample = examples[Math.floor(Math.random() * examples.length)];
     document.getElementById('sqlEditor').value = currentExample;
 }
+
 function exportDatabase() {
     if (!db) return;
     const data = db.export();
