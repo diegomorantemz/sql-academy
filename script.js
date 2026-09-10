@@ -195,6 +195,35 @@ function showExamples() {
     const currentExample = examples[Math.floor(Math.random() * examples.length)];
     document.getElementById('sqlEditor').value = currentExample;
 }
+function exportDatabase() {
+    if (!db) return;
+    const data = db.export();
+    const blob = new Blob([data], {type: 'application/x-sqlite3'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'database.sqlite';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importDatabase(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        const byteArray = new Uint8Array(arrayBuffer);
+        const SQL = initSqlJs({ locateFile: file => `https://sql.js.org/dist/${file}` });
+        SQL.then(SQL => {
+            db = new SQL.Database(byteArray);
+            dbInitialized = true;
+            showTablesInfo();
+            document.getElementById('resultOutput').innerHTML = '✅ Base de datos importada correctamente.';
+        });
+    };
+    reader.readAsArrayBuffer(file);
+}
 
 // Configurar atajo de teclado (Ctrl+Enter para ejecutar)
 document.addEventListener('DOMContentLoaded', function() {

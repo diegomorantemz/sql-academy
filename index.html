@@ -12,7 +12,9 @@
             <h1>🗄️ Simulador de Base de Datos</h1>
             <p>Practica SQL en tu navegador sin instalar nada</p>
         </header>
-
+        <button onclick="exportDatabase()">💾 Exportar BD</button>
+<button onclick="document.getElementById('importFile').click()">📂 Importar BD</button>
+<input type="file" id="importFile" accept=".sqlite" style="display:none" onchange="importDatabase(event)">
         <div class="main-content">
             <!-- Panel de información -->
             <div class="info-panel">
@@ -38,6 +40,7 @@
                     <div id="resultOutput">Esperando consulta...</div>
                 </div>
             </div>
+            
         </div>
 
         <footer>
