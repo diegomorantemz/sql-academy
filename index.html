@@ -1,9 +1,14 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Base de Datos SQL</title>
+
+    <!-- SEO -->
+    <meta name="description" content="SQL Academy: aprende y practica SQL en tu navegador. Ejecuta consultas en tiempo real sin instalar nada.">
+    <meta name="author" content="Oscar Bustamante">
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,6 +38,7 @@
                     <button id="executeBtn" onclick="runQuery()">▶️ Ejecutar</button>
                     <button onclick="resetDatabase()">🔄 Reiniciar Base de Datos</button>
                     <button onclick="showExamples()">📚 Ver ejemplos</button>
+                    <button class="btn-dark" onclick="toggleDarkMode()" id="darkModeBtn">🌙 Modo Oscuro</button>
                 </div>
 
                 <div id="resultArea">
