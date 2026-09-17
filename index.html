@@ -16,10 +16,11 @@
         <header>
             <h1>🗄️ Simulador de Base de Datos</h1>
             <p>Practica SQL en tu navegador sin instalar nada</p>
+            <p class="header-subtitle">Desarrollado como proyecto educativo | Frontend: Oscar Bustamante</p>
         </header>
 
         <div class="main-content">
-            <!-- Panel de información -->
+            <!-- Panel de informacion -->
             <div class="info-panel">
                 <h3>📊 Tablas disponibles</h3>
                 <div id="tableInfo">
@@ -47,12 +48,27 @@
         </div>
 
         <footer>
-            <p>Proyecto educativo - SQL Simulator v1.0</p>
+            <p>Proyecto educativo - SQL Simulator v1.0 &copy; 2026</p>
         </footer>
     </div>
 
-    <!-- Cargar sql.js desde CDN (o local) -->
+    <!-- Cargar sql.js desde CDN -->
     <script src="https://sql.js.org/dist/sql-wasm.js"></script>
     <script src="script.js"></script>
+
+    <!-- Funcionalidad frontend: modo oscuro -->
+    <script>
+        function toggleDarkMode() {
+            const btn = document.getElementById('darkModeBtn');
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.body.removeAttribute('data-theme');
+                btn.textContent = '🌙 Modo Oscuro';
+            } else {
+                document.body.setAttribute('data-theme', 'dark');
+                btn.textContent = '☀️ Modo Claro';
+            }
+        }
+    </script>
 </body>
 </html>
