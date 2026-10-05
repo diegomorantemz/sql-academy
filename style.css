@@ -292,3 +292,15 @@ footer {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
 }
+
+/* ===== VERSION BADGE ===== */
+.version-badge {
+    display: inline-block;
+    background-color: var(--primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-left: 5px;
+}
