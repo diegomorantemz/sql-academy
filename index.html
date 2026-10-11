@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Base de Datos SQL</title>
+
+    <!-- SEO -->
+    <meta name="description" content="SQL Academy: aprende y practica SQL en tu navegador. Ejecuta consultas en tiempo real sin instalar nada.">
+    <meta name="author" content="Oscar Bustamante">
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,12 +16,13 @@
         <header>
             <h1>🗄️ Simulador de Base de Datos</h1>
             <p>Practica SQL en tu navegador sin instalar nada</p>
+            <p class="header-subtitle">Desarrollado como proyecto educativo | Frontend: Oscar Bustamante</p>
         </header>
         <button onclick="exportDatabase()">💾 Exportar BD</button>
 <button onclick="document.getElementById('importFile').click()">📂 Importar BD</button>
 <input type="file" id="importFile" accept=".sqlite" style="display:none" onchange="importDatabase(event)">
         <div class="main-content">
-            <!-- Panel de información -->
+            <!-- Panel de informacion -->
             <div class="info-panel">
                 <h3>📊 Tablas disponibles</h3>
                 <div id="tableInfo">
@@ -33,6 +39,7 @@
                     <button id="executeBtn" onclick="runQuery()">▶️ Ejecutar</button>
                     <button onclick="resetDatabase()">🔄 Reiniciar Base de Datos</button>
                     <button onclick="showExamples()">📚 Ver ejemplos</button>
+                    <button class="btn-dark" onclick="toggleDarkMode()" id="darkModeBtn">🌙 Modo Oscuro</button>
                 </div>
 
                 <div id="resultArea">
@@ -44,12 +51,31 @@
         </div>
 
         <footer>
-            <p>Proyecto educativo - SQL Simulator v1.0</p>
+            <p>Proyecto educativo - SQL Simulator <span class="version-badge">v1.1.0</span> &copy; 2026</p>
+            <div class="team-section">
+                <span class="team-member">💻 Oscar Bustamante <span class="team-badge">Frontend Dev</span></span>
+                <span class="team-member">⚙️ Diego Morante <span class="team-badge">Backend Dev</span></span>
+            </div>
         </footer>
     </div>
 
-    <!-- Cargar sql.js desde CDN (o local) -->
+    <!-- Cargar sql.js desde CDN -->
     <script src="https://sql.js.org/dist/sql-wasm.js"></script>
     <script src="script.js"></script>
+
+    <!-- Funcionalidad frontend: modo oscuro -->
+    <script>
+        function toggleDarkMode() {
+            const btn = document.getElementById('darkModeBtn');
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.body.removeAttribute('data-theme');
+                btn.textContent = '🌙 Modo Oscuro';
+            } else {
+                document.body.setAttribute('data-theme', 'dark');
+                btn.textContent = '☀️ Modo Claro';
+            }
+        }
+    </script>
 </body>
 </html>

@@ -1,0 +1,30 @@
+﻿# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores de codigo
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependencias (si se agregan en el futuro)
+node_modules/
+package-lock.json
+
+# Archivos de construccion
+dist/
+build/
+
+# Variables de entorno
+.env
+.env.local
+
+# Temporales
+*.tmp
+*.bak

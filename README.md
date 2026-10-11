@@ -10,3 +10,17 @@ Este proyecto es un simulador educativo de SQL, desarrollado como parte de un cu
 - Font Awesome
 
 ## Estructura del Proyecto
+
+## Release Notes
+
+### v1.1.0
+- **Nuevas funcionalidades:**
+  - Registro de productos.
+  - Cálculo de precios.
+  - Aplicación de descuentos.
+- **Mejoras UI/UX:**
+  - Diseño responsive y barras de desplazamiento personalizadas.
+  - Modo oscuro implementado.
+- **Correcciones:**
+  - Validación de campos obligatorios.
+  - Resolución de conflicto en configuración.
