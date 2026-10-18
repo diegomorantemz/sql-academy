@@ -31,13 +31,13 @@
             <!-- Editor SQL -->
             <div class="query-panel">
                 <h3>✏️ Escribe tu consulta SQL</h3>
-                <textarea id="sqlEditor" rows="6" placeholder="Ejemplo: SELECT * FROM estudiantes;">SELECT * FROM estudiantes;</textarea>
+                <textarea id="sqlEditor" rows="6" placeholder="Ejemplo: SELECT * FROM estudiantes;" aria-label="Editor de consultas SQL">SELECT * FROM estudiantes;</textarea>
                 
                 <div class="button-group">
-                    <button id="executeBtn" onclick="runQuery()">▶️ Ejecutar</button>
-                    <button onclick="resetDatabase()">🔄 Reiniciar Base de Datos</button>
-                    <button onclick="showExamples()">📚 Ver ejemplos</button>
-                    <button class="btn-dark" onclick="toggleDarkMode()" id="darkModeBtn">🌙 Modo Oscuro</button>
+                    <button id="executeBtn" onclick="runQuery()" aria-label="Ejecutar consulta SQL">▶️ Ejecutar</button>
+                    <button onclick="resetDatabase()" aria-label="Reiniciar la base de datos">🔄 Reiniciar Base de Datos</button>
+                    <button onclick="showExamples()" aria-label="Mostrar ejemplos de consultas SQL">📚 Ver ejemplos</button>
+                    <button class="btn-dark" onclick="toggleDarkMode()" id="darkModeBtn" aria-label="Alternar modo oscuro">🌙 Modo Oscuro</button>
                 </div>
 
                 <div id="resultArea">
