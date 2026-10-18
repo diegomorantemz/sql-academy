@@ -336,3 +336,43 @@ footer {
     border-radius: 8px;
     font-weight: 600;
 }
+
+/* ===== ESTADOS DE CARGA Y RESULTADOS VACIOS ===== */
+#resultOutput:empty::before,
+#tableInfo p {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 20px 10px;
+}
+
+#resultOutput:empty::before {
+    content: "Sin resultados. Escribe una consulta y presiona Ejecutar.";
+    display: block;
+}
+
+#resultArea {
+    position: relative;
+}
+
+#resultArea::after {
+    content: "";
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--border-input);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spinLoader 0.8s linear infinite;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+}
+
+#resultArea.loading::after {
+    display: block;
+}
+
+@keyframes spinLoader {
+    to { transform: rotate(360deg); }
+}
