@@ -1,55 +1,588 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Base de Datos SQL</title>
+    <title>SQL Academy</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Estilos -->
     <link rel="stylesheet" href="style.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-    <div class="container">
-        <header>
-            <h1>🗄️ Simulador de Base de Datos</h1>
-            <p>Practica SQL en tu navegador sin instalar nada</p>
+    <div class="app-container">
+        <!-- ===== HEADER ===== -->
+        <header class="app-header">
+            <div class="header-content">
+                <!-- Logo c -->
+                <div class="logo">
+                    <i class="fas fa-terminal" style="color:#99b9e9; font-size:1em;"></i>
+                    <span>SQL Academy</span>
+                </div>
+                <nav class="main-nav">
+                    <button class="nav-btn active" data-section="learn">
+                        <i class="fas fa-book"></i> Aprender
+                    </button>
+                    <button class="nav-btn" data-section="practice">
+                        <i class="fas fa-laptop-code"></i> Practicar
+                    </button>
+                    <button class="nav-btn" data-section="analyze">
+                        <i class="fas fa-chart-pie"></i> Analizar
+                    </button>
+                    <button class="nav-btn" data-section="concepts">
+                        <i class="fas fa-graduation-cap"></i> Conceptos
+                    </button>
+                </nav>
+                <div class="header-actions">
+  
+                </div>
+            </div>
         </header>
-        <button onclick="exportDatabase()">💾 Exportar BD</button>
-<button onclick="document.getElementById('importFile').click()">📂 Importar BD</button>
-<input type="file" id="importFile" accept=".sqlite" style="display:none" onchange="importDatabase(event)">
-        <div class="main-content">
-            <!-- Panel de información -->
-            <div class="info-panel">
-                <h3>📊 Tablas disponibles</h3>
-                <div id="tableInfo">
-                    <p>Cargando...</p>
+
+        <!-- ===== SECCIÓN: APRENDER ===== -->
+        <section id="section-learn" class="section active">
+            <div class="section-header">
+                <h2><i class="fas fa-book"></i> Aprende sobre Bases de Datos</h2>
+                <p>Conoce los gestores SQL y NoSQL, sus conceptos y mejores practicas</p>
+            </div>
+
+            <!-- ===== GESTORES SQL ===== -->
+            <div class="db-group">
+                <h3 class="db-group-title"><i class="fas fa-database" style="color:#336791;"></i> Gestores SQL
+                    (Relacionales)</h3>
+                <p class="db-group-subtitle">Sistemas de gestión de bases de datos basados en el modelo relacional y
+                    lenguaje SQL</p>
+
+                <div class="learn-grid">
+                    <div class="learn-card" onclick="openDBInfo('postgresql')">
+                        <div class="learn-card-icon">
+                            <img src="logos/postgresql.png" alt="PostgreSQL">
+                        </div>
+                        <h3>PostgreSQL</h3>
+                        <p>El sistema relacional mas avanzado</p>
+                        <span class="learn-tag">Open Source</span>
+                        <span class="learn-tag">ACID</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('mysql')">
+                        <div class="learn-card-icon">
+                            <img src="logos/mysql.png" alt="MySQL">
+                        </div>
+                        <h3>MySQL</h3>
+                        <p>La base de datos mas popular</p>
+                        <span class="learn-tag">Open Source</span>
+                        <span class="learn-tag">Rapido</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('sqlserver')">
+                        <div class="learn-card-icon">
+                            <img src="logos/sqlserver.png" alt="SQL Server">
+                        </div>
+                        <h3>SQL Server</h3>
+                        <p>El sistema de Microsoft para empresas</p>
+                        <span class="learn-tag">Comercial</span>
+                        <span class="learn-tag">.NET</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('oracle')">
+                        <div class="learn-card-icon">
+                            <img src="logos/oracle.png" alt="Oracle">
+                        </div>
+                        <h3>Oracle</h3>
+                        <p>El gigante empresarial</p>
+                        <span class="learn-tag">Comercial</span>
+                        <span class="learn-tag">Seguro</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('mariadb')">
+                        <div class="learn-card-icon">
+                            <img src="logos/mariadb.png" alt="MariaDB">
+                        </div>
+                        <h3>MariaDB</h3>
+                        <p>El fork avanzado de MySQL</p>
+                        <span class="learn-tag">Open Source</span>
+                        <span class="learn-tag">Rapido</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('sqlite')">
+                        <div class="learn-card-icon">
+                            <img src="logos/sqlite.png" alt="SQLite">
+                        </div>
+                        <h3>SQLite</h3>
+                        <p>La base de datos ligera</p>
+                        <span class="learn-tag">Open Source</span>
+                        <span class="learn-tag">Ligero</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Editor SQL -->
-            <div class="query-panel">
-                <h3>✏️ Escribe tu consulta SQL</h3>
-                <textarea id="sqlEditor" rows="6" placeholder="Ejemplo: SELECT * FROM estudiantes;">SELECT * FROM estudiantes;</textarea>
-                
-                <div class="button-group">
-                    <button id="executeBtn" onclick="runQuery()">▶️ Ejecutar</button>
-                    <button onclick="resetDatabase()">🔄 Reiniciar Base de Datos</button>
-                    <button onclick="showExamples()">📚 Ver ejemplos</button>
-                </div>
+            <!-- ===== GESTORES NoSQL ===== -->
+            <div class="db-group" style="margin-top: 40px;">
+                <h3 class="db-group-title" style="color:#73bed7;"><i class="fas fa-database" style="color:#73bed7;"></i>
+                    Gestores NoSQL (No Relacionales)</h3>
+                <p class="db-group-subtitle">Sistemas de gestión de bases de datos diseñados para grandes volumenes de
+                    datos no estructurados</p>
 
-                <div id="resultArea">
-                    <h4>📋 Resultados</h4>
-                    <div id="resultOutput">Esperando consulta...</div>
+                <div class="learn-grid">
+                    <div class="learn-card" onclick="openDBInfo('mongodb')">
+                        <div class="learn-card-icon">
+                            <img src="logos/mongodb.png" alt="MongoDB">
+                        </div>
+                        <h3>MongoDB</h3>
+                        <p>La base de datos documental mas popular</p>
+                        <span class="learn-tag">Documental</span>
+                        <span class="learn-tag">NoSQL</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('firebase')">
+                        <div class="learn-card-icon">
+                            <img src="logos/firebase.png" alt="Firebase">
+                        </div>
+                        <h3>Firebase</h3>
+                        <p>La plataforma de Google para tiempo real</p>
+                        <span class="learn-tag">Tiempo Real</span>
+                        <span class="learn-tag">NoSQL</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('redis')">
+                        <div class="learn-card-icon">
+                            <img src="logos/redis.png" alt="Redis">
+                        </div>
+                        <h3>Redis</h3>
+                        <p>La base de datos clave-valor mas rapida</p>
+                        <span class="learn-tag">Clave-Valor</span>
+                        <span class="learn-tag">NoSQL</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('cassandra')">
+                        <div class="learn-card-icon">
+                            <img src="logos/cassandra.png" alt="Cassandra">
+                        </div>
+                        <h3>Cassandra</h3>
+                        <p>La base de datos columnar de Apache</p>
+                        <span class="learn-tag">Columnar</span>
+                        <span class="learn-tag">NoSQL</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('neo4j')">
+                        <div class="learn-card-icon">
+                            <img src="logos/neo4j.png" alt="Neo4j">
+                        </div>
+                        <h3>Neo4j</h3>
+                        <p>La base de datos de grafos lider</p>
+                        <span class="learn-tag">Grafos</span>
+                        <span class="learn-tag">NoSQL</span>
+                    </div>
+
+                    <div class="learn-card" onclick="openDBInfo('elasticsearch')">
+                        <div class="learn-card-icon">
+                            <img src="logos/elasticsearch.png" alt="Elasticsearch">
+                        </div>
+                        <h3>Elasticsearch</h3>
+                        <p>El motor de busqueda y analisis</p>
+                        <span class="learn-tag">Busqueda</span>
+                        <span class="learn-tag">NoSQL</span>
+                    </div>
                 </div>
             </div>
-            
-        </div>
 
-        <footer>
-            <p>Proyecto educativo - SQL Simulator v1.0</p>
+            <!-- ===== COMPARATIVA ===== -->
+            <div class="comparison-wrapper">
+                <h3><i class="fas fa-chart-bar"></i> Comparativa de Gestores SQL vs NoSQL</h3>
+                <div class="comparison-table-wrap">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Caracteristica</th>
+                                <th>SQL (Relacionales)</th>
+                                <th>NoSQL (No Relacionales)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Modelo de datos</strong></td>
+                                <td>Tablas con filas y columnas</td>
+                                <td>Documentos, Clave-Valor, Columnas, Grafos</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Esquema</strong></td>
+                                <td>Fijo (requiere definicion previa)</td>
+                                <td>Flexible (schema-less)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Escalabilidad</strong></td>
+                                <td>Vertical (mas recursos en un servidor)</td>
+                                <td>Horizontal (distribucion en multiples servidores)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ACID</strong></td>
+                                <td><i class="fas fa-check-circle text-success"></i> Soporte completo</td>
+                                <td><i class="fas fa-times-circle text-danger"></i> Consistencia eventual</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Lenguaje</strong></td>
+                                <td>SQL (Structure Query Language)</td>
+                                <td>APIs especificas (JSON, REST, etc)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Mejor para</strong></td>
+                                <td>Datos estructurados, transacciones complejas</td>
+                                <td>Grandes volumenes, datos no estructurados, tiempo real</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ejemplos</strong></td>
+                                <td>PostgreSQL, MySQL, SQL Server, Oracle</td>
+                                <td>MongoDB, Firebase, Redis, Cassandra, Neo4j</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: PRACTICAR ===== -->
+        <section id="section-practice" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-laptop-code"></i> Practica SQL</h2>
+                <p>Escribe consultas SQL y ve los resultados en tiempo real</p>
+            </div>
+
+            <div class="practice-layout">
+                <!-- Panel izquierdo: Info -->
+                <div class="practice-sidebar">
+                    <div class="info-panel">
+                        <h3><i class="fas fa-table"></i> Tablas disponibles</h3>
+                        <div id="tableInfo">
+                            <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel derecho: Editor y resultados -->
+                <div class="practice-main">
+                    <div class="editor-wrapper">
+                        <textarea id="sqlEditor" rows="6"
+                            placeholder='Escribe tu consulta sql o Selecciona un ejemplo del menú y presiona "▶"'></textarea>
+
+                        <div class="editor-toolbar">
+                            <button id="executeBtn" onclick="runQuery()">
+                                <i class="fas fa-play"></i> Ejecutar (Ctrl+Enter)
+                            </button>
+                            <button onclick="clearEditor()" class="btn-secondary">
+                                <i class="fas fa-eraser"></i> Limpiar
+                            </button>
+                            <button onclick="resetDatabase()" class="btn-secondary">
+                                <i class="fas fa-rotate"></i> Reiniciar BD
+                            </button>
+                            <button onclick="exportDatabase()" class="btn-secondary" title="Exportar BD">
+                        <i class="fas fa-download"></i>
+                    </button>
+                            <button onclick="openSQLGuide()" class="btn-secondary" title="Guía de primeros pasos en SQL">
+    <i class="fas fa-graduation-cap"></i> Guía SQL
+</button>
+
+                            <div class="example-selector">
+                                <select id="categorySelector">
+                                    <option value="basicos">Basicos</option>
+                                    <option value="filtros">Filtros</option>
+                                    <option value="orden">Ordenamiento</option>
+                                    <option value="agregacion">Agregaciones</option>
+                                    <option value="groupby">Agrupaciones</option>
+                                    <option value="join" selected>JOIN</option>
+                                    <option value="subconsultas">Subconsultas</option>
+                                    <option value="avanzado">Avanzadas</option>
+                                    <option value="modificacion">Modificacion</option>
+                                    <option value="aleatorio">Aleatorio</option>
+                                </select>
+                                <button onclick="showExampleByCategory()" class="btn-secondary">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </div>
+
+                            <button onclick="clearHistory()" class="btn-secondary">
+                                <i class="fas fa-trash"></i> Limpiar historial
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Historial -->
+                    <div class="history-wrapper">
+                        <h4><i class="fas fa-clock-rotate-left"></i> Historial</h4>
+                        <ul id="historyList">
+                            <li class="empty-history">No hay consultas aun</li>
+                        </ul>
+                    </div>
+
+                    <!-- Resultados -->
+                    <div class="results-wrapper">
+                        <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
+                        <div id="resultOutput" class="result-placeholder">
+                            <i class="fas fa-lightbulb placeholder-icon"></i>
+                            <p>Escribe una consulta y presiona "Ejecutar"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor de tablas -->
+            <div class="table-editor">
+                <h4><i class="fas fa-pen-to-square"></i> Editor de Tablas</h4>
+                <div class="table-editor-controls">
+                    <select id="tableSelector" onchange="loadTableEditor()">
+                        <option value="estudiantes">Estudiantes</option>
+                        <option value="cursos">Cursos</option>
+                        <option value="inscripciones">Inscripciones</option>
+                    </select>
+                    <button onclick="loadTableEditor()" class="btn-secondary">
+                        <i class="fas fa-rotate"></i> Refrescar
+                    </button>
+                    <button onclick="addRow(document.getElementById('tableSelector').value)" class="btn-secondary">
+                        <i class="fas fa-plus"></i> Agregar fila
+                    </button>
+                    <button onclick="saveTableChanges(document.getElementById('tableSelector').value)" class="btn-save">
+                        <i class="fas fa-save"></i> Guardar cambios
+                    </button>
+                </div>
+                <div id="tableEditorContent">
+                    <p class="text-muted" style="text-align:center;padding:20px;">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando...
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: ANALIZAR ===== -->
+        <section id="section-analyze" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-pie"></i> Analiza tus Datos</h2>
+                <p>Visualiza las relaciones y estadisticas de tu base de datos</p>
+            </div>
+
+            <div class="analyze-grid">
+                <!-- Diagrama ERD -->
+                <div class="analyze-card full-width">
+                    <h3><i class="fas fa-project-diagram"></i> Diagrama de Relaciones (ERD)</h3>
+                    <div class="diagram-controls">
+                        <button onclick="generateDiagram()" class="btn-secondary">
+                            <i class="fas fa-rotate"></i> Actualizar
+                        </button>
+                        <button onclick="toggleDiagramView()" class="btn-secondary">
+                            <i class="fas fa-expand"></i> Vista completa
+                        </button>
+                    </div>
+                    <div id="diagramContainer">
+                        <div class="diagram-loading"><i class="fas fa-spinner fa-spin"></i> Generando diagrama...</div>
+                    </div>
+                </div>
+
+                <!-- Graficos -->
+                <div class="analyze-card">
+                    <h3><i class="fas fa-users"></i> Estudiantes por Carrera</h3>
+                    <div class="chart-box">
+                        <canvas id="chartCarreras"></canvas>
+                    </div>
+                </div>
+
+                <div class="analyze-card">
+                    <h3><i class="fas fa-chart-line"></i> Promedio por Carrera</h3>
+                    <div class="chart-box">
+                        <canvas id="chartPromedios"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: CONCEPTOS ===== -->
+        <section id="section-concepts" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-graduation-cap"></i> Conceptos Fundamentales</h2>
+                <p>Domina los conceptos clave de las bases de datos relacionales y NoSQL</p>
+            </div>
+
+            <div class="concepts-grid">
+                <!-- ===== CONCEPTOS SQL (6) ===== -->
+                <div class="concept-card" onclick="openConcept('mer')">
+                    <div class="concept-icon"><i class="fas fa-sitemap"></i></div>
+                    <h3>Modelo Entidad-Relacion</h3>
+                    <p>Diseno conceptual de bases de datos</p>
+                    <span class="concept-tag sql-tag">SQL</span>
+                    <span class="concept-tag">Diseño</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('normalizacion')">
+                    <div class="concept-icon"><i class="fas fa-layer-group"></i></div>
+                    <h3>Normalizacion</h3>
+                    <p>Elimina redundancia, mejora integridad</p>
+                    <span class="concept-tag sql-tag">SQL</span>
+                    <span class="concept-tag">Diseño</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('llaves')">
+                    <div class="concept-icon"><i class="fas fa-key"></i></div>
+                    <h3>Tipos de Llaves</h3>
+                    <p>PK, FK, Unique, Composite</p>
+                    <span class="concept-tag sql-tag">SQL</span>
+                    <span class="concept-tag">Estructura</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('sql')">
+                    <div class="concept-icon"><i class="fas fa-code"></i></div>
+                    <h3>Comandos SQL</h3>
+                    <p>DDL, DML, DCL, TCL</p>
+                    <span class="concept-tag sql-tag">SQL</span>
+                    <span class="concept-tag">SQL</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('acid')">
+                    <div class="concept-icon"><i class="fas fa-shield-halved"></i></div>
+                    <h3>Propiedades ACID</h3>
+                    <p>Atomicidad, Consistencia, Aislamiento, Durabilidad</p>
+                    <span class="concept-tag sql-tag">SQL</span>
+                    <span class="concept-tag">Transacciones</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('indices')">
+                    <div class="concept-icon"><i class="fas fa-list"></i></div>
+                    <h3>Indices</h3>
+                    <p>Optimizacion de consultas</p>
+                    <span class="concept-tag sql-tag">SQL</span>
+                    <span class="concept-tag">Rendimiento</span>
+                </div>
+
+                <!-- ===== CONCEPTOS NoSQL (6) ===== -->
+                <div class="concept-card" onclick="openConcept('nosql')">
+                    <div class="concept-icon"><i class="fas fa-database"></i></div>
+                    <h3>Bases de Datos NoSQL</h3>
+                    <p>Alternativas a SQL para grandes volumenes</p>
+                    <span class="concept-tag nosql-tag">NoSQL</span>
+                    <span class="concept-tag">Big Data</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('documentales')">
+                    <div class="concept-icon"><i class="fas fa-file-lines"></i></div>
+                    <h3>Bases de Datos Documentales</h3>
+                    <p>Almacenamiento en documentos JSON</p>
+                    <span class="concept-tag nosql-tag">NoSQL</span>
+                    <span class="concept-tag">Documentos</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('clave-valor')">
+                    <div class="concept-icon"><i class="fas fa-key"></i></div>
+                    <h3>Bases de Datos Clave-Valor</h3>
+                    <p>Alto rendimiento con pares clave-valor</p>
+                    <span class="concept-tag nosql-tag">NoSQL</span>
+                    <span class="concept-tag">Cache</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('columnas')">
+                    <div class="concept-icon"><i class="fas fa-table-cells"></i></div>
+                    <h3>Bases de Datos por Columnas</h3>
+                    <p>Optimizadas para analisis de datos</p>
+                    <span class="concept-tag nosql-tag">NoSQL</span>
+                    <span class="concept-tag">Analisis</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('grafos')">
+                    <div class="concept-icon"><i class="fas fa-share-nodes"></i></div>
+                    <h3>Bases de Datos de Grafos</h3>
+                    <p>Ideal para relaciones complejas</p>
+                    <span class="concept-tag nosql-tag">NoSQL</span>
+                    <span class="concept-tag">Redes</span>
+                </div>
+
+                <div class="concept-card" onclick="openConcept('tiempo-real')">
+                    <div class="concept-icon"><i class="fas fa-bolt"></i></div>
+                    <h3>Bases de Datos en Tiempo Real</h3>
+                    <p>Sincronizacion instantanea</p>
+                    <span class="concept-tag nosql-tag">NoSQL</span>
+                    <span class="concept-tag">Tiempo Real</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <span class="brand-name">MNTWARE</span>
+                    <span class="brand-tagline">MOUNT. CODE. FORGE.</span>
+                </div>
+
+                <div class="footer-center">
+                    <p><i class="far fa-copyright"></i> <span id="currentYear"></span> MNTWARE. Todos los derechos
+                        reservados.</p>
+                </div>
+
+                <div class="footer-right">
+                    <div class="footer-donation">
+                        <span class="coffee-message">
+                            <i class="fas fa-mug-hot"></i> ¿Me invitas un café?
+                        </span>
+                        <button onclick="showDonationQR('yape')" class="btn-donation-sm yape">
+                            <i class="fas fa-coins"></i> Yape
+                        </button>
+                    </div>
+                </div>
+            </div>
         </footer>
     </div>
 
-    <!-- Cargar sql.js desde CDN (o local) -->
+    <!-- ===== MODALES ===== -->
+    <!-- Modal de Gestores -->
+    <div id="dbModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle"><i class="fas fa-database"></i> Gestor</h2>
+                <button onclick="closeDBModal()" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Conceptos -->
+    <div id="conceptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="conceptModalTitle"><i class="fas fa-graduation-cap"></i> Concepto</h2>
+                <button onclick="closeConceptModal()" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="conceptModalBody"></div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE DONACIONES ===== -->
+    <div id="donationModal" class="modal">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-laptop-code" style="color:#dc3545;"></i> Apoya el proyecto</h2>
+                <button onclick="closeDonationModal()" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="donationModalBody"></div>
+        </div>
+    </div>
+    <!-- ===== GUÍA DE PRIMEROS PASOS EN SQL ===== -->
+<div id="sqlGuideModal" class="modal">
+    <div class="modal-content" style="max-width: 750px; max-height: 90vh;">
+        <div class="modal-header">
+            <h2><i class="fas fa-graduation-cap" style="color: #336791;"></i> Primeros Pasos en SQL</h2>
+            <button onclick="closeSQLGuide()" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" id="sqlGuideBody">
+            <!-- Contenido dinámico -->
+        </div>
+    </div>
+</div>
+
+    <!-- Cargar sql.js -->
     <script src="https://sql.js.org/dist/sql-wasm.js"></script>
     <script src="script.js"></script>
 </body>
+
 </html>
