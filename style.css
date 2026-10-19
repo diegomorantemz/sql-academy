@@ -5,21 +5,39 @@
 }
 
 :root {
-    --primary: #00b894;
-    --primary-dark: #5a6fd6;
-    --bg-body: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --bg-container: #ffffff;
-    --bg-panel: #f8f9fa;
-    --text-main: #333;
+    --postgres-blue: #336791;
+    --postgres-light: #0064A5;
+    --postgres-dark: #1B2F4A;
+    --postgres-bg: #F5F5F5;
+    --postgres-white: #FFFFFF;
+    --postgres-border: #D4D4D4;
+    --postgres-shadow: rgba(51, 103, 145, 0.15);
+    --postgres-text: #2C3E50;
+
+    /* Variables de compatibilidad */
+    --primary: var(--postgres-blue);
+    --primary-dark: var(--postgres-light);
+    --bg-body: var(--postgres-bg);
+    --bg-container: var(--postgres-white);
+    --bg-panel: var(--postgres-bg);
+    --bg-editor: #ffffff;
+    --text-color: #2C3E50;
+    --text-main: #2C3E50;
     --text-muted: #666;
-    --border: #e9ecef;
-    --border-input: #ddd;
+    --border: var(--postgres-border);
+    --border-input: var(--postgres-border);
 }
 
 [data-theme="dark"] {
+    --postgres-bg: #1a1a2e;
+    --postgres-white: #1e2235;
+    --postgres-border: #2d3748;
+    --postgres-text: #e2e8f0;
     --bg-body: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     --bg-container: #1e2235;
     --bg-panel: #252b3b;
+    --bg-editor: #16213e;
+    --text-color: #e2e8f0;
     --text-main: #e2e8f0;
     --text-muted: #94a3b8;
     --border: #2d3748;
@@ -27,150 +45,290 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: var(--bg-body);
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--postgres-bg);
+    color: var(--postgres-text);
     min-height: 100vh;
-    padding: 20px;
-    transition: background 0.3s ease;
 }
 
-.container {
-    max-width: 1200px;
+/* ===== APP CONTAINER ===== */
+.app-container, .container {
+    max-width: 1400px;
     margin: 0 auto;
-    background: var(--bg-container);
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    overflow: hidden;
-    padding: 30px;
-    transition: background 0.3s ease;
+    background: var(--postgres-white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.05);
 }
 
-header {
+/* ===== HEADER ===== */
+.app-header {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 0 30px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+
+.header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.3em;
+    font-weight: 700;
+}
+
+.logo i {
+    font-size: 1.8em;
+    color: #FFD700;
+}
+
+.badge-postgres {
+    background: rgba(255,255,255,0.2);
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-size: 0.6em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.main-nav {
+    display: flex;
+    gap: 4px;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-btn:hover {
+    color: white;
+    background: rgba(255,255,255,0.1);
+}
+
+.nav-btn.active {
+    color: white;
+    background: rgba(255,255,255,0.15);
+    box-shadow: inset 0 -2px 0 #FFD700;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-outline {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-outline:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Compatibilidad con header anterior */
+header:not(.app-header) {
     text-align: center;
-    padding-bottom: 20px;
-    border-bottom: 3px solid var(--primary);
-    margin-bottom: 30px;
+    padding: 25px 30px;
+    border-bottom: 3px solid var(--postgres-blue);
+    margin-bottom: 20px;
 }
 
-header h1 {
-    font-size: 2.5em;
-    color: var(--text-main);
-    margin-bottom: 10px;
+header:not(.app-header) h1 {
+    font-size: 2.2em;
+    color: var(--postgres-dark);
+    margin-bottom: 8px;
 }
 
-header p {
+header:not(.app-header) p {
     color: var(--text-muted);
-    font-size: 1.1em;
+    font-size: 1.05em;
 }
 
-.main-content {
+.header-subtitle {
+    font-size: 0.78em;
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-style: italic;
+}
+
+/* ===== SECCIONES Y TRANSICIONES ===== */
+.section {
+    display: none;
+    padding: 30px;
+    animation: fadeIn 0.3s ease;
+    flex: 1;
+}
+
+.section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.section-header {
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--postgres-border);
+}
+
+.section-header h2 {
+    font-size: 1.8em;
+    color: var(--postgres-dark);
+}
+
+.section-header h2 i {
+    color: var(--postgres-blue);
+    margin-right: 12px;
+}
+
+.section-header p {
+    color: #666;
+    font-size: 1.05em;
+    margin-top: 4px;
+}
+
+/* ===== PRACTICE SECTION & LAYOUT ===== */
+.practice-layout, .main-content {
     display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 30px;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+    margin-bottom: 30px;
+    padding: 0 20px;
 }
 
-@media (max-width: 768px) {
-    .main-content {
+@media (max-width: 992px) {
+    .practice-layout, .main-content {
         grid-template-columns: 1fr;
     }
 }
 
-.info-panel {
-    background: var(--bg-panel);
-    padding: 20px;
-    border-radius: 10px;
-    border-left: 4px solid var(--primary);
-    transition: background 0.3s ease;
+.practice-sidebar {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 16px;
+    max-height: 600px;
+    overflow-y: auto;
 }
 
-.info-panel h3 {
-    color: var(--text-main);
-    margin-bottom: 15px;
+.practice-main, .query-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.info-panel table {
-    width: 100%;
-    font-size: 0.9em;
-    border-collapse: collapse;
-}
-
-.info-panel th {
-    text-align: left;
-    color: var(--primary);
-    padding: 5px 0;
-}
-
-.info-panel td {
-    padding: 3px 0;
-    color: var(--text-muted);
-}
-
-.query-panel {
-    background: var(--bg-panel);
-    padding: 20px;
-    border-radius: 10px;
-    transition: background 0.3s ease;
-}
-
-.query-panel h3 {
-    color: var(--text-main);
-    margin-bottom: 15px;
+.editor-wrapper {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 16px;
 }
 
 #sqlEditor {
     width: 100%;
-    padding: 15px;
+    height: 160px;
+    padding: 12px 16px;
+    border: 2px solid var(--postgres-border);
+    border-radius: 8px;
     font-family: 'Courier New', monospace;
     font-size: 14px;
-    border: 2px solid var(--border-input);
-    border-radius: 8px;
+    line-height: 1.6;
     resize: vertical;
-    transition: border-color 0.3s, background 0.3s, color 0.3s;
-    background: var(--bg-container);
-    color: var(--text-main);
+    background: white;
+    color: var(--postgres-text);
+    transition: border-color 0.3s, box-shadow 0.3s;
+    overflow: auto !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
 }
 
 #sqlEditor:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
 }
 
-.button-group {
-    margin: 15px 0;
+.editor-toolbar, .button-group {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
+    margin-top: 12px;
+    align-items: center;
 }
 
 button {
-    padding: 10px 25px;
+    padding: 8px 18px;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
-    font-size: 14px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 #executeBtn {
-    background: var(--primary);
+    background: var(--postgres-blue);
     color: white;
 }
 
 #executeBtn:hover {
-    background: var(--primary-dark);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    background: var(--postgres-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(51, 103, 145, 0.3);
 }
 
-button:not(#executeBtn):not(.btn-dark) {
-    background: #e9ecef;
-    color: #333;
+.btn-secondary, button:not(#executeBtn):not(.btn-dark):not(.btn-save) {
+    background: white;
+    color: var(--postgres-text);
+    border: 1px solid var(--postgres-border);
 }
 
-button:not(#executeBtn):not(.btn-dark):hover {
-    background: #dee2e6;
-    transform: translateY(-2px);
+.btn-secondary:hover, button:not(#executeBtn):not(.btn-dark):not(.btn-save):hover {
+    background: var(--postgres-bg);
+    transform: translateY(-1px);
+}
+
+.btn-save {
+    background: #28a745;
+    color: white;
+}
+
+.btn-save:hover {
+    background: #218838;
+    transform: translateY(-1px);
 }
 
 .btn-dark {
@@ -180,188 +338,159 @@ button:not(#executeBtn):not(.btn-dark):hover {
 
 .btn-dark:hover {
     background: #1a202c;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
-#resultArea {
-    margin-top: 20px;
-    background: var(--bg-container);
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    transition: background 0.3s ease;
-}
-
-#resultArea h4 {
-    color: var(--text-main);
-    margin-bottom: 10px;
-}
-
-#resultOutput {
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    min-height: 100px;
-    padding: 10px;
-    background: var(--bg-panel);
-    border-radius: 5px;
-    overflow-x: auto;
-    color: var(--text-main);
-    transition: background 0.3s ease;
-}
-
-#resultOutput table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Segoe UI', sans-serif;
-}
-
-#resultOutput th {
-    background: var(--primary);
-    color: white;
-    padding: 10px;
-    text-align: left;
-}
-
-#resultOutput td {
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text-main);
-}
-
-#resultOutput tr:hover {
-    background: rgba(102, 126, 234, 0.08);
-}
-
-footer {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.9em;
-}
-/* ===== MEJORAS RESPONSIVE - PANTALLAS PEQUEÑAS ===== */
-@media (max-width: 480px) {
-    header h1 {
-        font-size: 1.8em;
-    }
-
-    .button-group {
-        flex-direction: column;
-    }
-
-    .button-group button {
-        width: 100%;
-    }
-
-    #sqlEditor {
-        font-size: 13px;
-    }
-}
-
-/* ===== ESTILOS FOOTER ===== */
-footer {
-    background: rgba(0, 0, 0, 0.04);
-    border-radius: 0 0 20px 20px;
-}
-
-/* ===== HEADER SUBTITULO ===== */
-.header-subtitle {
-    font-size: 0.78em;
-    color: var(--text-muted);
-    margin-top: 6px;
-    font-style: italic;
-}
-
-/* ===== CUSTOM SCROLLBARS ===== */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--bg-panel);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--border-input);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--primary);
-}
-
-/* ===== VERSION BADGE ===== */
-.version-badge {
-    display: inline-block;
-    background-color: var(--primary);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.85em;
-    font-weight: bold;
-    margin-left: 5px;
-}
-
-/* ===== SECCION COLABORADORES / EQUIPO ===== */
-.team-section {
-    margin-top: 15px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--border-input);
+.example-selector {
     display: flex;
-    justify-content: center;
-    gap: 15px;
-    flex-wrap: wrap;
-    font-size: 0.85rem;
-}
-
-.team-member {
-    display: inline-flex;
-    align-items: center;
     gap: 6px;
-    padding: 4px 10px;
-    background-color: var(--bg-editor);
-    border: 1px solid var(--border-input);
-    border-radius: 20px;
-    color: var(--text-color);
+    align-items: center;
+    margin-left: auto;
 }
 
-.team-badge {
-    background-color: var(--primary);
-    color: white;
-    font-size: 0.72rem;
-    padding: 2px 6px;
-    border-radius: 8px;
-    font-weight: 600;
+.example-selector select {
+    padding: 6px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    color: var(--postgres-text);
+    cursor: pointer;
 }
 
-/* ===== ESTADOS DE CARGA Y RESULTADOS VACIOS ===== */
-#resultOutput:empty::before,
-#tableInfo p {
-    color: var(--text-muted);
-    font-style: italic;
-    text-align: center;
-    padding: 20px 10px;
+/* ===== HISTORIAL DE CONSULTAS ===== */
+.history-wrapper {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 12px 16px;
 }
 
-#resultOutput:empty::before {
-    content: "Sin resultados. Escribe una consulta y presiona Ejecutar.";
-    display: block;
+.history-wrapper h4 {
+    color: var(--postgres-dark);
+    font-size: 0.9em;
+    margin-bottom: 8px;
 }
 
-#resultArea {
+.history-wrapper h4 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+#historyList {
+    list-style: none;
+    padding: 0;
+    max-height: 120px;
+    overflow: auto;
+}
+
+#historyList li {
+    padding: 6px 10px;
+    margin: 2px 0;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    transition: background 0.2s;
+    border-left: 3px solid var(--postgres-blue);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#historyList li:hover {
+    background: #e8f0f5;
+}
+
+/* ===== RESULTADOS DEL SIMULADOR ===== */
+.results-wrapper, #resultArea {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 12px 16px;
     position: relative;
 }
 
+.results-wrapper h4, #resultArea h4 {
+    color: var(--postgres-dark);
+    font-size: 0.9em;
+    margin-bottom: 8px;
+}
+
+.results-wrapper h4 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+#resultOutput {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 80px;
+    max-height: 400px;
+    overflow: auto;
+    font-size: 14px;
+    color: var(--postgres-text);
+}
+
+.result-placeholder {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+}
+
+.placeholder-icon {
+    font-size: 2em;
+    display: block;
+    margin-bottom: 8px;
+    color: var(--postgres-blue);
+}
+
+.result-container {
+    overflow: auto !important;
+    max-height: 350px;
+}
+
+.result-container table, #resultOutput table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 600px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.result-container thead th, #resultOutput th {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 8px 12px;
+    text-align: left;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.result-container tbody td, #resultOutput td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #f1f3f5;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--postgres-text);
+}
+
+.result-container tbody tr:hover td, #resultOutput tr:hover {
+    background: #f1f3f5;
+}
+
+/* Spinner de carga */
 #resultArea::after {
     content: "";
     display: none;
     width: 20px;
     height: 20px;
-    border: 3px solid var(--border-input);
-    border-top-color: var(--primary);
+    border: 3px solid var(--postgres-border);
+    border-top-color: var(--postgres-blue);
     border-radius: 50%;
     animation: spinLoader 0.8s linear infinite;
     position: absolute;
@@ -375,4 +504,279 @@ footer {
 
 @keyframes spinLoader {
     to { transform: rotate(360deg); }
+}
+
+/* ===== EDITOR DE TABLAS ===== */
+.table-editor {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.table-editor h4 {
+    color: var(--postgres-dark);
+    margin-bottom: 12px;
+}
+
+.table-editor h4 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+.table-editor-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.table-editor select {
+    padding: 6px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+    background: white;
+    font-size: 13px;
+}
+
+#tableEditorContent {
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 300px;
+    overflow: auto;
+}
+
+#tableEditorContent table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 500px;
+}
+
+#tableEditorContent th {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#tableEditorContent td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+#tableEditorContent td input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+#tableEditorContent td input:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 2px rgba(51, 103, 145, 0.15);
+}
+
+#tableEditorContent button {
+    padding: 2px 8px;
+    font-size: 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* ===== PANEL DE INFORMACION DE TABLAS ===== */
+.info-panel {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.info-panel h3 {
+    color: var(--postgres-dark);
+    font-size: 0.95em;
+    margin-bottom: 12px;
+    position: sticky;
+    top: 0;
+    background: var(--postgres-bg);
+    padding: 8px 0;
+    z-index: 5;
+}
+
+.info-panel h3 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+.table-card {
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid var(--postgres-border);
+}
+
+.table-card:last-child {
+    margin-bottom: 0;
+}
+
+.table-title {
+    font-weight: 600;
+    color: var(--postgres-dark);
+    padding: 4px 0 8px;
+    border-bottom: 2px solid var(--postgres-blue);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.table-title i {
+    color: var(--postgres-blue);
+    margin-right: 4px;
+}
+
+.badge-count {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 1px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+.table-scroll {
+    max-height: 160px;
+    overflow: auto;
+}
+
+.info-table {
+    width: 100%;
+    font-size: 0.8em;
+    border-collapse: collapse;
+    min-width: 300px;
+}
+
+.info-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.info-table th {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 4px 8px;
+    text-align: left;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.info-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #f1f3f5;
+    color: #444;
+    font-size: 0.85em;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.info-table td:hover {
+    overflow: visible;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.info-table tbody tr:hover {
+    background: #f1f3f5;
+}
+
+/* ===== FOOTER BASE & COLABORADORES ===== */
+footer:not(.app-footer) {
+    margin-top: 30px;
+    padding: 20px;
+    border-top: 1px solid var(--postgres-border);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9em;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 0 0 20px 20px;
+}
+
+.version-badge {
+    display: inline-block;
+    background-color: var(--postgres-blue);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.team-section {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--postgres-border);
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+}
+
+.team-member {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background-color: white;
+    border: 1px solid var(--postgres-border);
+    border-radius: 20px;
+    color: var(--postgres-text);
+}
+
+.team-badge {
+    background-color: var(--postgres-blue);
+    color: white;
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* ===== SCROLLBARS ===== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--postgres-blue);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--postgres-light);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--postgres-blue) #f1f1f1;
 }
