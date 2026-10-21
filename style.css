@@ -1,4 +1,4 @@
-﻿* {
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -12,47 +12,17 @@
     --postgres-white: #FFFFFF;
     --postgres-border: #D4D4D4;
     --postgres-shadow: rgba(51, 103, 145, 0.15);
-    --postgres-text: #2C3E50;
-
-    /* Variables de compatibilidad */
-    --primary: var(--postgres-blue);
-    --primary-dark: var(--postgres-light);
-    --bg-body: var(--postgres-bg);
-    --bg-container: var(--postgres-white);
-    --bg-panel: var(--postgres-bg);
-    --bg-editor: #ffffff;
-    --text-color: #2C3E50;
-    --text-main: #2C3E50;
-    --text-muted: #666;
-    --border: var(--postgres-border);
-    --border-input: var(--postgres-border);
-}
-
-[data-theme="dark"] {
-    --postgres-bg: #1a1a2e;
-    --postgres-white: #1e2235;
-    --postgres-border: #2d3748;
-    --postgres-text: #e2e8f0;
-    --bg-body: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    --bg-container: #1e2235;
-    --bg-panel: #252b3b;
-    --bg-editor: #16213e;
-    --text-color: #e2e8f0;
-    --text-main: #e2e8f0;
-    --text-muted: #94a3b8;
-    --border: #2d3748;
-    --border-input: #4a5568;
 }
 
 body {
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--postgres-bg);
-    color: var(--postgres-text);
+    color: #2C3E50;
     min-height: 100vh;
 }
 
 /* ===== APP CONTAINER ===== */
-.app-container, .container {
+.app-container {
     max-width: 1400px;
     margin: 0 auto;
     background: var(--postgres-white);
@@ -154,33 +124,7 @@ body {
     background: rgba(255,255,255,0.2);
 }
 
-/* Compatibilidad con header anterior */
-header:not(.app-header) {
-    text-align: center;
-    padding: 25px 30px;
-    border-bottom: 3px solid var(--postgres-blue);
-    margin-bottom: 20px;
-}
-
-header:not(.app-header) h1 {
-    font-size: 2.2em;
-    color: var(--postgres-dark);
-    margin-bottom: 8px;
-}
-
-header:not(.app-header) p {
-    color: var(--text-muted);
-    font-size: 1.05em;
-}
-
-.header-subtitle {
-    font-size: 0.78em;
-    color: var(--text-muted);
-    margin-top: 6px;
-    font-style: italic;
-}
-
-/* ===== SECCIONES Y TRANSICIONES ===== */
+/* ===== SECCIONES ===== */
 .section {
     display: none;
     padding: 30px;
@@ -334,16 +278,15 @@ header:not(.app-header) p {
 }
 
 /* ===== PRACTICE SECTION ===== */
-.practice-layout, .main-content {
+.practice-layout {
     display: grid;
     grid-template-columns: 280px 1fr;
     gap: 24px;
     margin-bottom: 30px;
-    padding: 0 20px;
 }
 
 @media (max-width: 992px) {
-    .practice-layout, .main-content {
+    .practice-layout {
         grid-template-columns: 1fr;
     }
 }
@@ -356,7 +299,7 @@ header:not(.app-header) p {
     overflow-y: auto;
 }
 
-.practice-main, .query-panel {
+.practice-main {
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -377,10 +320,10 @@ header:not(.app-header) p {
     font-family: 'Courier New', monospace;
     font-size: 14px;
     line-height: 1.6;
-    resize: vertical;
+    resize: none;
     background: white;
     color: var(--postgres-text);
-    transition: border-color 0.3s, box-shadow 0.3s;
+    transition: border-color 0.3s;
     overflow: auto !important;
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
@@ -392,12 +335,11 @@ header:not(.app-header) p {
     box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
 }
 
-.editor-toolbar, .button-group {
+.editor-toolbar {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
     margin-top: 12px;
-    align-items: center;
 }
 
 button {
@@ -424,13 +366,13 @@ button {
     box-shadow: 0 4px 16px rgba(51, 103, 145, 0.3);
 }
 
-.btn-secondary, button:not(#executeBtn):not(.btn-dark):not(.btn-save) {
+.btn-secondary {
     background: white;
     color: var(--postgres-text);
     border: 1px solid var(--postgres-border);
 }
 
-.btn-secondary:hover, button:not(#executeBtn):not(.btn-dark):not(.btn-save):hover {
+.btn-secondary:hover {
     background: var(--postgres-bg);
     transform: translateY(-1px);
 }
@@ -442,16 +384,6 @@ button {
 
 .btn-save:hover {
     background: #218838;
-    transform: translateY(-1px);
-}
-
-.btn-dark {
-    background: #2d3748;
-    color: #e2e8f0;
-}
-
-.btn-dark:hover {
-    background: #1a202c;
     transform: translateY(-1px);
 }
 
@@ -517,14 +449,13 @@ button {
 }
 
 /* ===== RESULTADOS ===== */
-.results-wrapper, #resultArea {
+.results-wrapper {
     background: var(--postgres-bg);
     border-radius: 12px;
     padding: 12px 16px;
-    position: relative;
 }
 
-.results-wrapper h4, #resultArea h4 {
+.results-wrapper h4 {
     color: var(--postgres-dark);
     font-size: 0.9em;
     margin-bottom: 8px;
@@ -543,7 +474,6 @@ button {
     max-height: 400px;
     overflow: auto;
     font-size: 14px;
-    color: var(--postgres-text);
 }
 
 .result-placeholder {
@@ -564,15 +494,14 @@ button {
     max-height: 350px;
 }
 
-.result-container table, #resultOutput table {
+.result-container table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
     min-width: 600px;
-    font-family: 'Segoe UI', sans-serif;
 }
 
-.result-container thead th, #resultOutput th {
+.result-container thead th {
     background: var(--postgres-blue);
     color: white;
     padding: 8px 12px;
@@ -583,41 +512,17 @@ button {
     z-index: 10;
 }
 
-.result-container tbody td, #resultOutput td {
+.result-container tbody td {
     padding: 6px 12px;
     border-bottom: 1px solid #f1f3f5;
     max-width: 250px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--postgres-text);
 }
 
-.result-container tbody tr:hover td, #resultOutput tr:hover {
+.result-container tbody tr:hover td {
     background: #f1f3f5;
-}
-
-/* Spinner de carga */
-#resultArea::after {
-    content: "";
-    display: none;
-    width: 20px;
-    height: 20px;
-    border: 3px solid var(--postgres-border);
-    border-top-color: var(--postgres-blue);
-    border-radius: 50%;
-    animation: spinLoader 0.8s linear infinite;
-    position: absolute;
-    top: 15px;
-    right: 15px;
-}
-
-#resultArea.loading::after {
-    display: block;
-}
-
-@keyframes spinLoader {
-    to { transform: rotate(360deg); }
 }
 
 /* ===== TABLE EDITOR ===== */
@@ -900,12 +805,6 @@ button {
 }
 
 /* ===== INFO PANEL ===== */
-.info-panel {
-    background: var(--postgres-bg);
-    border-radius: 12px;
-    padding: 16px;
-}
-
 .info-panel h3 {
     color: var(--postgres-dark);
     font-size: 0.95em;
@@ -1365,60 +1264,6 @@ button {
     transform: translateY(-2px);
 }
 
-/* Compatibilidad footer anterior y colaboradores */
-footer:not(.app-footer) {
-    margin-top: 30px;
-    padding: 20px;
-    border-top: 1px solid var(--postgres-border);
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.9em;
-    background: rgba(0, 0, 0, 0.02);
-    border-radius: 0 0 20px 20px;
-}
-
-.version-badge {
-    display: inline-block;
-    background-color: var(--postgres-blue);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.85em;
-    font-weight: bold;
-    margin-left: 5px;
-}
-
-.team-section {
-    margin-top: 15px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--postgres-border);
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    flex-wrap: wrap;
-    font-size: 0.85rem;
-}
-
-.team-member {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    background-color: white;
-    border: 1px solid var(--postgres-border);
-    border-radius: 20px;
-    color: var(--postgres-text);
-}
-
-.team-badge {
-    background-color: var(--postgres-blue);
-    color: white;
-    font-size: 0.72rem;
-    padding: 2px 6px;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
 /* ===== UTILITIES ===== */
 .text-success { color: #28a745; }
 .text-danger { color: #dc3545; }
@@ -1645,3 +1490,4 @@ footer:not(.app-footer) {
 .concept-card .fa-table-cells { color: #00b894; }
 .concept-card .fa-share-nodes { color: #6c5ce7; }
 .concept-card .fa-bolt { color: #fdcb6e; }
+
