@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="style.css">
 
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -224,11 +224,11 @@
                             <tr>
                                 <td><strong>ACID</strong></td>
                                 <td><i class="fas fa-check-circle text-success"></i> Soporte completo</td>
-                                <td><i class="fas fa-times-circle text-danger"></i> Consistencia eventual</td>
+                                <td><i class="fas fa-triangle-exclamation text-warning"></i> Variable: algunos motores ofrecen transacciones; otros priorizan disponibilidad</td>
                             </tr>
                             <tr>
                                 <td><strong>Lenguaje</strong></td>
-                                <td>SQL (Structure Query Language)</td>
+                                <td>SQL (Structured Query Language)</td>
                                 <td>APIs especificas (JSON, REST, etc)</td>
                             </tr>
                             <tr>
@@ -281,12 +281,15 @@
                             <button onclick="resetDatabase()" class="btn-secondary">
                                 <i class="fas fa-rotate"></i> Reiniciar BD
                             </button>
-                            <button onclick="exportDatabase()" class="btn-secondary" title="Exportar BD">
-                        <i class="fas fa-download"></i>
-                    </button>
+                            <button onclick="exportDatabase()" class="btn-secondary" title="Exportar BD" aria-label="Exportar base de datos">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button onclick="importDatabase()" class="btn-secondary" title="Importar BD" aria-label="Importar base de datos">
+                                <i class="fas fa-upload"></i>
+                            </button>
                             <button onclick="openSQLGuide()" class="btn-secondary" title="Guía de primeros pasos en SQL">
-    <i class="fas fa-graduation-cap"></i> Guía SQL
-</button>
+                                <i class="fas fa-graduation-cap"></i> Guía SQL
+                            </button>
 
                             <div class="example-selector">
                                 <select id="categorySelector">
@@ -295,8 +298,10 @@
                                     <option value="orden">Ordenamiento</option>
                                     <option value="agregacion">Agregaciones</option>
                                     <option value="groupby">Agrupaciones</option>
+                                    <option value="having">HAVING</option>
                                     <option value="join" selected>JOIN</option>
                                     <option value="subconsultas">Subconsultas</option>
+                                    <option value="operadores">Operadores</option>
                                     <option value="avanzado">Avanzadas</option>
                                     <option value="modificacion">Modificacion</option>
                                     <option value="aleatorio">Aleatorio</option>
@@ -323,7 +328,7 @@
                     <!-- Resultados -->
                     <div class="results-wrapper">
                         <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
-                        <div id="resultOutput" class="result-placeholder">
+                        <div id="resultOutput" class="result-placeholder" aria-live="polite">
                             <i class="fas fa-lightbulb placeholder-icon"></i>
                             <p>Escribe una consulta y presiona "Ejecutar"</p>
                         </div>
@@ -536,7 +541,7 @@
 
     <!-- ===== MODALES ===== -->
     <!-- Modal de Gestores -->
-    <div id="dbModal" class="modal">
+    <div id="dbModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle"><i class="fas fa-database"></i> Gestor</h2>
@@ -547,7 +552,7 @@
     </div>
 
     <!-- Modal de Conceptos -->
-    <div id="conceptModal" class="modal">
+    <div id="conceptModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="conceptModalTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="conceptModalTitle"><i class="fas fa-graduation-cap"></i> Concepto</h2>
@@ -558,20 +563,20 @@
     </div>
 
     <!-- ===== MODAL DE DONACIONES ===== -->
-    <div id="donationModal" class="modal">
+    <div id="donationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="donationModalTitle">
         <div class="modal-content" style="max-width: 420px;">
             <div class="modal-header">
-                <h2><i class="fas fa-laptop-code" style="color:#dc3545;"></i> Apoya el proyecto</h2>
+                <h2 id="donationModalTitle"><i class="fas fa-laptop-code" style="color:#dc3545;"></i> Apoya el proyecto</h2>
                 <button onclick="closeDonationModal()" class="modal-close">&times;</button>
             </div>
             <div class="modal-body" id="donationModalBody"></div>
         </div>
     </div>
     <!-- ===== GUÍA DE PRIMEROS PASOS EN SQL ===== -->
-<div id="sqlGuideModal" class="modal">
+<div id="sqlGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="sqlGuideTitle">
     <div class="modal-content" style="max-width: 750px; max-height: 90vh;">
         <div class="modal-header">
-            <h2><i class="fas fa-graduation-cap" style="color: #336791;"></i> Primeros Pasos en SQL</h2>
+            <h2 id="sqlGuideTitle"><i class="fas fa-graduation-cap" style="color: #336791;"></i> Primeros Pasos en SQL</h2>
             <button onclick="closeSQLGuide()" class="modal-close">&times;</button>
         </div>
         <div class="modal-body" id="sqlGuideBody">
@@ -581,7 +586,7 @@
 </div>
 
     <!-- Cargar sql.js -->
-    <script src="https://sql.js.org/dist/sql-wasm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
     <script src="script.js"></script>
 </body>
 

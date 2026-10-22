@@ -1,8 +1,148 @@
 let db;
+let SQLModule = null;
 let dbInitialized = false;
 let chartCarreras, chartPromedios;
-let history = [];
+let queryHistory = [];
 let diagramFullView = false;
+
+// ============================================
+// UTILIDADES GENERALES
+// ============================================
+
+/**
+ * Escapa texto para insertarlo de forma segura en HTML.
+ * Se usa tanto en contenido como en valores de atributos.
+ */
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/** Escapa un nombre de identificador SQL (tabla/columna). */
+function quoteIdent(name) {
+    return '"' + String(name).replace(/"/g, '""') + '"';
+}
+
+/** Devuelve las tablas de usuario de la base de datos actual. */
+function getUserTables() {
+    if (!db) return [];
+    try {
+        const result = db.exec(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+        );
+        return result.length > 0 ? result[0].values.map(row => String(row[0])) : [];
+    } catch (e) {
+        console.error('No se pudieron leer las tablas:', e);
+        return [];
+    }
+}
+
+/** Devuelve la estructura de una tabla usando PRAGMA table_info. */
+function getTableColumns(tableName) {
+    if (!db) return [];
+    try {
+        const result = db.exec(`PRAGMA table_info(${quoteIdent(tableName)})`);
+        if (result.length === 0) return [];
+        return result[0].values.map(row => ({
+            cid: row[0],
+            name: String(row[1]),
+            type: String(row[2] || ''),
+            notnull: Number(row[3]) === 1,
+            dflt_value: row[4],
+            pk: Number(row[5]) || 0
+        }));
+    } catch (e) {
+        console.error(`No se pudo leer la tabla ${tableName}:`, e);
+        return [];
+    }
+}
+
+/** Devuelve la clave primaria de una tabla (o null si no tiene). */
+function getPrimaryKey(tableName) {
+    const columns = getTableColumns(tableName);
+    return columns.find(col => col.pk > 0) || null;
+}
+
+/** Indica si un tipo declarado de SQLite es numérico. */
+function isNumericType(type) {
+    return /INT|REAL|FLOA|DOUB|NUM|DEC|BOOL/i.test(String(type || ''));
+}
+
+/**
+ * Convierte un valor del editor de tablas al tipo declarado de la columna.
+ * En columnas numéricas, los valores vacíos se guardan como NULL; en texto
+ * se conserva la cadena vacía y "NULL" se interpreta como nulo explícito.
+ */
+function parseColumnValue(rawValue, column) {
+    const raw = rawValue === null || rawValue === undefined ? '' : String(rawValue);
+
+    // "NULL" siempre representa un nulo explícito, sin importar el tipo.
+    if (raw.trim().toUpperCase() === 'NULL') return null;
+
+    if (isNumericType(column.type)) {
+        if (raw.trim() === '') return null;
+        const normalized = raw.trim().replace(',', '.');
+        const number = Number(normalized);
+        if (!Number.isFinite(number)) {
+            throw new Error(`"${raw}" no es un valor numérico válido para la columna ${column.name}`);
+        }
+        return number;
+    }
+
+    return raw;
+}
+
+/** Muestra un mensaje estandarizado en el panel de resultados. */
+function showMessage(type, title, detail) {
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-circle-exclamation',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-circle-info'
+    };
+    const icon = icons[type] || icons.info;
+    const detailHtml = detail
+        ? `<div class="msg-detail">${detail}</div>`
+        : '';
+    const output = document.getElementById('resultOutput');
+    output.classList.remove('result-placeholder');
+    output.innerHTML = `
+        <div class="msg msg-${type}">
+            <div class="msg-title"><i class="fas ${icon}"></i> ${escapeHtml(title)}</div>
+            ${detailHtml}
+        </div>
+    `;
+}
+
+/** Abre un modal y bloquea el scroll de la página. */
+function openModal(modal) {
+    if (!modal) return;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+/** Cierra un modal y restaura el scroll solo si no queda otro abierto. */
+function closeModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('active');
+    if (!document.querySelector('.modal.active')) {
+        document.body.style.overflow = '';
+    }
+}
+
+/** Refresca todos los paneles que dependen de la base de datos. */
+function refreshAll() {
+    refreshTableSelector();
+    showTablesInfo();
+    loadTableEditor();
+    updateCharts();
+    generateDiagram();
+}
 
 // LIMPIAR EDITOR
 function clearEditor() {
@@ -10,21 +150,34 @@ function clearEditor() {
     if (editor.value.trim() !== '') {
         editor.value = '';
         editor.focus();
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:20px;text-align:center;color:#f59e0b;background:#fffbeb;border-radius:8px;">
-                <i class="fas fa-eraser"></i> Editor limpiado
-            </div>
-        `;
+        showMessage('warning', 'Editor limpiado');
     }
 }
 
 // INICIALIZAR BASE DE DATOS
 function initDatabase() {
+    dbInitialized = false;
+
+    if (typeof initSqlJs !== 'function') {
+        showMessage('error', 'No se pudo cargar SQL.js', 'Revisa tu conexión a internet y recarga la página.');
+        return;
+    }
+
+    // Liberar la base de datos anterior (por ejemplo, al reiniciar).
+    if (db) {
+        try { db.close(); } catch (e) { /* ignorar */ }
+        db = null;
+    }
+
     initSqlJs({
-        locateFile: file => `https://sql.js.org/dist/${file}`
+        locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}`
     }).then(SQL => {
+        SQLModule = SQL;
         db = new SQL.Database();
-        
+        // SQLite desactiva las claves foráneas por defecto; el simulador las enseña,
+        // así que deben aplicarse de verdad.
+        db.run('PRAGMA foreign_keys = ON;');
+
         // TABLA: estudiantes
         db.run(`
             CREATE TABLE estudiantes (
@@ -104,7 +257,7 @@ function initDatabase() {
                 id INTEGER PRIMARY KEY,
                 estudiante_id INTEGER,
                 curso_id INTEGER,
-                año INTEGER,
+                anio INTEGER,
                 ciclo TEXT,
                 nota REAL,
                 FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id),
@@ -187,53 +340,48 @@ function initDatabase() {
         `);
         
         dbInitialized = true;
-        showTablesInfo();
-        loadTableEditor();
-        updateCharts();
-        generateDiagram();
-        
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:20px;text-align:center;color:#28a745;background:#f0fff4;border-radius:8px;">
-                <i class="fas fa-check-circle"></i> Base de datos lista. Escribe una consulta SQL.
-            </div>
-        `;
+        refreshAll();
+        showMessage('success', 'Base de datos lista. Escribe una consulta SQL.');
     }).catch(error => {
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:15px;background:#fff5f5;border-radius:8px;border-left:4px solid #dc3545;">
-                <div style="color:#dc3545;font-weight:600;"><i class="fas fa-circle-exclamation"></i> Error al cargar SQL.js</div>
-                <code style="display:block;padding:10px;background:white;border-radius:6px;font-size:13px;margin-top:5px;">${error.message}</code>
-            </div>
-        `;
+        showMessage('error', 'Error al cargar SQL.js', `<code>${escapeHtml(error.message)}</code>`);
     });
 }
 
 // MOSTRAR INFO DE TABLAS
 function showTablesInfo() {
     if (!db) return;
+    const container = document.getElementById('tableInfo');
+
     try {
-        const tables = ['estudiantes', 'cursos', 'inscripciones'];
+        const tables = getUserTables();
+        if (tables.length === 0) {
+            container.innerHTML = '<p class="text-muted">No hay tablas disponibles</p>';
+            return;
+        }
+
         let html = '';
-        
         tables.forEach(tableName => {
-            const result = db.exec(`SELECT * FROM ${tableName} LIMIT 5`);
-            if (result.length > 0) {
+            try {
+                const result = db.exec(`SELECT * FROM ${quoteIdent(tableName)} LIMIT 5`);
+                if (result.length === 0) return;
+
                 const cols = result[0].columns;
                 const rows = result[0].values;
-                
-                const countResult = db.exec(`SELECT COUNT(*) as total FROM ${tableName}`);
+
+                const countResult = db.exec(`SELECT COUNT(*) AS total FROM ${quoteIdent(tableName)}`);
                 const totalRows = countResult.length > 0 ? countResult[0].values[0][0] : 0;
-                
+
                 html += `<div class="table-card">`;
-                html += `<div class="table-title"><i class="fas fa-table"></i> ${tableName} <span class="badge-count">${totalRows} registros</span></div>`;
+                html += `<div class="table-title"><i class="fas fa-table"></i> ${escapeHtml(tableName)} <span class="badge-count">${escapeHtml(totalRows)} registros</span></div>`;
                 html += `<div class="table-scroll">`;
                 html += `<table class="info-table">`;
-                
+
                 html += '<thead><tr>';
                 cols.forEach(col => {
-                    html += `<th>${col}</th>`;
+                    html += `<th>${escapeHtml(col)}</th>`;
                 });
                 html += '</tr></thead>';
-                
+
                 html += '<tbody>';
                 if (rows.length === 0) {
                     html += `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;">Sin datos</td></tr>`;
@@ -241,160 +389,152 @@ function showTablesInfo() {
                     rows.forEach(row => {
                         html += '<tr>';
                         row.forEach(val => {
-                            const displayVal = val !== null ? String(val) : 'NULL';
+                            const displayVal = val !== null && val !== undefined ? String(val) : 'NULL';
                             const truncated = displayVal.length > 20 ? displayVal.substring(0, 20) + '...' : displayVal;
-                            html += `<td title="${displayVal}">${truncated}</td>`;
+                            html += `<td title="${escapeHtml(displayVal)}">${escapeHtml(truncated)}</td>`;
                         });
                         html += '</tr>';
                     });
                     if (totalRows > 5) {
                         html += `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;font-style:italic;">
-                            ... y ${totalRows - 5} registros mas
+                            ... y ${escapeHtml(totalRows - 5)} registros mas
                         </td></tr>`;
                     }
                 }
-                
+
                 html += '</tbody></table>';
                 html += '</div></div>';
+            } catch (tableError) {
+                console.error(`Error al mostrar la tabla ${tableName}:`, tableError);
+                html += `<div class="table-card"><div class="table-title"><i class="fas fa-table"></i> ${escapeHtml(tableName)}</div>
+                    <p style="color:#dc3545;font-size:12px;">No se pudo leer esta tabla.</p></div>`;
             }
         });
-        
-        document.getElementById('tableInfo').innerHTML = html || '<p class="text-muted">No hay tablas disponibles</p>';
-    } catch(e) {
-        document.getElementById('tableInfo').innerHTML = `<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Error: ${e.message}</p>`;
+
+        container.innerHTML = html || '<p class="text-muted">No hay tablas disponibles</p>';
+    } catch (e) {
+        container.innerHTML = `<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Error: ${escapeHtml(e.message)}</p>`;
     }
 }
 
 // MOSTRAR RESULTADOS
 function displayResults(result) {
-    if (!result || result.length === 0) {
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:20px;text-align:center;color:#28a745;background:#f0fff4;border-radius:8px;">
-                <i class="fas fa-check-circle"></i> Consulta ejecutada correctamente
-            </div>
-        `;
+    const resultSets = (result || []).filter(set => set && set.columns && set.columns.length > 0);
+
+    if (resultSets.length === 0) {
+        showMessage('success', 'Consulta ejecutada correctamente');
         return;
     }
-    
-    const rowCount = result[0].values.length;
-    const colCount = result[0].columns.length;
-    
-    let html = `
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; padding:8px 12px; background:white; border-radius:8px; border:1px solid #e9ecef;">
-            <span style="font-weight:600; color:#333;">
-                <i class="fas fa-list"></i> ${rowCount} ${rowCount === 1 ? 'fila' : 'filas'} encontradas | ${colCount} columnas
-            </span>
-            <span style="font-size:12px; color:#999;">
-                <i class="fas fa-arrows-left-right"></i> <strong>Desliza</strong> horizontal y verticalmente
-            </span>
-        </div>
-        <div class="result-container">
-            <table>
-                <thead>
-                    <tr>
-                        ${result[0].columns.map(col => `<th>${col}</th>`).join('')}
-                    </tr>
-                </thead>
-                <tbody>
-                    ${result[0].values.map(row => `
+
+    const multiple = resultSets.length > 1;
+    let html = '';
+
+    resultSets.forEach((set, index) => {
+        const rowCount = set.values.length;
+        const colCount = set.columns.length;
+
+        html += `
+            <div class="result-meta">
+                <span style="font-weight:600; color:#333;">
+                    <i class="fas fa-list"></i>
+                    ${multiple ? `Resultado ${index + 1} de ${resultSets.length}: ` : ''}
+                    ${rowCount} ${rowCount === 1 ? 'fila' : 'filas'} | ${colCount} columnas
+                </span>
+                <span style="font-size:12px; color:#999;">
+                    <i class="fas fa-arrows-left-right"></i> <strong>Desliza</strong> para ver todo
+                </span>
+            </div>
+            <div class="result-container">
+                <table>
+                    <thead>
                         <tr>
-                            ${row.map(value => {
-                                const displayValue = value !== null && value !== undefined ? String(value) : 'NULL';
-                                const truncated = displayValue.length > 50 ? displayValue.substring(0, 50) + '...' : displayValue;
-                                return `<td title="${displayValue.replace(/"/g, '&quot;')}">${truncated}</td>`;
-                            }).join('')}
+                            ${set.columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}
                         </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-        <div style="margin-top:8px; font-size:11px; color:#999; text-align:center; display:flex; justify-content:center; gap:20px; flex-wrap:wrap;">
+                    </thead>
+                    <tbody>
+                        ${rowCount === 0
+                            ? `<tr><td colspan="${colCount}" style="text-align:center;color:#999;">Sin filas</td></tr>`
+                            : set.values.map(row => `
+                                <tr>
+                                    ${row.map(value => {
+                                        const displayValue = value !== null && value !== undefined ? String(value) : 'NULL';
+                                        const truncated = displayValue.length > 50 ? displayValue.substring(0, 50) + '...' : displayValue;
+                                        return `<td title="${escapeHtml(displayValue)}">${escapeHtml(truncated)}</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    });
+
+    html += `
+        <div class="result-scroll-hint">
             <span><i class="fas fa-arrow-left"></i><i class="fas fa-arrow-right"></i> Scroll horizontal</span>
             <span><i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i> Scroll vertical</span>
         </div>
     `;
-    
+
+    document.getElementById('resultOutput').classList.remove('result-placeholder');
     document.getElementById('resultOutput').innerHTML = html;
 }
 
 // EJECUTAR CONSULTA
 function runQuery() {
     if (!dbInitialized) {
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:20px;text-align:center;color:#999;background:#f8f9fa;border-radius:8px;">
-                <i class="fas fa-spinner fa-spin"></i> Esperando que la base de datos se inicialice...
-            </div>
-        `;
+        showMessage('info', 'Esperando que la base de datos se inicialice...');
         return;
     }
-    
+
     const editor = document.getElementById('sqlEditor');
     const query = editor.value.trim();
-    
+
     if (!query) {
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:20px;text-align:center;color:#f59e0b;background:#fffbeb;border-radius:8px;">
-                <i class="fas fa-exclamation-triangle"></i> Por favor, escribe una consulta SQL
-            </div>
-        `;
+        showMessage('warning', 'Por favor, escribe una consulta SQL');
         return;
     }
-    
+
     addToHistory(query);
-    
+
     try {
         const result = db.exec(query);
-        
-        if (result.length === 0) {
-            document.getElementById('resultOutput').innerHTML = `
-                <div style="padding:20px;text-align:center;color:#28a745;background:#f0fff4;border-radius:8px;">
-                    <i class="fas fa-check-circle"></i> Consulta ejecutada correctamente
-                </div>
-            `;
-            showTablesInfo();
-            loadTableEditor();
-            updateCharts();
-            generateDiagram();
-            return;
-        }
-        
         displayResults(result);
-        showTablesInfo();
-        loadTableEditor();
-        updateCharts();
-        generateDiagram();
-        
-    } catch(error) {
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:15px;background:#fff5f5;border-radius:8px;border-left:4px solid #dc3545;">
-                <div style="color:#dc3545;font-weight:600;margin-bottom:5px;"><i class="fas fa-circle-exclamation"></i> Error en la consulta</div>
-                <code style="display:block;padding:10px;background:white;border-radius:6px;font-size:13px;color:#333;margin-top:5px;overflow:auto;white-space:pre-wrap;word-break:break-all;">
-                    ${error.message}
-                </code>
-            </div>
-        `;
+        refreshAll();
+    } catch (error) {
+        showMessage('error', 'Error en la consulta', `<code>${escapeHtml(error.message)}</code>`);
     }
 }
 
 // HISTORIAL
 function addToHistory(query) {
     if (!query || query.trim() === '') return;
-    if (history.includes(query)) return;
-    history.unshift(query);
-    if (history.length > 20) history.pop();
+    if (queryHistory.includes(query)) return;
+    queryHistory.unshift(query);
+    if (queryHistory.length > 20) queryHistory.pop();
     updateHistoryDisplay();
 }
 
 function updateHistoryDisplay() {
     const list = document.getElementById('historyList');
-    if (history.length === 0) {
-        list.innerHTML = '<li class="empty-history" style="color:#999;border-left-color:#999;">No hay consultas aun</li>';
+    list.innerHTML = '';
+
+    if (queryHistory.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'empty-history';
+        empty.textContent = 'No hay consultas aun';
+        list.appendChild(empty);
         return;
     }
-    list.innerHTML = history.map(query => {
+
+    queryHistory.forEach(query => {
+        const li = document.createElement('li');
         const truncated = query.length > 60 ? query.substring(0, 60) + '...' : query;
-        return `<li onclick="loadHistoryQuery('${query.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" title="${query.replace(/"/g, '&quot;')}">${truncated}</li>`;
-    }).join('');
+        li.textContent = truncated;
+        li.title = query;
+        li.addEventListener('click', () => loadHistoryQuery(query));
+        list.appendChild(li);
+    });
 }
 
 function loadHistoryQuery(query) {
@@ -405,306 +545,422 @@ function loadHistoryQuery(query) {
 
 function clearHistory() {
     if (confirm('¿Limpiar todo el historial?')) {
-        history = [];
+        queryHistory = [];
         updateHistoryDisplay();
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:20px;text-align:center;color:#999;background:#f8f9fa;border-radius:8px;">
-                <i class="fas fa-trash"></i> Historial limpiado
-            </div>
-        `;
+        showMessage('info', 'Historial limpiado');
     }
 }
 
 // EXPORTAR / IMPORTAR
 function exportDatabase() {
-    if (!db) return;
-    const data = db.export();
-    const blob = new Blob([data], {type: 'application/x-sqlite3'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `database_${new Date().toISOString().slice(0,10)}.sqlite`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!db) {
+        showMessage('error', 'La base de datos no está inicializada');
+        return;
+    }
+    try {
+        const data = db.export();
+        const blob = new Blob([data], { type: 'application/x-sqlite3' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `database_${new Date().toISOString().slice(0, 10)}.sqlite`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showMessage('success', 'Base de datos exportada correctamente');
+    } catch (e) {
+        showMessage('error', 'No se pudo exportar la base de datos', `<code>${escapeHtml(e.message)}</code>`);
+    }
+}
+
+function importDatabase() {
+    if (!SQLModule) {
+        showMessage('warning', 'Espera a que la base de datos termine de inicializarse');
+        return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.sqlite,.sqlite3,.db,application/x-sqlite3';
+    input.style.display = 'none';
+    input.addEventListener('change', () => {
+        const file = input.files && input.files[0];
+        input.remove();
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            let imported = null;
+            try {
+                imported = new SQLModule.Database(new Uint8Array(reader.result));
+                // Fuerza la lectura del esquema para detectar archivos que no son SQLite.
+                imported.exec('SELECT name FROM sqlite_master LIMIT 1;');
+                imported.run('PRAGMA foreign_keys = ON;');
+                if (db) db.close();
+                db = imported;
+                dbInitialized = true;
+                refreshAll();
+                showMessage('success', 'Base de datos importada correctamente', `Archivo: ${escapeHtml(file.name)}`);
+            } catch (e) {
+                if (imported) {
+                    try { imported.close(); } catch (closeError) { /* ignorar */ }
+                }
+                showMessage('error', 'No se pudo importar el archivo', `<code>${escapeHtml(e.message)}</code>`);
+            }
+        };
+        reader.onerror = () => {
+            showMessage('error', 'No se pudo leer el archivo seleccionado');
+        };
+        reader.readAsArrayBuffer(file);
+    });
+    document.body.appendChild(input);
+    input.click();
 }
 
 // EDITOR DE TABLAS
+function refreshTableSelector() {
+    if (!db) return;
+    const selector = document.getElementById('tableSelector');
+    if (!selector) return;
+
+    const previous = selector.value;
+    const tables = getUserTables();
+
+    selector.innerHTML = '';
+
+    if (tables.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Sin tablas';
+        option.disabled = true;
+        option.selected = true;
+        selector.appendChild(option);
+        return;
+    }
+
+    tables.forEach(tableName => {
+        const option = document.createElement('option');
+        option.value = tableName;
+        option.textContent = tableName;
+        selector.appendChild(option);
+    });
+
+    selector.value = tables.includes(previous) ? previous : tables[0];
+}
+
 function loadTableEditor() {
     if (!db) return;
     const tableName = document.getElementById('tableSelector').value;
     const content = document.getElementById('tableEditorContent');
-    
+
+    if (!tableName) {
+        content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> No hay tablas para editar</p>';
+        return;
+    }
+
     try {
-        const result = db.exec(`SELECT * FROM ${tableName}`);
-        if (result.length === 0) {
+        const columns = getTableColumns(tableName);
+        const result = db.exec(`SELECT * FROM ${quoteIdent(tableName)}`);
+        if (result.length === 0 || columns.length === 0) {
             content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> Tabla vacia</p>';
             return;
         }
-        
+
+        const selectColumns = result[0].columns;
+        const rows = result[0].values;
+        const pkColumn = columns.find(col => col.pk > 0) || null;
+        const pkIndex = pkColumn ? selectColumns.indexOf(pkColumn.name) : -1;
+
         let html = '<table>';
         html += '<thead><tr>';
-        result[0].columns.forEach(col => {
-            html += `<th>${col}</th>`;
+        selectColumns.forEach(col => {
+            const isPk = pkColumn && col === pkColumn.name;
+            html += `<th>${isPk ? '<i class="fas fa-key" title="Clave primaria"></i> ' : ''}${escapeHtml(col)}</th>`;
         });
         html += '<th>Acciones</th></tr></thead>';
-        
+
         html += '<tbody>';
-        result[0].values.forEach((row, idx) => {
-            html += `<tr>`;
-            row.forEach((value, colIdx) => {
-                const displayValue = value !== null && value !== undefined ? value : '';
-                html += `<td><input type="text" value="${displayValue}" data-row="${idx}" data-col="${colIdx}" class="cell-input" /></td>`;
+        if (rows.length === 0) {
+            html += `<tr><td colspan="${selectColumns.length + 1}" style="text-align:center;color:#999;">
+                Tabla vacía. Usa "Agregar fila" para crear un registro.
+            </td></tr>`;
+        } else {
+            rows.forEach((row, rowIndex) => {
+                const pkValue = pkIndex >= 0 ? row[pkIndex] : null;
+                html += `<tr data-row="${rowIndex}" data-pk="${escapeHtml(pkValue)}">`;
+                row.forEach((value, colIdx) => {
+                    const displayValue = value !== null && value !== undefined ? String(value) : '';
+                    const isPk = colIdx === pkIndex;
+                    html += `<td><input type="text" value="${escapeHtml(displayValue)}"
+                        data-row="${rowIndex}" data-col="${colIdx}"
+                        data-original="${escapeHtml(displayValue)}"
+                        class="cell-input${isPk ? ' pk-input' : ''}"
+                        ${isPk ? 'readonly title="La clave primaria no se puede editar"' : ''} /></td>`;
+                });
+                html += pkColumn
+                    ? `<td><button type="button" class="delete-btn" data-pk="${escapeHtml(pkValue)}" title="Eliminar fila" aria-label="Eliminar fila"><i class="fas fa-trash"></i></button></td>`
+                    : '<td><span title="La tabla no tiene clave primaria">—</span></td>';
+                html += '</tr>';
             });
-            html += `<td><button onclick="deleteRow('${tableName}', ${row[0]})" class="delete-btn"><i class="fas fa-trash"></i></button></td>`;
-            html += '</tr>';
-        });
+        }
         html += '</tbody></table>';
+
         content.innerHTML = html;
-    } catch(e) {
-        content.innerHTML = `<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Error: ${e.message}</p>`;
+
+        content.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', () => deleteRow(tableName, button.dataset.pk));
+        });
+    } catch (e) {
+        content.innerHTML = `<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Error: ${escapeHtml(e.message)}</p>`;
     }
 }
 
 function saveTableChanges(tableName) {
-    if (!db) return;
-    
+    if (!db) {
+        showMessage('error', 'La base de datos no está inicializada');
+        return;
+    }
+    if (!tableName) {
+        showMessage('warning', 'No hay ninguna tabla seleccionada');
+        return;
+    }
+
     try {
-        const inputs = document.querySelectorAll('#tableEditorContent .cell-input');
-        
-        const tableInfo = db.exec(`PRAGMA table_info(${tableName})`);
-        if (tableInfo.length === 0) {
-            document.getElementById('resultOutput').innerHTML = `
-                <div style="padding:15px;background:#fff5f5;border-radius:8px;border-left:4px solid #dc3545;">
-                    <div style="color:#dc3545;font-weight:600;"><i class="fas fa-circle-exclamation"></i> Error: No se pudo obtener la estructura de la tabla</div>
-                </div>
-            `;
-            return;
+        if (!getUserTables().includes(tableName)) {
+            throw new Error(`La tabla ${tableName} no existe`);
         }
-        
-        const columns = tableInfo[0].values.map(v => v[1]);
-        
-        const rowData = {};
-        inputs.forEach(input => {
-            const row = parseInt(input.dataset.row);
-            const col = parseInt(input.dataset.col);
-            const value = input.value;
-            
-            if (!rowData[row]) rowData[row] = {};
-            rowData[row][col] = value;
-        });
-        
-        let updatedCount = 0;
-        for (const rowIndex in rowData) {
-            const data = rowData[rowIndex];
-            const id = data[0];
-            
-            const setClauses = [];
-            
-            for (let colIndex = 1; colIndex < columns.length; colIndex++) {
-                const colName = columns[colIndex];
-                const value = data[colIndex];
-                
-                const isNumber = !isNaN(value) && value !== '' && value !== null && value !== undefined;
-                const isNull = value === '' || value === null || value === undefined || value === 'NULL';
-                
-                if (isNull) {
-                    setClauses.push(`${colName} = NULL`);
-                } else if (isNumber) {
-                    setClauses.push(`${colName} = ${value}`);
-                } else {
-                    setClauses.push(`${colName} = '${String(value).replace(/'/g, "''")}'`);
-                }
+
+        const columns = getTableColumns(tableName);
+        const pkColumn = columns.find(col => col.pk > 0);
+        if (!pkColumn) {
+            throw new Error('La tabla no tiene clave primaria; actualízala con una consulta SQL');
+        }
+        const pkIndex = columns.findIndex(col => col === pkColumn);
+
+        const rows = new Map();
+        document.querySelectorAll('#tableEditorContent .cell-input').forEach(input => {
+            const rowIndex = Number(input.dataset.row);
+            const colIndex = Number(input.dataset.col);
+            if (!rows.has(rowIndex)) {
+                rows.set(rowIndex, {
+                    values: {},
+                    originals: {},
+                    pk: input.closest('tr')?.dataset.pk ?? ''
+                });
             }
-            
-            if (setClauses.length > 0) {
-                const sql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE id = ${id}`;
-                db.run(sql);
+            const row = rows.get(rowIndex);
+            row.values[colIndex] = input.value;
+            row.originals[colIndex] = input.dataset.original ?? '';
+        });
+
+        let updatedCount = 0;
+        db.run('BEGIN TRANSACTION;');
+        try {
+            for (const row of rows.values()) {
+                const setClauses = [];
+                const params = [];
+
+                columns.forEach((column, colIndex) => {
+                    if (colIndex === pkIndex) return;
+
+                    const rawValue = row.values[colIndex];
+                    const originalValue = row.originals[colIndex];
+                    const current = rawValue === undefined ? '' : rawValue;
+                    const original = originalValue === undefined ? '' : originalValue;
+
+                    if (current === original) return;
+
+                    const parsed = parseColumnValue(current, column);
+                    setClauses.push(`${quoteIdent(column.name)} = ?`);
+                    params.push(parsed);
+                });
+
+                if (setClauses.length === 0) continue;
+
+                const pkValue = parseColumnValue(row.pk, pkColumn);
+                params.push(pkValue);
+                db.run(
+                    `UPDATE ${quoteIdent(tableName)} SET ${setClauses.join(', ')} WHERE ${quoteIdent(pkColumn.name)} = ?`,
+                    params
+                );
                 updatedCount++;
             }
+            db.run('COMMIT;');
+        } catch (e) {
+            db.run('ROLLBACK;');
+            throw e;
         }
-        
-        loadTableEditor();
-        showTablesInfo();
-        updateCharts();
-        generateDiagram();
-        
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:15px;background:#f0fff4;border-radius:8px;border-left:4px solid #28a745;">
-                <div style="color:#28a745;font-weight:600;"><i class="fas fa-check-circle"></i> Cambios guardados correctamente</div>
-                <div style="color:#666;font-size:13px;margin-top:5px;">${updatedCount} fila(s) actualizada(s) en ${tableName}</div>
-            </div>
-        `;
-        
-    } catch(e) {
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:15px;background:#fff5f5;border-radius:8px;border-left:4px solid #dc3545;">
-                <div style="color:#dc3545;font-weight:600;"><i class="fas fa-circle-exclamation"></i> Error al guardar cambios</div>
-                <code style="display:block;padding:10px;background:white;border-radius:6px;font-size:13px;margin-top:5px;">${e.message}</code>
-            </div>
-        `;
+
+        refreshAll();
+        if (updatedCount === 0) {
+            showMessage('info', 'No había cambios que guardar');
+        } else {
+            showMessage('success', 'Cambios guardados correctamente', `${updatedCount} fila(s) actualizada(s) en ${escapeHtml(tableName)}`);
+        }
+    } catch (e) {
+        showMessage('error', 'Error al guardar cambios', `<code>${escapeHtml(e.message)}</code>`);
         console.error(e);
     }
 }
 
-function deleteRow(tableName, id) {
-    if (!confirm(`¿Eliminar registro con ID ${id}?`)) return;
+function deleteRow(tableName, pkValue) {
+    if (!db) return;
+
     try {
-        db.run(`DELETE FROM ${tableName} WHERE id = ${id}`);
-        loadTableEditor();
-        showTablesInfo();
-        updateCharts();
-        generateDiagram();
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:15px;background:#f0fff4;border-radius:8px;border-left:4px solid #28a745;">
-                <div style="color:#28a745;font-weight:600;"><i class="fas fa-check-circle"></i> Registro eliminado correctamente</div>
-            </div>
-        `;
-    } catch(e) {
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:15px;background:#fff5f5;border-radius:8px;border-left:4px solid #dc3545;">
-                <div style="color:#dc3545;font-weight:600;"><i class="fas fa-circle-exclamation"></i> Error al eliminar</div>
-                <code style="display:block;padding:10px;background:white;border-radius:6px;font-size:13px;margin-top:5px;">${e.message}</code>
-            </div>
-        `;
+        const pkColumn = getPrimaryKey(tableName);
+        if (!pkColumn) {
+            throw new Error('La tabla no tiene clave primaria; elimina el registro con una consulta SQL');
+        }
+
+        if (!confirm(`¿Eliminar el registro con ${pkColumn.name} = ${pkValue}?`)) return;
+
+        const value = parseColumnValue(pkValue, pkColumn);
+        db.run(`DELETE FROM ${quoteIdent(tableName)} WHERE ${quoteIdent(pkColumn.name)} = ?`, [value]);
+        refreshAll();
+        showMessage('success', 'Registro eliminado correctamente');
+    } catch (e) {
+        showMessage('error', 'Error al eliminar', `<code>${escapeHtml(e.message)}</code>`);
     }
 }
 
 function addRow(tableName) {
     if (!db) return;
+    if (!tableName) {
+        showMessage('warning', 'No hay ninguna tabla seleccionada');
+        return;
+    }
+
     try {
-        const result = db.exec(`PRAGMA table_info(${tableName})`);
-        if (result.length === 0) return;
-        
-        const columns = result[0].values.map(v => v[1]);
-        const columnsWithoutId = columns.filter(c => c !== 'id');
-        
-        const placeholders = columnsWithoutId.map(() => '?').join(',');
-        const values = columnsWithoutId.map(col => {
-            if (col === 'nombre') return 'Nuevo registro';
-            if (col === 'edad' || col === 'creditos' || col === 'año') return 0;
-            if (col === 'promedio') return 0.0;
-            return 'texto';
-        });
-        
-        db.run(`INSERT INTO ${tableName} (${columnsWithoutId.join(',')}) VALUES (${placeholders})`, values);
-        loadTableEditor();
-        showTablesInfo();
-        updateCharts();
-        generateDiagram();
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:15px;background:#f0fff4;border-radius:8px;border-left:4px solid #28a745;">
-                <div style="color:#28a745;font-weight:600;"><i class="fas fa-check-circle"></i> Nueva fila agregada a ${tableName}</div>
-            </div>
-        `;
-    } catch(e) {
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:15px;background:#fff5f5;border-radius:8px;border-left:4px solid #dc3545;">
-                <div style="color:#dc3545;font-weight:600;"><i class="fas fa-circle-exclamation"></i> Error al agregar fila</div>
-                <code style="display:block;padding:10px;background:white;border-radius:6px;font-size:13px;margin-top:5px;">${e.message}</code>
-            </div>
-        `;
+        const columns = getTableColumns(tableName);
+        if (columns.length === 0) {
+            throw new Error(`La tabla ${tableName} no existe`);
+        }
+
+        const primaryKeys = columns.filter(col => col.pk > 0);
+        const pkColumn = primaryKeys.length === 1 ? primaryKeys[0] : null;
+        const autoPk = pkColumn && /INT/i.test(pkColumn.type);
+        const insertColumns = columns.filter(col => !(autoPk && col === pkColumn));
+
+        if (insertColumns.length === 0) {
+            db.run(`INSERT INTO ${quoteIdent(tableName)} DEFAULT VALUES`);
+        } else {
+            const values = insertColumns.map(column => {
+                if (column === pkColumn) {
+                    return isNumericType(column.type) ? 0 : 'nuevo';
+                }
+                if (column.name === 'nombre') {
+                    return 'Nuevo registro';
+                }
+                if (column.notnull && column.dflt_value === null) {
+                    return isNumericType(column.type) ? 0 : '';
+                }
+                return null;
+            });
+
+            const columnList = insertColumns.map(col => quoteIdent(col.name)).join(', ');
+            const placeholders = insertColumns.map(() => '?').join(', ');
+            db.run(`INSERT INTO ${quoteIdent(tableName)} (${columnList}) VALUES (${placeholders})`, values);
+        }
+
+        refreshAll();
+        showMessage('success', `Nueva fila agregada a ${tableName}`);
+    } catch (e) {
+        showMessage('error', 'Error al agregar fila', `<code>${escapeHtml(e.message)}</code>`);
     }
 }
 
 // DIAGRAMA DE RELACIONES
 function generateDiagram() {
+    const container = document.getElementById('diagramContainer');
+
     if (!db) {
-        document.getElementById('diagramContainer').innerHTML = 
-            '<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Base de datos no inicializada</p>';
+        container.innerHTML = '<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Base de datos no inicializada</p>';
         return;
     }
-    
+
     try {
-        const container = document.getElementById('diagramContainer');
-        
-        const entities = {
-            'estudiantes': {
-                columns: ['id', 'nombre', 'edad', 'carrera', 'promedio', 'ciudad', 'fecha_ingreso'],
-                primaryKey: 'id',
-                foreignKeys: [],
-                label: 'Estudiantes'
-            },
-            'cursos': {
-                columns: ['id', 'nombre', 'creditos', 'profesor', 'departamento', 'semestre'],
-                primaryKey: 'id',
-                foreignKeys: [],
-                label: 'Cursos'
-            },
-            'inscripciones': {
-                columns: ['id', 'estudiante_id', 'curso_id', 'año', 'ciclo', 'nota'],
-                primaryKey: 'id',
-                foreignKeys: ['estudiante_id', 'curso_id'],
-                label: 'Inscripciones'
-            }
-        };
-        
-        let html = '<div class="diagram-erd">';
-        
-        const entityNames = Object.keys(entities);
-        entityNames.forEach((name, index) => {
-            const info = entities[name];
-            
-            html += `<div class="entity-box">`;
-            html += `<div class="entity-title"><i class="fas fa-table"></i> ${info.label}</div>`;
-            html += `<ul>`;
-            
-            info.columns.forEach(col => {
-                let className = '';
-                let displayCol = col;
-                
-                if (col === info.primaryKey && info.foreignKeys.includes(col)) {
-                    className = 'pk-fk';
-                    displayCol = col;
-                } else if (col === info.primaryKey) {
-                    className = 'pk';
-                    displayCol = col;
-                } else if (info.foreignKeys.includes(col)) {
-                    className = 'fk';
-                    displayCol = col;
+        const tables = getUserTables();
+        if (tables.length === 0) {
+            container.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> No hay tablas para mostrar</p>';
+            return;
+        }
+
+        const entities = tables.map(tableName => {
+            let foreignKeys = [];
+            try {
+                const fkResult = db.exec(`PRAGMA foreign_key_list(${quoteIdent(tableName)})`);
+                if (fkResult.length > 0) {
+                    foreignKeys = fkResult[0].values.map(row => ({
+                        table: String(row[2]),
+                        from: String(row[3]),
+                        to: String(row[4]),
+                        onDelete: String(row[6] || 'NO ACTION')
+                    }));
                 }
-                
-                html += `<li class="${className}">${displayCol}</li>`;
-            });
-            
-            html += `</ul></div>`;
-            
-            if (index < entityNames.length - 1) {
-                const currentName = name;
-                const nextName = entityNames[index + 1];
-                
-                let relationLabel = '';
-                let relationSymbol = '───';
-                
-                if (currentName === 'estudiantes' && nextName === 'inscripciones') {
-                    relationLabel = '1 : N';
-                } else if (currentName === 'cursos' && nextName === 'inscripciones') {
-                    relationLabel = '1 : N';
-                } else {
-                    relationLabel = '⟷';
-                }
-                
-                html += `<div class="relation-group">`;
-                html += `<div class="relation-line">${relationSymbol}</div>`;
-                html += `<div class="relation-label">${relationLabel}</div>`;
-                html += `</div>`;
+            } catch (e) {
+                console.error(`No se pudieron leer las claves foráneas de ${tableName}:`, e);
             }
+            return {
+                name: tableName,
+                columns: getTableColumns(tableName),
+                foreignKeys
+            };
         });
-        
+
+        let html = '<div class="diagram-erd">';
+        entities.forEach(entity => {
+            const fkByColumn = new Map(entity.foreignKeys.map(fk => [fk.from, fk]));
+
+            html += `<div class="entity-box">`;
+            html += `<div class="entity-title"><i class="fas fa-table"></i> ${escapeHtml(entity.name)}</div>`;
+            html += '<ul>';
+            entity.columns.forEach(column => {
+                const isPk = column.pk > 0;
+                const fk = fkByColumn.get(column.name);
+                const className = isPk && fk ? 'pk-fk' : isPk ? 'pk' : fk ? 'fk' : '';
+                const title = fk
+                    ? ` title="Referencia a ${escapeHtml(fk.table)}.${escapeHtml(fk.to)}"`
+                    : ` title="${escapeHtml(column.type || 'sin tipo')}"`;
+                html += `<li class="${className}"${title}>${escapeHtml(column.name)}</li>`;
+            });
+            html += '</ul></div>';
+        });
         html += '</div>';
-        
+
+        const relations = entities.flatMap(entity =>
+            entity.foreignKeys.map(fk => ({ source: entity.name, ...fk }))
+        );
+
+        if (relations.length === 0) {
+            html += '<p class="diagram-empty-relations"><i class="fas fa-info-circle"></i> No se detectaron claves foráneas.</p>';
+        } else {
+            html += '<div class="diagram-relations">';
+            html += '<h4><i class="fas fa-link"></i> Relaciones detectadas</h4>';
+            html += '<ul>';
+            relations.forEach(relation => {
+                html += `<li>
+                    <code>${escapeHtml(relation.source)}.${escapeHtml(relation.from)}</code>
+                    <span class="relation-arrow">→</span>
+                    <code>${escapeHtml(relation.table)}.${escapeHtml(relation.to)}</code>
+                    <span class="relation-cardinality">N : 1</span>
+                    <span class="relation-delete">ON DELETE ${escapeHtml(relation.onDelete)}</span>
+                </li>`;
+            });
+            html += '</ul></div>';
+        }
+
         html += `
-            <div style="display:flex; justify-content:center; gap:20px; margin-top:15px; flex-wrap:wrap; font-size:12px; color:#666; border-top:1px solid #e9ecef; padding-top:15px;">
-                <span><span style="color:#336791; font-weight:bold;"><i class="fas fa-key"></i></span> Primary Key</span>
-                <span><span style="color:#764ba2; font-weight:bold;"><i class="fas fa-link"></i></span> Foreign Key</span>
-                <span><span style="color:#dc3545; font-weight:bold;"><i class="fas fa-key"></i><i class="fas fa-link"></i></span> Primary + Foreign Key</span>
+            <div class="diagram-legend">
+                <span><i class="fas fa-key" style="color:#336791;"></i> Primary Key</span>
+                <span><i class="fas fa-link" style="color:#764ba2;"></i> Foreign Key</span>
+                <span><i class="fas fa-key" style="color:#dc3545;"></i><i class="fas fa-link" style="color:#dc3545;"></i> Primary + Foreign Key</span>
             </div>
         `;
-        
+
         container.innerHTML = html;
-        
-    } catch(e) {
-        document.getElementById('diagramContainer').innerHTML = 
-            `<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Error al generar diagrama: ${e.message}</p>`;
+    } catch (e) {
+        container.innerHTML = `<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Error al generar diagrama: ${escapeHtml(e.message)}</p>`;
     }
 }
 
@@ -748,16 +1004,26 @@ function createCloseButton() {
 // GRAFICOS
 function updateCharts() {
     if (!db) return;
-    
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js no está disponible; se omiten los gráficos.');
+        return;
+    }
+
+    const hasStudentsTable = getUserTables().includes('estudiantes');
+    if (!hasStudentsTable) {
+        if (chartCarreras) { chartCarreras.destroy(); chartCarreras = null; }
+        if (chartPromedios) { chartPromedios.destroy(); chartPromedios = null; }
+        return;
+    }
+
     try {
+        if (chartCarreras) { chartCarreras.destroy(); chartCarreras = null; }
         const resultCarreras = db.exec(`SELECT carrera, COUNT(*) as cantidad FROM estudiantes GROUP BY carrera`);
         if (resultCarreras.length > 0 && resultCarreras[0].values.length > 0) {
             const labels = resultCarreras[0].values.map(row => row[0]);
             const data = resultCarreras[0].values.map(row => row[1]);
             const colors = ['#336791', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#a18cd1'];
-            
-            if (chartCarreras) chartCarreras.destroy();
-            
+
             const ctx = document.getElementById('chartCarreras').getContext('2d');
             chartCarreras = new Chart(ctx, {
                 type: 'bar',
@@ -790,16 +1056,16 @@ function updateCharts() {
             });
         }
     } catch(e) {
+        if (chartCarreras) { chartCarreras.destroy(); chartCarreras = null; }
         console.log('Error en grafico de carreras:', e);
     }
     
     try {
+        if (chartPromedios) { chartPromedios.destroy(); chartPromedios = null; }
         const resultPromedios = db.exec(`SELECT carrera, ROUND(AVG(promedio), 2) as promedio FROM estudiantes GROUP BY carrera`);
         if (resultPromedios.length > 0 && resultPromedios[0].values.length > 0) {
             const labels = resultPromedios[0].values.map(row => row[0]);
             const data = resultPromedios[0].values.map(row => row[1]);
-            
-            if (chartPromedios) chartPromedios.destroy();
             
             const ctx = document.getElementById('chartPromedios').getContext('2d');
             chartPromedios = new Chart(ctx, {
@@ -842,6 +1108,7 @@ function updateCharts() {
             });
         }
     } catch(e) {
+        if (chartPromedios) { chartPromedios.destroy(); chartPromedios = null; }
         console.log('Error en grafico de promedios:', e);
     }
 }
@@ -850,11 +1117,7 @@ function updateCharts() {
 function resetDatabase() {
     if (confirm('¿Seguro que quieres reiniciar la base de datos a su estado original?')) {
         dbInitialized = false;
-        document.getElementById('resultOutput').innerHTML = `
-            <div style="padding:20px;text-align:center;color:#f59e0b;background:#fffbeb;border-radius:8px;">
-                <i class="fas fa-spinner fa-spin"></i> Reiniciando base de datos...
-            </div>
-        `;
+        showMessage('warning', 'Reiniciando base de datos...');
         initDatabase();
     }
 }
@@ -993,7 +1256,6 @@ function showExampleByCategory() {
     if (category === 'aleatorio') {
         const keys = Object.keys(categories);
         selectedCategory = keys[Math.floor(Math.random() * keys.length)];
-        selector.value = selectedCategory;
     }
     
     const categoryData = categories[selectedCategory];
@@ -1008,16 +1270,17 @@ function showExampleByCategory() {
         editor.focus();
     }
     
+    document.getElementById('resultOutput').classList.remove('result-placeholder');
     document.getElementById('resultOutput').innerHTML = `
         <div style="padding: 15px; background: #f0f4ff; border-radius: 8px; border-left: 4px solid #336791;">
             <div style="color: #336791; font-weight: 700; font-size: 16px; margin-bottom: 5px;">
-                <i class="fas fa-book"></i> ${categoryData.titulo}
+                <i class="fas fa-book"></i> ${escapeHtml(categoryData.titulo)}
             </div>
             <div style="color: #555; font-size: 14px; margin-bottom: 8px;">
-                <i class="fas fa-lightbulb"></i> ${ejemplo.titulo}
+                <i class="fas fa-lightbulb"></i> ${escapeHtml(ejemplo.titulo)}
             </div>
             <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">
-                ${ejemplo.sql}
+                ${escapeHtml(ejemplo.sql)}
             </div>
             <div style="margin-top: 8px; font-size: 12px; color: #999;">
                 <i class="fas fa-clock"></i> Presiona <strong>"Ejecutar"</strong> o <strong>Ctrl+Enter</strong> para ver el resultado
@@ -1087,16 +1350,11 @@ function showDonationQR(type) {
         </div>
     `;
     
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    openModal(modal);
 }
 
 function closeDonationModal() {
-    const modal = document.getElementById('donationModal');
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = 'auto';
-    }
+    closeModal(document.getElementById('donationModal'));
 }
 
 // GESTORES DE BD - INFORMACION
@@ -1119,6 +1377,7 @@ const dbInfo = {
         empresas: 'Instagram, Apple, Spotify, Uber, Reddit',
         ventajas: 'Muy robusto, excelente rendimiento, gran comunidad',
         desventajas: 'Curva de aprendizaje pronunciada, consume mas recursos',
+        tip: 'Ideal para aplicaciones que requieren consistencia, transacciones complejas y consultas avanzadas.',
         tags: ['Open Source', 'SQL', 'ACID', 'Empresarial']
     },
     'mysql': {
@@ -1139,6 +1398,7 @@ const dbInfo = {
         empresas: 'Facebook, Twitter, YouTube, Netflix, Airbnb',
         ventajas: 'Muy rapido, facil de usar, gran comunidad',
         desventajas: 'Menos funcionalidades que PostgreSQL',
+        tip: 'Ideal para aplicaciones web y proyectos que priorizan velocidad y simplicidad.',
         tags: ['Open Source', 'SQL', 'Rapido', 'Web']
     },
     'sqlserver': {
@@ -1159,6 +1419,7 @@ const dbInfo = {
         empresas: 'Microsoft, Coca-Cola, Walmart, Adobe, Dell',
         ventajas: 'Excelente integracion con Microsoft',
         desventajas: 'Costo de licencia, requiere Windows',
+        tip: 'Ideal para entornos empresariales ya integrados en el ecosistema Microsoft.',
         tags: ['Comercial', 'SQL', 'Empresarial', 'Microsoft']
     },
     'oracle': {
@@ -1179,6 +1440,7 @@ const dbInfo = {
         empresas: 'Bancos, gobiernos, Amazon, Salesforce, SAP',
         ventajas: 'Muy robusto, seguro y escalable',
         desventajas: 'Muy costoso, complejo de administrar',
+        tip: 'Ideal para sistemas criticos que exigen alta seguridad, disponibilidad y soporte corporativo.',
         tags: ['Comercial', 'SQL', 'Empresarial', 'Seguro']
     },
     'mariadb': {
@@ -1199,6 +1461,7 @@ const dbInfo = {
         empresas: 'Google, Wikipedia, WordPress, Red Hat, Fedora',
         ventajas: 'Rapido, compatible con MySQL, innovador',
         desventajas: 'Comunidad mas pequeña que MySQL',
+        tip: 'Ideal para aplicaciones web que buscan compatibilidad con MySQL y codigo abierto.',
         tags: ['Open Source', 'SQL', 'Rapido', 'Web']
     },
     'sqlite': {
@@ -1219,6 +1482,7 @@ const dbInfo = {
         empresas: 'Apple, Google, Firefox, Adobe, Autodesk',
         ventajas: 'Muy ligero, facil de usar, sin configuracion',
         desventajas: 'No escalable para grandes volumenes',
+        tip: 'Ideal para aplicaciones moviles, prototipos y herramientas locales que no necesitan un servidor.',
         tags: ['Open Source', 'SQL', 'Ligero', 'Embebido']
     },
     // ===== GESTORES NoSQL =====
@@ -1240,6 +1504,7 @@ const dbInfo = {
     empresas: 'Adobe, Google, eBay, Bosch, Accenture',
     ventajas: 'Flexible, escalable, facil de comenzar',
     desventajas: 'No tiene JOINs nativos, consistencia eventual',
+    tip: 'Ideal para datos semiestructurados y aplicaciones con esquemas cambiantes.',
     tags: ['NoSQL', 'Documental', 'Escalable', 'JSON']
 },
 'firebase': {
@@ -1260,6 +1525,7 @@ const dbInfo = {
     empresas: 'Google, Lyft, The New York Times, Alibaba',
     ventajas: 'Muy facil de usar, integracion completa',
     desventajas: 'Costo variable, dependencia de Google',
+    tip: 'Ideal para apps moviles y web que necesitan sincronizacion en tiempo real.',
     tags: ['NoSQL', 'Tiempo Real', 'Cloud', 'Mobile']
 },
 'redis': {
@@ -1280,6 +1546,7 @@ const dbInfo = {
     empresas: 'Twitter, GitHub, Stack Overflow, Snapchat',
     ventajas: 'Muy rapido, versatil, facil de usar',
     desventajas: 'No soporta consultas complejas',
+    tip: 'Ideal para cache, sesiones y datos de acceso ultrarrápido; no para consultas relacionales complejas.',
     tags: ['NoSQL', 'Clave-Valor', 'Rapido', 'Cache']
 },
 'cassandra': {
@@ -1300,6 +1567,7 @@ const dbInfo = {
     empresas: 'Apple, Netflix, Uber, eBay, Spotify',
     ventajas: 'Muy escalable, alta disponibilidad',
     desventajas: 'Consistencia eventual, complejo de administrar',
+    tip: 'Ideal para escrituras masivas y datos distribuidos geograficamente.',
     tags: ['NoSQL', 'Columnar', 'Escalable', 'Big Data']
 },
 'neo4j': {
@@ -1320,6 +1588,7 @@ const dbInfo = {
     empresas: 'eBay, Walmart, Cisco, UBS, NASA',
     ventajas: 'Excelente para relaciones complejas, intuitivo',
     desventajas: 'Curva de aprendizaje, no optimizado para datos planos',
+    tip: 'Ideal para redes sociales, recomendaciones y analisis de relaciones complejas.',
     tags: ['NoSQL', 'Grafos', 'Relaciones', 'Redes']
 },
 'elasticsearch': {
@@ -1340,6 +1609,7 @@ const dbInfo = {
     empresas: 'Uber, Netflix, eBay, Microsoft, Facebook',
     ventajas: 'Busqueda rapida, analisis potente',
     desventajas: 'No es una BD transaccional, consistencia eventual',
+    tip: 'Ideal para busqueda de texto completo, logs y analisis; no como base transaccional principal.',
     tags: ['NoSQL', 'Busqueda', 'Analisis', 'Logs']
 }
 };
@@ -1421,35 +1691,17 @@ function openDBInfo(dbKey) {
         
         <div style="margin-top: 15px; padding: 12px; background: #f0f4ff; border-radius: 8px; border-left: 4px solid #336791; font-size:0.9em; color:#555;">
             <i class="fas fa-lightbulb" style="color: #336791;"></i>
-            <strong>Tip:</strong> ${info.title} es una excelente opcion para <strong>aplicaciones que requieren consistencia y relaciones complejas</strong>.
+            <strong>Tip:</strong> ${info.tip}
         </div>
     `;
     
     body.innerHTML = html;
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    openModal(modal);
 }
 
 function closeDBModal() {
-    const modal = document.getElementById('dbModal');
-    modal.classList.remove('active');
-    document.body.style.overflow = 'auto';
+    closeModal(document.getElementById('dbModal'));
 }
-
-// Cerrar modal con clic fuera
-document.addEventListener('click', function(e) {
-    const modal = document.getElementById('dbModal');
-    if (e.target === modal) {
-        closeDBModal();
-    }
-});
-
-// Cerrar modal con tecla ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeDBModal();
-    }
-});
 
 // CONCEPTOS CLAVE
 const conceptInfo = {
@@ -1639,44 +1891,34 @@ function openConcept(conceptKey) {
         
         <div style="margin-top: 15px; padding: 12px; background: #e9ecef; border-radius: 8px; font-size:0.85em; color:#666;">
             <i class="fas fa-info-circle" style="color: #336791;"></i>
-            Este concepto es fundamental para el diseño y optimizacion de bases de datos relacionales.
+            Este concepto forma parte de los fundamentos que te ayudarán a elegir y diseñar el modelo de datos adecuado.
         </div>
     `;
     
     body.innerHTML = html;
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    openModal(modal);
 }
 
 function closeConceptModal() {
-    const modal = document.getElementById('conceptModal');
-    modal.classList.remove('active');
-    document.body.style.overflow = 'auto';
+    closeModal(document.getElementById('conceptModal'));
 }
-
-// Cerrar modal de conceptos con clic fuera
-document.addEventListener('click', function(e) {
-    const modal = document.getElementById('conceptModal');
-    if (e.target === modal) {
-        closeConceptModal();
-    }
-});
-
-// Cerrar modal de conceptos con tecla ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeConceptModal();
-    }
-});
 
 // NAVEGACIÓN ENTRE SECCIONES
 document.addEventListener('DOMContentLoaded', function() {
     // Navegación por pestañas del navbar
     document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.classList.contains('active')) {
+            btn.setAttribute('aria-current', 'page');
+        }
+
         btn.addEventListener('click', function() {
             // Remover active de todos los botones
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('active');
+                b.removeAttribute('aria-current');
+            });
             this.classList.add('active');
+            this.setAttribute('aria-current', 'page');
             
             // Ocultar todas las secciones
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1700,21 +1942,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Cerrar modales con clic fuera o con la tecla ESC
+document.addEventListener('click', function(e) {
+    if (e.target.classList && e.target.classList.contains('modal')) {
+        closeModal(e.target);
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    const activeModal = document.querySelector('.modal.active');
+    if (activeModal) {
+        e.preventDefault();
+        closeModal(activeModal);
+    }
+});
+
 // ATAJOS DE TECLADO
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         runQuery();
     }
-    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r') {
         e.preventDefault();
         resetDatabase();
     }
-    if (e.ctrlKey && e.key === 'e') {
+    if (e.ctrlKey && e.key.toLowerCase() === 'e') {
         e.preventDefault();
         showExamples();
     }
-    if (e.ctrlKey && e.key === 'l') {
+    if (e.ctrlKey && e.key.toLowerCase() === 'l') {
         e.preventDefault();
         clearEditor();
     }
@@ -1976,7 +2234,7 @@ const sqlGuideSteps = [
 
             <h4 style="margin:15px 0 8px 0; color:#e67e22;">Ejemplo:</h4>
             <div style="background:#1a1a2e; color:#e0e0e0; padding:12px 15px; border-radius:8px; font-family:'Courier New',monospace; font-size:13px; overflow-x:auto;">
-                SELECT e.nombre, c.nombre_curso 
+                SELECT e.nombre, c.nombre AS curso
                 FROM estudiantes e
                 JOIN inscripciones i ON e.id = i.estudiante_id
                 JOIN cursos c ON i.curso_id = c.id;
@@ -2029,18 +2287,13 @@ let currentGuideStep = 0;
 
 function openSQLGuide() {
     const modal = document.getElementById('sqlGuideModal');
-    const body = document.getElementById('sqlGuideBody');
-    
     currentGuideStep = 0;
     renderGuideStep(currentGuideStep);
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    openModal(modal);
 }
 
 function closeSQLGuide() {
-    const modal = document.getElementById('sqlGuideModal');
-    modal.classList.remove('active');
-    document.body.style.overflow = 'auto';
+    closeModal(document.getElementById('sqlGuideModal'));
 }
 
 // ===== NUEVA FUNCIÓN: Cerrar guía e ir a Practicar =====
@@ -2056,6 +2309,9 @@ function closeSQLGuideAndGoToPractice() {
 function renderGuideStep(index) {
     const step = sqlGuideSteps[index];
     if (!step) return;
+
+    // Mantiene sincronizado el paso actual aunque se navegue desde la barra de progreso.
+    currentGuideStep = index;
     
     const body = document.getElementById('sqlGuideBody');
     const totalSteps = sqlGuideSteps.length;
@@ -2064,14 +2320,21 @@ function renderGuideStep(index) {
         <!-- Barra de progreso -->
         <div style="display:flex; gap:6px; margin-bottom:20px; justify-content:center;">
             ${sqlGuideSteps.map((s, i) => `
-                <div style="
-                    width: ${100 / totalSteps}%;
-                    height: 4px;
-                    background: ${i <= index ? s.color : '#e9ecef'};
-                    border-radius: 2px;
-                    transition: all 0.3s;
-                    cursor: pointer;
-                " onclick="renderGuideStep(${i})"></div>
+                <button type="button"
+                    aria-label="Ir al paso ${i + 1}"
+                    title="Paso ${i + 1}"
+                    ${i === index ? 'aria-current="step"' : ''}
+                    style="
+                        width: ${100 / totalSteps}%;
+                        height: 4px;
+                        background: ${i <= index ? s.color : '#e9ecef'};
+                        border: none;
+                        padding: 0;
+                        border-radius: 2px;
+                        transition: all 0.3s;
+                        cursor: pointer;
+                    "
+                    onclick="renderGuideStep(${i})"></button>
             `).join('')}
         </div>
         
@@ -2140,6 +2403,7 @@ window.showExamples = showExamples;
 window.clearHistory = clearHistory;
 window.loadHistoryQuery = loadHistoryQuery;
 window.exportDatabase = exportDatabase;
+window.importDatabase = importDatabase;
 window.loadTableEditor = loadTableEditor;
 window.deleteRow = deleteRow;
 window.addRow = addRow;

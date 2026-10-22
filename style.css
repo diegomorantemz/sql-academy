@@ -4,197 +4,1705 @@
     box-sizing: border-box;
 }
 
+:root {
+    --postgres-blue: #336791;
+    --postgres-light: #0064A5;
+    --postgres-dark: #1B2F4A;
+    --postgres-bg: #F5F5F5;
+    --postgres-white: #FFFFFF;
+    --postgres-border: #D4D4D4;
+    --postgres-shadow: rgba(51, 103, 145, 0.15);
+    --postgres-text: #2C3E50;
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--postgres-bg);
+    color: #2C3E50;
     min-height: 100vh;
-    padding: 20px;
 }
 
-.container {
-    max-width: 1200px;
+/* ===== APP CONTAINER ===== */
+.app-container {
+    max-width: 1400px;
     margin: 0 auto;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    overflow: hidden;
+    background: var(--postgres-white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(0,0,0,0.05);
+}
+
+/* ===== HEADER ===== */
+.app-header {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 0 30px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+
+.header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.3em;
+    font-weight: 700;
+}
+
+.logo i {
+    font-size: 1.8em;
+    color: #FFD700;
+}
+
+.badge-postgres {
+    background: rgba(255,255,255,0.2);
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-size: 0.6em;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.main-nav {
+    display: flex;
+    gap: 4px;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-btn:hover {
+    color: white;
+    background: rgba(255,255,255,0.1);
+}
+
+.nav-btn.active {
+    color: white;
+    background: rgba(255,255,255,0.15);
+    box-shadow: inset 0 -2px 0 #FFD700;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-outline {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-outline:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* ===== SECCIONES ===== */
+.section {
+    display: none;
     padding: 30px;
+    animation: fadeIn 0.3s ease;
+    flex: 1;
 }
 
-header {
-    text-align: center;
-    padding-bottom: 20px;
-    border-bottom: 3px solid #667eea;
+.section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.section-header {
     margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--postgres-border);
 }
 
-header h1 {
-    font-size: 2.5em;
-    color: #333;
+.section-header h2 {
+    font-size: 1.8em;
+    color: var(--postgres-dark);
+}
+
+.section-header h2 i {
+    color: var(--postgres-blue);
+    margin-right: 12px;
+}
+
+.section-header p {
+    color: #666;
+    font-size: 1.05em;
+    margin-top: 4px;
+}
+
+/* ===== LEARN SECTION ===== */
+.learn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.learn-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid var(--postgres-border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.learn-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--postgres-blue);
+    box-shadow: 0 8px 30px var(--postgres-shadow);
+}
+
+.learn-card-icon {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 10px;
 }
 
-header p {
+.learn-card-icon img {
+    max-height: 48px;
+    max-width: 80px;
+    object-fit: contain;
+}
+
+.learn-card h3 {
+    font-size: 0.95em;
+    color: var(--postgres-dark);
+    margin: 6px 0 3px;
+}
+
+.learn-card p {
+    font-size: 0.75em;
     color: #666;
-    font-size: 1.1em;
+    margin: 3px 0 10px;
+    line-height: 1.3;
 }
 
-.main-content {
+.learn-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.6em;
+    font-weight: 600;
+    margin: 2px 3px;
+    background: var(--postgres-bg);
+    color: var(--postgres-text);
+}
+
+.comparison-wrapper {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.comparison-wrapper h3 {
+    color: var(--postgres-dark);
+    margin-bottom: 15px;
+}
+
+.comparison-wrapper h3 i {
+    color: var(--postgres-blue);
+    margin-right: 8px;
+}
+
+.comparison-table-wrap {
+    overflow-x: auto;
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+    min-width: 700px;
+}
+
+.comparison-table th {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 10px 12px;
+    text-align: center;
+}
+
+.comparison-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--postgres-border);
+    text-align: center;
+    color: #444;
+}
+
+.comparison-table td:first-child {
+    text-align: left;
+    font-weight: 500;
+    color: var(--postgres-dark);
+}
+
+.comparison-table tr:hover td {
+    background: rgba(51, 103, 145, 0.05);
+}
+
+/* ===== PRACTICE SECTION ===== */
+.practice-layout {
     display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 30px;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+    margin-bottom: 30px;
 }
 
-@media (max-width: 768px) {
-    .main-content {
+@media (max-width: 992px) {
+    .practice-layout {
         grid-template-columns: 1fr;
     }
 }
 
-.info-panel {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 10px;
-    border-left: 4px solid #667eea;
+.practice-sidebar {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 16px;
+    max-height: 600px;
+    overflow-y: auto;
 }
 
-.info-panel h3 {
-    color: #333;
-    margin-bottom: 15px;
+.practice-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.info-panel table {
-    width: 100%;
-    font-size: 0.9em;
-    border-collapse: collapse;
-}
-
-.info-panel th {
-    text-align: left;
-    color: #667eea;
-    padding: 5px 0;
-}
-
-.info-panel td {
-    padding: 3px 0;
-    color: #555;
-}
-
-.query-panel {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 10px;
-}
-
-.query-panel h3 {
-    color: #333;
-    margin-bottom: 15px;
+.editor-wrapper {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 16px;
 }
 
 #sqlEditor {
     width: 100%;
-    padding: 15px;
+    height: 160px;
+    padding: 12px 16px;
+    border: 2px solid var(--postgres-border);
+    border-radius: 8px;
     font-family: 'Courier New', monospace;
     font-size: 14px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    resize: vertical;
+    line-height: 1.6;
+    resize: none;
+    background: white;
+    color: var(--postgres-text);
     transition: border-color 0.3s;
+    overflow: auto !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
 }
 
 #sqlEditor:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
 }
 
-.button-group {
-    margin: 15px 0;
+.editor-toolbar {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
+    margin-top: 12px;
 }
 
 button {
-    padding: 10px 25px;
+    padding: 8px 18px;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
-    font-size: 14px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 #executeBtn {
-    background: #667eea;
+    background: var(--postgres-blue);
     color: white;
 }
 
 #executeBtn:hover {
-    background: #5a6fd6;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    background: var(--postgres-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(51, 103, 145, 0.3);
 }
 
-button:not(#executeBtn) {
-    background: #e9ecef;
+.btn-secondary {
+    background: white;
+    color: var(--postgres-text);
+    border: 1px solid var(--postgres-border);
+}
+
+.btn-secondary:hover {
+    background: var(--postgres-bg);
+    transform: translateY(-1px);
+}
+
+.btn-save {
+    background: #28a745;
+    color: white;
+}
+
+.btn-save:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.example-selector {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: auto;
+}
+
+.example-selector select {
+    padding: 6px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    color: var(--postgres-text);
+    cursor: pointer;
+}
+
+/* ===== HISTORIAL ===== */
+.history-wrapper {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 12px 16px;
+}
+
+.history-wrapper h4 {
+    color: var(--postgres-dark);
+    font-size: 0.9em;
+    margin-bottom: 8px;
+}
+
+.history-wrapper h4 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+#historyList {
+    list-style: none;
+    padding: 0;
+    max-height: 120px;
+    overflow: auto;
+}
+
+#historyList li {
+    padding: 6px 10px;
+    margin: 2px 0;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    transition: background 0.2s;
+    border-left: 3px solid var(--postgres-blue);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#historyList li:hover {
+    background: #e8f0f5;
+}
+
+#historyList li.empty-history {
+    color: #999;
+    border-left-color: #999;
+    cursor: default;
+    font-family: 'Segoe UI', sans-serif;
+    font-style: italic;
+}
+
+#historyList li.empty-history:hover {
+    background: white;
+}
+
+/* ===== MENSAJES DEL PANEL DE RESULTADOS ===== */
+.msg {
+    padding: 15px 18px;
+    border-radius: 8px;
+    border-left: 4px solid var(--postgres-blue);
+    background: #f0f4ff;
     color: #333;
 }
 
-button:not(#executeBtn):hover {
-    background: #dee2e6;
-    transform: translateY(-2px);
+.msg-title {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-#resultArea {
-    margin-top: 20px;
+.msg-detail {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #555;
+}
+
+.msg-detail code {
+    display: block;
+    padding: 10px;
     background: white;
-    padding: 15px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #333;
+    margin-top: 5px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.msg-success {
+    background: #f0fff4;
+    border-left-color: #28a745;
+}
+
+.msg-success .msg-title {
+    color: #28a745;
+}
+
+.msg-error {
+    background: #fff5f5;
+    border-left-color: #dc3545;
+}
+
+.msg-error .msg-title {
+    color: #dc3545;
+}
+
+.msg-warning {
+    background: #fffbeb;
+    border-left-color: #f59e0b;
+}
+
+.msg-warning .msg-title {
+    color: #b26a00;
+}
+
+.msg-info {
+    background: #f0f4ff;
+    border-left-color: #336791;
+}
+
+.msg-info .msg-title {
+    color: #336791;
+}
+
+/* ===== RESULTADOS ===== */
+.results-wrapper {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 12px 16px;
+}
+
+.results-wrapper h4 {
+    color: var(--postgres-dark);
+    font-size: 0.9em;
+    margin-bottom: 8px;
+}
+
+.results-wrapper h4 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+#resultOutput {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 80px;
+    max-height: 400px;
+    overflow: auto;
+    font-size: 14px;
+}
+
+.result-placeholder {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+}
+
+.placeholder-icon {
+    font-size: 2em;
+    display: block;
+    margin-bottom: 8px;
+    color: var(--postgres-blue);
+}
+
+.result-container {
+    overflow: auto !important;
+    max-height: 350px;
+}
+
+.result-container table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 600px;
+}
+
+.result-container thead th {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 8px 12px;
+    text-align: left;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.result-container tbody td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #f1f3f5;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.result-container tbody tr:hover td {
+    background: #f1f3f5;
+}
+
+.result-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    background: white;
     border-radius: 8px;
     border: 1px solid #e9ecef;
 }
 
-#resultArea h4 {
-    color: #333;
+.result-meta + .result-container {
+    margin-bottom: 12px;
+}
+
+.result-scroll-hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* ===== TABLE EDITOR ===== */
+.table-editor {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.table-editor h4 {
+    color: var(--postgres-dark);
+    margin-bottom: 12px;
+}
+
+.table-editor h4 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+.table-editor-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.table-editor select {
+    padding: 6px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+    background: white;
+    font-size: 13px;
+}
+
+#tableEditorContent {
+    background: white;
+    border-radius: 8px;
+    padding: 10px;
+    max-height: 300px;
+    overflow: auto;
+}
+
+#tableEditorContent table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 500px;
+}
+
+#tableEditorContent th {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#tableEditorContent td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+#tableEditorContent td input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+#tableEditorContent td input:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 2px rgba(51, 103, 145, 0.15);
+}
+
+#tableEditorContent td input.pk-input {
+    background: var(--postgres-bg);
+    color: #555;
+    font-weight: 600;
+    cursor: not-allowed;
+}
+
+#tableEditorContent button {
+    padding: 2px 8px;
+    font-size: 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* ===== ANALYZE SECTION ===== */
+.analyze-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.analyze-card {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.analyze-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.analyze-card h3 {
+    color: var(--postgres-dark);
+    font-size: 1em;
+    margin-bottom: 12px;
+}
+
+.analyze-card h3 i {
+    color: var(--postgres-blue);
+    margin-right: 8px;
+}
+
+.chart-box {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.chart-box canvas {
+    max-height: 250px;
+    max-width: 100%;
+}
+
+/* ===== DIAGRAMA ===== */
+#diagramContainer {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 250px;
+    overflow: auto;
+}
+
+.diagram-loading {
+    text-align: center;
+    color: #999;
+    padding: 40px 0;
+}
+
+#diagramContainer.full-view {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    z-index: 3000;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+    overflow: auto;
+}
+
+.diagram-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 2999;
+    display: none;
+}
+
+.diagram-overlay.active {
+    display: block;
+}
+
+.close-diagram-btn {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    z-index: 3001;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(220,53,69,0.4);
+    transition: all 0.3s;
+}
+
+.close-diagram-btn:hover {
+    transform: scale(1.1);
+}
+
+.close-diagram-btn.visible {
+    display: flex;
+}
+
+.diagram-erd {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 30px;
+    padding: 10px;
+    min-width: 500px;
+}
+
+.entity-box {
+    background: white;
+    border: 2px solid var(--postgres-blue);
+    border-radius: 10px;
+    padding: 14px 18px;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    transition: transform 0.3s;
+}
+
+.entity-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.entity-box .entity-title {
+    color: var(--postgres-blue);
+    border-bottom: 2px solid var(--postgres-blue);
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.entity-box ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+}
+
+.entity-box ul li {
+    padding: 3px 8px;
+    border-bottom: 1px solid #f1f3f5;
+    color: #555;
+    font-family: 'Courier New', monospace;
+}
+
+.entity-box ul li:last-child {
+    border-bottom: none;
+}
+
+.entity-box .pk { color: var(--postgres-blue); font-weight: bold; }
+.entity-box .pk::after { content: ' PK'; }
+.entity-box .fk { color: #764ba2; font-weight: bold; }
+.entity-box .fk::after { content: ' FK'; }
+.entity-box .pk-fk { color: #dc3545; font-weight: bold; }
+.entity-box .pk-fk::after { content: ' PK/FK'; }
+
+.relation-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.relation-line {
+    font-size: 22px;
+    color: #764ba2;
+    font-weight: bold;
+}
+
+.relation-label {
+    font-size: 10px;
+    color: #999;
+    background: var(--postgres-bg);
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--postgres-border);
+}
+
+.diagram-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     margin-bottom: 10px;
 }
 
-#resultOutput {
+.diagram-relations {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #e9ecef;
+}
+
+.diagram-relations h4 {
+    color: var(--postgres-dark);
+    font-size: 0.95em;
+    margin-bottom: 10px;
+}
+
+.diagram-relations h4 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+.diagram-relations ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.diagram-relations li {
+    background: var(--postgres-bg);
+    border-left: 3px solid #764ba2;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.diagram-relations code {
     font-family: 'Courier New', monospace;
-    font-size: 14px;
-    min-height: 100px;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 5px;
-    overflow-x: auto;
+    color: var(--postgres-dark);
 }
 
-#resultOutput table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Segoe UI', sans-serif;
+.relation-arrow {
+    color: #764ba2;
+    font-weight: bold;
 }
 
-#resultOutput th {
-    background: #667eea;
+.relation-cardinality {
+    background: #764ba2;
     color: white;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.relation-delete {
+    margin-left: auto;
+    color: #999;
+    font-size: 10px;
+}
+
+.diagram-empty-relations {
+    margin-top: 18px;
+    padding: 12px;
+    text-align: center;
+    color: #999;
+    background: var(--postgres-bg);
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.diagram-empty-relations i {
+    color: var(--postgres-blue);
+    margin-right: 5px;
+}
+
+.diagram-legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: #666;
+    border-top: 1px solid #e9ecef;
+    padding-top: 15px;
+}
+
+/* ===== INFO PANEL ===== */
+.info-panel h3 {
+    color: var(--postgres-dark);
+    font-size: 0.95em;
+    margin-bottom: 12px;
+    position: sticky;
+    top: 0;
+    background: var(--postgres-bg);
+    padding: 8px 0;
+    z-index: 5;
+}
+
+.info-panel h3 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+.table-card {
+    background: white;
+    border-radius: 8px;
     padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid var(--postgres-border);
+}
+
+.table-card:last-child {
+    margin-bottom: 0;
+}
+
+.table-title {
+    font-weight: 600;
+    color: var(--postgres-dark);
+    padding: 4px 0 8px;
+    border-bottom: 2px solid var(--postgres-blue);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.table-title i {
+    color: var(--postgres-blue);
+    margin-right: 4px;
+}
+
+.badge-count {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 1px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+.table-scroll {
+    max-height: 160px;
+    overflow: auto;
+}
+
+.info-table {
+    width: 100%;
+    font-size: 0.8em;
+    border-collapse: collapse;
+    min-width: 300px;
+}
+
+.info-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.info-table th {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 4px 8px;
     text-align: left;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
-#resultOutput td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #dee2e6;
+.info-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #f1f3f5;
+    color: #444;
+    font-size: 0.85em;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-#resultOutput tr:hover {
+.info-table td:hover {
+    overflow: visible;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.info-table tbody tr:hover {
     background: #f1f3f5;
 }
 
-footer {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #e9ecef;
-    text-align: center;
-    color: #999;
-    font-size: 0.9em;
+/* ===== CONCEPTS SECTION ===== */
+.concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
 }
+
+.concept-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid var(--postgres-border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.concept-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--postgres-blue);
+    box-shadow: 0 8px 30px var(--postgres-shadow);
+}
+
+.concept-icon {
+    font-size: 2.2em;
+    color: var(--postgres-blue);
+    margin-bottom: 10px;
+}
+
+.concept-card h3 {
+    font-size: 1em;
+    color: var(--postgres-dark);
+    margin: 6px 0;
+}
+
+.concept-card p {
+    font-size: 0.8em;
+    color: #666;
+    margin: 4px 0 12px;
+    line-height: 1.4;
+}
+
+.concept-tag {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-size: 0.65em;
+    font-weight: 600;
+    background: var(--postgres-bg);
+    color: var(--postgres-text);
+}
+
+/* ===== MODALES ===== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    max-width: 680px;
+    width: 92%;
+    max-height: 85vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 16px 24px;
+    border-bottom: 2px solid var(--postgres-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--postgres-bg);
+}
+
+.modal-header h2 {
+    font-size: 1.2em;
+    color: var(--postgres-dark);
+}
+
+.modal-header h2 i {
+    color: var(--postgres-blue);
+    margin-right: 8px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    padding: 0 8px;
+    transition: color 0.3s;
+}
+
+.modal-close:hover {
+    color: #dc3545;
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(85vh - 80px);
+}
+
+.modal-body h3 {
+    color: var(--postgres-dark);
+    margin: 16px 0 8px;
+    font-size: 1.05em;
+}
+
+.modal-body h3 i {
+    color: var(--postgres-blue);
+    margin-right: 8px;
+}
+
+.modal-body p {
+    color: #444;
+    line-height: 1.7;
+    margin: 8px 0;
+}
+
+.modal-body ul {
+    padding-left: 20px;
+    margin: 8px 0;
+}
+
+.modal-body ul li {
+    color: #444;
+    line-height: 1.7;
+    margin: 4px 0;
+}
+
+.modal-body .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.modal-body .info-item {
+    background: var(--postgres-bg);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border-left: 3px solid var(--postgres-blue);
+}
+
+.modal-body .info-item .label {
+    font-size: 0.7em;
+    text-transform: uppercase;
+    color: #999;
+    font-weight: 600;
+}
+
+.modal-body .info-item .value {
+    font-size: 0.95em;
+    color: var(--postgres-dark);
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.modal-body .badge-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+}
+
+.modal-body .badge {
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.badge-success { background: #d4edda; color: #155724; }
+.badge-info { background: #cce5ff; color: #004085; }
+.badge-warning { background: #fff3cd; color: #856404; }
+.badge-danger { background: #f8d7da; color: #721c24; }
+.badge-secondary { background: #e9ecef; color: #495057; }
+
+.modal-body .db-logo-large {
+    text-align: center;
+    padding: 10px 0 20px;
+}
+
+.modal-body .db-logo-large img {
+    max-height: 60px;
+    max-width: 120px;
+    object-fit: contain;
+}
+
+/* ===== DONACIONES ===== */
+.donation-container {
+    display: none;
+    margin-top: 15px;
+}
+
+.donation-container.active {
+    display: block;
+}
+
+.qr-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+
+.qr-footer {
+    font-size: 0.8em;
+    color: #999;
+    background: #f8f9fa;
+    padding: 8px 15px;
+    border-radius: 5px;
+    margin-top: 5px;
+    text-align: center;
+}
+
+/* ===== FOOTER ===== */
+.app-footer {
+    background: var(--postgres-dark);
+    color: rgba(255,255,255,0.7);
+    padding: 16px 30px;
+    margin-top: auto;
+    border-top: 3px solid #336791;
+}
+
+.footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.footer-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.footer-left .brand-name {
+    font-size: 1.1em;
+    font-weight: 700;
+    color: #667eea;
+    letter-spacing: 1px;
+}
+
+.footer-left .brand-tagline {
+    font-size: 0.65em;
+    color: rgba(255,255,255,0.3);
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin-top: 1px;
+}
+
+.footer-center {
+    flex: 1;
+    text-align: center;
+}
+
+.footer-center p {
+    margin: 0;
+    font-size: 0.8em;
+    color: rgba(255,255,255,0.5);
+}
+
+.footer-center i {
+    color: rgba(255,255,255,0.3);
+}
+
+.footer-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.footer-donation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.coffee-message {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85em;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.coffee-message i {
+    color: #f39c12;
+    font-size: 1.1em;
+}
+
+.btn-donation-sm {
+    padding: 5px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-donation-sm.yape {
+    background: #ee5a24;
+}
+
+.btn-donation-sm.yape:hover {
+    background: #d63031;
+    transform: translateY(-2px);
+}
+
+.btn-donation-sm.plin {
+    background: #6c5ce7;
+}
+
+.btn-donation-sm.plin:hover {
+    background: #5f3dc4;
+    transform: translateY(-2px);
+}
+
+/* ===== UTILITIES ===== */
+.text-success { color: #28a745; }
+.text-danger { color: #dc3545; }
+.text-warning { color: #ffc107; }
+.text-muted { color: #999; }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--postgres-blue);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--postgres-light);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--postgres-blue) #f1f1f1;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .header-content {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 10px 0;
+        gap: 8px;
+    }
+
+    .main-nav {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .nav-btn {
+        padding: 6px 12px;
+        font-size: 0.8em;
+    }
+
+    .section {
+        padding: 16px;
+    }
+
+    .learn-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    .concepts-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .analyze-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .analyze-card.full-width {
+        grid-column: auto;
+    }
+
+    .modal-content {
+        width: 96%;
+    }
+
+    .modal-body .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .footer-left {
+        align-items: center;
+    }
+
+    .footer-right {
+        justify-content: center;
+    }
+
+    .footer-donation {
+        justify-content: center;
+    }
+
+    .editor-toolbar {
+        flex-direction: column;
+    }
+
+    .example-selector {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .example-selector select {
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .concepts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .learn-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .comparison-table {
+        font-size: 0.7em;
+        min-width: 500px;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+        padding: 4px 6px;
+    }
+
+    #sqlEditor {
+        height: 120px;
+        font-size: 13px;
+    }
+
+    .header-actions {
+        display: none;
+    }
+}
+
+/* ===== GRUPOS DE GESTORES ===== */
+.db-group {
+    margin-bottom: 20px;
+}
+
+.db-group-title {
+    font-size: 1.4em;
+    color: var(--postgres-dark);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.db-group-title i {
+    font-size: 1.2em;
+}
+
+.db-group-subtitle {
+    color: #666;
+    font-size: 0.95em;
+    margin-bottom: 15px;
+}
+
+.db-group:last-child {
+    margin-bottom: 0;
+}
+
+/* ===== ETIQUETAS SQL vs NoSQL ===== */
+.concept-tag {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-size: 0.65em;
+    font-weight: 600;
+    background: var(--postgres-bg);
+    color: var(--postgres-text);
+    margin: 2px 3px;
+}
+
+.sql-tag {
+    background: #336791 !important;
+    color: white !important;
+}
+
+.nosql-tag {
+    background: #f39c12 !important;
+    color: white !important;
+}
+
+/* ===== GUÍA SQL ===== */
+#sqlGuideBody code {
+    background: #f1f3f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #e74c3c;
+}
+
+#sqlGuideBody .btn-secondary {
+    background: white;
+    color: #336791;
+    border: 2px solid #336791;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+#sqlGuideBody .btn-secondary:hover {
+    background: #336791;
+    color: white;
+}
+
+/* ===== ICONOS DE CONCEPTOS ===== */
+.concept-card .fa-sitemap { color: #336791; }
+.concept-card .fa-layer-group { color: #2ecc71; }
+.concept-card .fa-key { color: #e74c3c; }
+.concept-card .fa-code { color: #9b59b6; }
+.concept-card .fa-shield-halved { color: #3498db; }
+.concept-card .fa-list { color: #1abc9c; }
+.concept-card .fa-database { color: #f39c12; }
+.concept-card .fa-file-lines { color: #e67e22; }
+.concept-card .fa-table-cells { color: #00b894; }
+.concept-card .fa-share-nodes { color: #6c5ce7; }
+.concept-card .fa-bolt { color: #fdcb6e; }
