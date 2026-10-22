@@ -1,0 +1,11 @@
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/explain"
+  to = "/.netlify/functions/explain"
+  status = 200
+  force = true

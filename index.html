@@ -290,6 +290,9 @@
                             <button onclick="openSQLGuide()" class="btn-secondary" title="Guía de primeros pasos en SQL">
                                 <i class="fas fa-graduation-cap"></i> Guía SQL
                             </button>
+                            <button id="aiHelpBtn" onclick="openAIHelp('manual')" class="btn-secondary btn-ai" title="Explicar tu consulta con IA">
+                                <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
+                            </button>
 
                             <div class="example-selector">
                                 <select id="categorySelector">
@@ -584,6 +587,38 @@
         </div>
     </div>
 </div>
+
+    <!-- ===== ASISTENTE IA ===== -->
+    <div id="aiHelpModal" class="modal ai-modal" role="dialog" aria-modal="true" aria-labelledby="aiHelpTitle">
+        <div class="modal-content ai-panel">
+            <div class="modal-header ai-panel-header">
+                <h2 id="aiHelpTitle"><i class="fas fa-wand-magic-sparkles"></i> Asistente SQL</h2>
+                <button type="button" onclick="closeAIHelp()" class="modal-close" aria-label="Cerrar asistente">&times;</button>
+            </div>
+            <div class="ai-panel-body" id="aiHelpBody" aria-live="polite">
+                <div class="ai-empty">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    <h3>Tu ayudante de SQL</h3>
+                    <p>Puedo explicarte qué falló en una consulta y cómo corregirla.</p>
+                    <p class="ai-empty-hint">Escribe una consulta y pulsa “Ayudante IA”, o usa el botón que aparece cuando ocurre un error.</p>
+                </div>
+            </div>
+            <div class="ai-panel-footer">
+                <p class="ai-privacy">
+                    <i class="fas fa-shield-halved"></i>
+                    Se envían la consulta, el error (si existe) y el esquema de las tablas. Nunca los datos de los registros.
+                </p>
+                <div class="ai-panel-actions">
+                    <button type="button" id="aiCopyBtn" class="btn-secondary" onclick="copyAIResponse()" disabled>
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <button type="button" id="aiRetryBtn" class="btn-secondary" onclick="retryAIHelp()" hidden>
+                        <i class="fas fa-rotate"></i> Reintentar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Cargar sql.js -->
     <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
