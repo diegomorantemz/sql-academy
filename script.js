@@ -621,6 +621,16 @@ function getAIErrorMessage(code) {
             return 'La consulta o el error son demasiado largos para enviarlos al asistente.';
         case 'timeout':
             return 'La explicación tardó demasiado en llegar. Intenta de nuevo.';
+        case 'model_overloaded':
+            return 'El modelo de IA está saturado en este momento. Intenta de nuevo en unos segundos.';
+        case 'model_unavailable':
+            return 'El modelo de IA configurado ya no está disponible. Revisa GEMINI_MODEL en Netlify.';
+        case 'gemini_auth':
+            return 'La clave de Gemini no es válida o no tiene permisos. Revisa GEMINI_API_KEY en Netlify.';
+        case 'gemini_bad_request':
+            return 'La solicitud al proveedor de IA no es válida. Intenta reformular la consulta.';
+        case 'gemini_unavailable':
+            return 'El proveedor de IA está teniendo problemas temporales. Intenta de nuevo en unos segundos.';
         case 'upstream':
         case 'invalid_upstream_response':
             return 'El proveedor de IA no respondió correctamente. Intenta de nuevo en unos segundos.';
@@ -641,6 +651,8 @@ function isAIRetryable(code) {
         'quota',
         'rate_limited',
         'timeout',
+        'model_overloaded',
+        'gemini_unavailable',
         'upstream',
         'invalid_upstream_response',
         'empty_response',

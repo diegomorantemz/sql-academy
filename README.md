@@ -127,8 +127,11 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 1. Crea una API Key gratuita en [Google AI Studio](https://aistudio.google.com/apikey).
 2. En Netlify, entra en **Site configuration → Environment variables**.
 3. Añade `GEMINI_API_KEY` con el valor de tu clave.
-4. Opcionalmente, añade `GEMINI_MODEL` para cambiar el modelo. El valor por defecto es `gemini-2.5-flash`.
-5. Vuelve a desplegar el sitio. La función se publica desde `netlify/functions` y el frontend llama a `/api/explain`.
+4. Opcionalmente, añade `GEMINI_MODEL` para cambiar el modelo. El valor por defecto es `gemini-3.5-flash-lite`.
+5. Opcionalmente, añade `GEMINI_FALLBACK_MODEL` para indicar el modelo de respaldo. El valor por defecto es `gemini-3.5-flash`; se usa si el modelo principal está saturado o ya no está disponible.
+6. Vuelve a desplegar el sitio. La función se publica desde `netlify/functions` y el frontend llama a `/api/explain`.
+
+> **Nota sobre modelos:** `gemini-2.5-flash` ya no está disponible para proyectos nuevos. Usa `gemini-3.5-flash-lite` o `gemini-3.5-flash`. Si el modelo principal devuelve saturación (503), la función reintenta una vez con el modelo de respaldo.
 
 > **Importante:** arrastrar la carpeta a Netlify solo publica los archivos estáticos. Para desplegar la función usa Git o Netlify CLI (`netlify deploy --prod`). No subas tu `.env` real al repositorio; `.gitignore` ya lo excluye.
 
@@ -149,6 +152,13 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - El asistente IA requiere conexión a internet y la Netlify Function desplegada. Al abrir `index.html` directamente con `file://` o con un servidor estático sin funciones, el botón mostrará un aviso y el simulador seguirá funcionando.
 
 ## Release Notes
+
+### v1.3.1
+
+- **Corrección del asistente IA:**
+  - Se actualizó el modelo por defecto a `gemini-3.5-flash-lite`, porque `gemini-2.5-flash` ya no está disponible para proyectos nuevos.
+  - Se añadió `GEMINI_FALLBACK_MODEL` para reintentar con `gemini-3.5-flash` si el modelo principal está saturado o no disponible.
+  - Se añadieron mensajes específicos para modelos saturados, modelos no disponibles y errores de autenticación.
 
 ### v1.3.0
 

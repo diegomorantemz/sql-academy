@@ -5,6 +5,10 @@ const MAX_ERROR_CHARS = 2000;
 const MAX_SCHEMA_CHARS = 5000;
 const MAX_OUTPUT_TOKENS = 700;
 
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
+const DEFAULT_FALLBACK_MODEL = 'gemini-3.5-flash';
+const FALLBACK_STATUSES = new Set([404, 503]);
+
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 6;
 
@@ -117,12 +121,74 @@ function extractGeminiText(data) {
         .trim();
 }
 
+function resolveModel(value, fallback) {
+    const model = typeof value === 'string' ? value.trim() : '';
+    return model || fallback;
+}
+
+async function readGeminiError(response) {
+    let detail = '';
+
+    try {
+        const text = await response.text();
+        if (text) {
+            try {
+                const data = JSON.parse(text);
+                detail = data?.error?.message || data?.error?.status || '';
+            } catch (error) {
+                detail = text;
+            }
+        }
+    } catch (error) {
+        detail = '';
+    }
+
+    return String(detail).replace(/\s+/g, ' ').trim().slice(0, 300);
+}
+
+function sanitizeLogDetail(detail, apiKey) {
+    let safe = String(detail || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    if (apiKey) {
+        safe = safe.split(apiKey).join('[redacted]');
+    }
+    return safe;
+}
+
+function getGeminiErrorCode(status) {
+    if (status === 400) return 'gemini_bad_request';
+    if (status === 401 || status === 403) return 'gemini_auth';
+    if (status === 404) return 'model_unavailable';
+    if (status === 429) return 'quota';
+    if (status === 503) return 'model_overloaded';
+    if (status >= 500) return 'gemini_unavailable';
+    return 'upstream';
+}
+
+function getGeminiErrorHttpStatus(status) {
+    return status === 429 ? 429 : 502;
+}
+
+function requestGemini(model, apiKey, requestBody, signal) {
+    return fetch(
+        `${GEMINI_ENDPOINT}/${encodeURIComponent(model)}:generateContent`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey
+            },
+            body: JSON.stringify(requestBody),
+            signal
+        }
+    );
+}
+
 export default async (req, context) => {
     if (req.method !== 'POST') {
         return json(405, { error: 'method_not_allowed' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
         return json(503, { error: 'missing_key' });
     }
@@ -156,45 +222,56 @@ export default async (req, context) => {
         return json(429, { error: 'rate_limited' });
     }
 
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const primaryModel = resolveModel(process.env.GEMINI_MODEL, DEFAULT_MODEL);
+    const fallbackModel = resolveModel(process.env.GEMINI_FALLBACK_MODEL, DEFAULT_FALLBACK_MODEL);
+    const requestBody = {
+        systemInstruction: {
+            parts: [{ text: SYSTEM_PROMPT }]
+        },
+        contents: [
+            {
+                role: 'user',
+                parts: [{ text: buildUserPrompt({ query, error: errorMessage, schema }) }]
+            }
+        ],
+        generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: MAX_OUTPUT_TOKENS
+        }
+    };
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20_000);
 
     try {
-        const response = await fetch(
-            `${GEMINI_ENDPOINT}/${encodeURIComponent(model)}:generateContent`,
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': apiKey
-                },
-                body: JSON.stringify({
-                    systemInstruction: {
-                        parts: [{ text: SYSTEM_PROMPT }]
-                    },
-                    contents: [
-                        {
-                            role: 'user',
-                            parts: [{ text: buildUserPrompt({ query, error: errorMessage, schema }) }]
-                        }
-                    ],
-                    generationConfig: {
-                        temperature: 0.2,
-                        maxOutputTokens: MAX_OUTPUT_TOKENS
-                    }
-                }),
-                signal: controller.signal
-            }
-        );
+        let model = primaryModel;
+        let response = await requestGemini(model, apiKey, requestBody, controller.signal);
+
+        if (
+            !response.ok &&
+            fallbackModel !== primaryModel &&
+            FALLBACK_STATUSES.has(response.status)
+        ) {
+            const primaryStatus = response.status;
+            const primaryDetail = await readGeminiError(response);
+            console.warn(
+                `Gemini falló con ${primaryModel} (estado ${primaryStatus}): ` +
+                sanitizeLogDetail(primaryDetail, apiKey)
+            );
+
+            model = fallbackModel;
+            response = await requestGemini(model, apiKey, requestBody, controller.signal);
+        }
 
         if (!response.ok) {
-            if (response.status === 429) {
-                return json(429, { error: 'quota' });
-            }
-
-            console.error(`Gemini respondió con estado ${response.status}`);
-            return json(502, { error: 'upstream' });
+            const status = response.status;
+            const detail = await readGeminiError(response);
+            const code = getGeminiErrorCode(status);
+            console.error(
+                `Gemini respondió con estado ${status} usando ${model}: ` +
+                sanitizeLogDetail(detail, apiKey)
+            );
+            return json(getGeminiErrorHttpStatus(status), { error: code });
         }
 
         let data;
