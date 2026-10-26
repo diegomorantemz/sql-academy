@@ -298,6 +298,11 @@
                                 <i class="fas fa-hard-drive"></i> Guardado local
                             </span>
 
+                            <label class="safe-mode-toggle" title="Pide confirmación antes de ejecutar consultas destructivas">
+                                <input type="checkbox" id="safeModeToggle" checked onchange="toggleSafeMode(this.checked)">
+                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                            </label>
+
                             <div class="example-selector">
                                 <select id="categorySelector">
                                     <option value="basicos">Basicos</option>
@@ -623,6 +628,8 @@
             </div>
         </div>
     </div>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Cargar sql.js -->
     <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>

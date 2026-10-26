@@ -443,6 +443,101 @@ button {
     border-color: #b9e4c8;
 }
 
+.safe-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.safe-mode-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.safe-mode-toggle span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #256b3d;
+    background: #eaf7ef;
+    border: 1px solid #b9e4c8;
+    transition: all 0.2s ease;
+}
+
+.safe-mode-toggle input:not(:checked) + span {
+    color: #8a5a00;
+    background: #fff6e5;
+    border-color: #f0d58a;
+}
+
+.safe-mode-toggle input:focus-visible + span {
+    outline: 3px solid rgba(51, 103, 145, 0.25);
+    outline-offset: 2px;
+}
+
+.safe-mode-toggle input:checked + span {
+    color: #256b3d;
+    background: #eaf7ef;
+    border-color: #b9e4c8;
+}
+
+.toast-container {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(380px, calc(100vw - 36px));
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #1f2937;
+    color: #f8fafc;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+    font-size: 13px;
+    line-height: 1.45;
+    pointer-events: auto;
+    animation: toast-in 0.2s ease both;
+}
+
+.toast.toast-success { background: #14532d; }
+.toast.toast-warning { background: #78350f; }
+.toast.toast-error { background: #7f1d1d; }
+.toast.toast-info { background: #1e3a5f; }
+
+.toast i {
+    margin-top: 2px;
+}
+
+.toast.toast-hiding {
+    animation: toast-out 0.2s ease both;
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(8px); }
+}
+
 .example-selector {
     display: flex;
     gap: 6px;

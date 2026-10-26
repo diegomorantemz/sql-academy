@@ -362,6 +362,32 @@ function showMessage(type, title, detail) {
     `;
 }
 
+/** Muestra una notificación breve sin sustituir los resultados de la consulta. */
+function showToast(type, message, duration = 2800) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const icons = {
+        success: 'fa-check-circle',
+        warning: 'fa-triangle-exclamation',
+        error: 'fa-circle-exclamation',
+        info: 'fa-circle-info'
+    };
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${icons[type] ? type : 'info'}`;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.innerHTML = `
+        <i class="fas ${icons[type] || icons.info}" aria-hidden="true"></i>
+        <span>${escapeHtml(message)}</span>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('toast-hiding');
+        setTimeout(() => toast.remove(), 220);
+    }, duration);
+}
+
 /** Abre un modal y bloquea el scroll de la página. */
 function openModal(modal) {
     if (!modal) return;
@@ -1157,6 +1183,64 @@ async function copyAIResponse() {
     }
 }
 
+// MODO SEGURO
+function stripSqlComments(sql) {
+    return String(sql || '')
+        .replace(/--[^\n]*/g, ' ')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
+ * Devuelve una explicación si la consulta es potencialmente destructiva.
+ * Es una comprobación heurística pensada para principiantes, no un parser SQL.
+ */
+function getDangerousQueryReason(sql) {
+    const normalized = stripSqlComments(sql);
+    if (!normalized) return '';
+
+    if (/^DROP\s+(TABLE|VIEW|INDEX|TRIGGER|DATABASE|SCHEMA)\b/i.test(normalized)) {
+        return 'La consulta elimina un objeto de la base de datos con DROP.';
+    }
+
+    if (/^TRUNCATE\b/i.test(normalized)) {
+        return 'TRUNCATE vacía una tabla completa sin posibilidad de recuperar los datos.';
+    }
+
+    const deleteMatch = normalized.match(/^DELETE\s+FROM\s+[^;]+/i);
+    if (deleteMatch && !/\bWHERE\b/i.test(deleteMatch[0])) {
+        return 'DELETE sin WHERE elimina todos los registros de la tabla.';
+    }
+
+    const updateMatch = normalized.match(/^UPDATE\s+[^;]+/i);
+    if (updateMatch && !/\bWHERE\b/i.test(updateMatch[0])) {
+        return 'UPDATE sin WHERE modifica todos los registros de la tabla.';
+    }
+
+    if (/^ALTER\s+TABLE\s+.+\s+DROP\s+(COLUMN|CONSTRAINT)\b/i.test(normalized)) {
+        return 'ALTER TABLE ... DROP elimina parte del esquema de la base de datos.';
+    }
+
+    return '';
+}
+
+function applyPreferences() {
+    const safeModeToggle = document.getElementById('safeModeToggle');
+    if (safeModeToggle) safeModeToggle.checked = preferences.safeMode;
+}
+
+function toggleSafeMode(enabled) {
+    preferences.safeMode = Boolean(enabled);
+    savePreferences();
+    showToast(
+        preferences.safeMode ? 'success' : 'warning',
+        preferences.safeMode
+            ? 'Modo seguro activado: se pedirá confirmación antes de consultas destructivas.'
+            : 'Modo seguro desactivado: las consultas destructivas se ejecutarán sin confirmación.'
+    );
+}
+
 // EJECUTAR CONSULTA
 function runQuery() {
     if (!dbInitialized) {
@@ -1171,6 +1255,19 @@ function runQuery() {
     if (!query) {
         showMessage('warning', 'Por favor, escribe una consulta SQL');
         return;
+    }
+
+    if (preferences.safeMode) {
+        const dangerReason = getDangerousQueryReason(query);
+        if (dangerReason) {
+            const confirmed = confirm(
+                `Modo seguro activado\n\n${dangerReason}\n\n¿Quieres ejecutar la consulta de todos modos?`
+            );
+            if (!confirmed) {
+                showToast('info', 'Consulta cancelada. No se modificó la base de datos.');
+                return;
+            }
+        }
     }
 
     addToHistory(query);
@@ -2631,6 +2728,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Preferencias e historial guardados en el navegador.
     loadPreferences();
+    applyPreferences();
     loadHistoryFromStorage();
     updateHistoryDisplay();
 
@@ -3111,6 +3209,7 @@ window.deleteRow = deleteRow;
 window.addRow = addRow;
 window.updateCharts = updateCharts;
 window.clearEditor = clearEditor;
+window.toggleSafeMode = toggleSafeMode;
 window.saveTableChanges = saveTableChanges;
 window.generateDiagram = generateDiagram;
 window.toggleDiagramView = toggleDiagramView;
