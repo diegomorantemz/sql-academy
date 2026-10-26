@@ -33,6 +33,9 @@
                     <button class="nav-btn" data-section="practice">
                         <i class="fas fa-laptop-code"></i> Practicar
                     </button>
+                    <button class="nav-btn" data-section="challenges">
+                        <i class="fas fa-trophy"></i> Retos
+                    </button>
                     <button class="nav-btn" data-section="analyze">
                         <i class="fas fa-chart-pie"></i> Analizar
                     </button>
@@ -371,6 +374,46 @@
                     <p class="text-muted" style="text-align:center;padding:20px;">
                         <i class="fas fa-spinner fa-spin"></i> Cargando...
                     </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: RETOS ===== -->
+        <section id="section-challenges" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-trophy"></i> Retos SQL</h2>
+                <p>Resuelve ejercicios y comprueba automáticamente si tu resultado coincide con el esperado</p>
+            </div>
+
+            <div class="challenges-layout">
+                <aside class="challenge-list-panel" aria-label="Lista de retos">
+                    <div class="challenge-progress">
+                        <div class="challenge-progress-head">
+                            <span>Tu progreso</span>
+                            <strong id="challengeProgressText">0 de 0</strong>
+                        </div>
+                        <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de retos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="challengeProgressTrack">
+                            <div id="challengeProgressBar"></div>
+                        </div>
+                    </div>
+
+                    <div id="challengeList" class="challenge-list">
+                        <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando retos...</p>
+                    </div>
+
+                    <button type="button" onclick="resetChallengeProgress()" class="btn-secondary challenge-reset-btn">
+                        <i class="fas fa-rotate-left"></i> Reiniciar progreso
+                    </button>
+                </aside>
+
+                <div class="challenge-play-panel">
+                    <div id="challengeDetail" class="challenge-detail">
+                        <div class="challenge-empty">
+                            <i class="fas fa-trophy"></i>
+                            <h3>Elige un reto para empezar</h3>
+                            <p>Los retos validan el resultado de tu consulta, no el texto exacto. Puedes resolverlos de varias formas.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

@@ -2909,6 +2909,398 @@ function closeConceptModal() {
     closeModal(document.getElementById('conceptModal'));
 }
 
+// ============================================
+// RETOS
+// ============================================
+
+const challengeCatalog = [
+    {
+        id: 'basico-01',
+        titulo: 'Primer contacto',
+        nivel: 'basico',
+        descripcion: 'Muestra todos los estudiantes de la tabla estudiantes.',
+        pista: 'Usa SELECT * FROM estudiantes; para ver todas las columnas y filas.',
+        sqlEsperado: 'SELECT * FROM estudiantes;',
+        ordenada: false
+    },
+    {
+        id: 'filtro-01',
+        titulo: 'Solo Ingeniería',
+        nivel: 'basico',
+        descripcion: 'Muestra el nombre y la carrera de los estudiantes cuya carrera sea Ingenieria.',
+        pista: 'Combina SELECT nombre, carrera con un WHERE carrera = \'Ingenieria\'.',
+        sqlEsperado: "SELECT nombre, carrera FROM estudiantes WHERE carrera = 'Ingenieria';",
+        ordenada: false
+    },
+    {
+        id: 'orden-01',
+        titulo: 'Top 5 promedios',
+        nivel: 'intermedio',
+        descripcion: 'Muestra el nombre y el promedio de los 5 estudiantes con mejor promedio. Ordena de mayor a menor y desempata por nombre ascendente.',
+        pista: 'Usa ORDER BY promedio DESC, nombre ASC y LIMIT 5.',
+        sqlEsperado: 'SELECT nombre, promedio FROM estudiantes ORDER BY promedio DESC, nombre ASC LIMIT 5;',
+        ordenada: true
+    },
+    {
+        id: 'agregacion-01',
+        titulo: 'Estudiantes por carrera',
+        nivel: 'intermedio',
+        descripcion: 'Muestra cada carrera y la cantidad de estudiantes que tiene. Ordena alfabéticamente por carrera.',
+        pista: 'Agrupa con GROUP BY carrera y cuenta con COUNT(*).',
+        sqlEsperado: 'SELECT carrera, COUNT(*) AS cantidad FROM estudiantes GROUP BY carrera ORDER BY carrera ASC;',
+        ordenada: true
+    },
+    {
+        id: 'join-01',
+        titulo: 'Estudiantes y sus cursos',
+        nivel: 'intermedio',
+        descripcion: 'Muestra el nombre del estudiante y el nombre del curso de todas las inscripciones. Ordena por nombre del estudiante y luego por nombre del curso.',
+        pista: 'Une estudiantes con inscripciones y luego con cursos usando JOIN.',
+        sqlEsperado: 'SELECT e.nombre AS estudiante, c.nombre AS curso FROM estudiantes e JOIN inscripciones i ON e.id = i.estudiante_id JOIN cursos c ON i.curso_id = c.id ORDER BY e.nombre ASC, c.nombre ASC;',
+        ordenada: true
+    },
+    {
+        id: 'subconsulta-01',
+        titulo: 'Por encima del promedio',
+        nivel: 'avanzado',
+        descripcion: 'Muestra el nombre y el promedio de los estudiantes cuyo promedio sea mayor al promedio general. Ordena por promedio descendente y nombre ascendente.',
+        pista: 'Compara promedio con una subconsulta: (SELECT AVG(promedio) FROM estudiantes).',
+        sqlEsperado: 'SELECT nombre, promedio FROM estudiantes WHERE promedio > (SELECT AVG(promedio) FROM estudiantes) ORDER BY promedio DESC, nombre ASC;',
+        ordenada: true
+    },
+    {
+        id: 'having-01',
+        titulo: 'Carreras con más alumnos',
+        nivel: 'avanzado',
+        descripcion: 'Muestra las carreras con 5 o más estudiantes y su cantidad. Ordena por cantidad descendente y luego por carrera ascendente.',
+        pista: 'Usa GROUP BY carrera y filtra el agregado con HAVING COUNT(*) >= 5.',
+        sqlEsperado: 'SELECT carrera, COUNT(*) AS cantidad FROM estudiantes GROUP BY carrera HAVING COUNT(*) >= 5 ORDER BY cantidad DESC, carrera ASC;',
+        ordenada: true
+    },
+    {
+        id: 'join-02',
+        titulo: 'Cursos e inscritos',
+        nivel: 'avanzado',
+        descripcion: 'Muestra el nombre de cada curso y cuántas inscripciones tiene, incluyendo cursos con cero inscritos. Ordena por inscritos descendente y nombre del curso ascendente.',
+        pista: 'Usa LEFT JOIN desde cursos hacia inscripciones y COUNT(i.id).',
+        sqlEsperado: 'SELECT c.nombre, COUNT(i.id) AS inscritos FROM cursos c LEFT JOIN inscripciones i ON c.id = i.curso_id GROUP BY c.id, c.nombre ORDER BY inscritos DESC, c.nombre ASC;',
+        ordenada: true
+    }
+];
+
+let currentChallengeId = null;
+let challengeAttempts = 0;
+let challengeProgress = {};
+
+function loadChallengeProgress() {
+    const stored = readStoredJSON(STORAGE_KEYS.challenges, {});
+    challengeProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+}
+
+function saveChallengeProgress() {
+    writeStoredJSON(STORAGE_KEYS.challenges, challengeProgress);
+}
+
+function getChallengeById(id) {
+    return challengeCatalog.find(challenge => challenge.id === id) || null;
+}
+
+function getCompletedChallengeCount() {
+    return challengeCatalog.filter(challenge => challengeProgress[challenge.id]?.completed).length;
+}
+
+function renderChallengeProgress() {
+    const completed = getCompletedChallengeCount();
+    const total = challengeCatalog.length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    const text = document.getElementById('challengeProgressText');
+    const bar = document.getElementById('challengeProgressBar');
+    const track = document.getElementById('challengeProgressTrack');
+    if (text) text.textContent = `${completed} de ${total}`;
+    if (bar) bar.style.width = `${percent}%`;
+    if (track) track.setAttribute('aria-valuenow', String(percent));
+}
+
+function renderChallengeList() {
+    const list = document.getElementById('challengeList');
+    if (!list) return;
+
+    list.innerHTML = challengeCatalog.map(challenge => {
+        const completed = Boolean(challengeProgress[challenge.id]?.completed);
+        const active = challenge.id === currentChallengeId;
+        return `
+            <button type="button" class="challenge-card${completed ? ' completed' : ''}${active ? ' active' : ''}"
+                onclick="openChallenge('${challenge.id}')"
+                aria-pressed="${active}">
+                <span class="challenge-card-title">
+                    ${escapeHtml(challenge.titulo)}
+                    ${completed ? '<i class="fas fa-circle-check" title="Completado"></i>' : ''}
+                </span>
+                <span class="challenge-card-meta">
+                    <span class="challenge-level ${escapeHtml(challenge.nivel)}">${escapeHtml(challenge.nivel)}</span>
+                    ${completed ? '<span>Completado</span>' : '<span>Pendiente</span>'}
+                </span>
+            </button>
+        `;
+    }).join('');
+
+    renderChallengeProgress();
+}
+
+function initChallenges() {
+    loadChallengeProgress();
+    renderChallengeList();
+}
+
+function openChallenge(id) {
+    const challenge = getChallengeById(id);
+    if (!challenge) return;
+
+    currentChallengeId = id;
+    challengeAttempts = 0;
+    const detail = document.getElementById('challengeDetail');
+    if (!detail) return;
+
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <h3>${escapeHtml(challenge.titulo)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${escapeHtml(challenge.nivel)}">${escapeHtml(challenge.nivel)}</span>
+                    <span class="text-muted">Validación por resultado</span>
+                </div>
+            </div>
+        </div>
+        <div class="challenge-description">${escapeHtml(challenge.descripcion)}</div>
+        <label for="challengeEditor" class="sr-only">Consulta SQL para el reto</label>
+        <textarea id="challengeEditor" spellcheck="false" placeholder="Escribe tu consulta SQL aquí..."></textarea>
+        <div class="challenge-actions">
+            <button type="button" id="challengeRunBtn" onclick="runChallenge()">
+                <i class="fas fa-play"></i> Comprobar reto
+            </button>
+            <button type="button" class="btn-secondary" onclick="showChallengeHint()">
+                <i class="fas fa-lightbulb"></i> Ver pista
+            </button>
+            <button type="button" class="btn-secondary" onclick="clearChallengeEditor()">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+        </div>
+        <div id="challengeHint" class="challenge-hint" hidden></div>
+        <div id="challengeResult" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para intentarlo</strong>
+            Escribe una consulta de solo lectura (SELECT o WITH) y pulsa “Comprobar reto”.
+        </div>
+    `;
+
+    renderChallengeList();
+    const editor = document.getElementById('challengeEditor');
+    if (editor) editor.focus();
+}
+
+function clearChallengeEditor() {
+    const editor = document.getElementById('challengeEditor');
+    if (editor) {
+        editor.value = '';
+        editor.focus();
+    }
+}
+
+function showChallengeHint() {
+    const challenge = getChallengeById(currentChallengeId);
+    const hint = document.getElementById('challengeHint');
+    if (!challenge || !hint) return;
+    hint.innerHTML = `<strong><i class="fas fa-lightbulb"></i> Pista:</strong> ${escapeHtml(challenge.pista)}`;
+    hint.hidden = false;
+}
+
+function showChallengeSolution() {
+    const challenge = getChallengeById(currentChallengeId);
+    const editor = document.getElementById('challengeEditor');
+    if (!challenge || !editor) return;
+    editor.value = challenge.sqlEsperado;
+    editor.focus();
+    showToast('info', 'Solución cargada. Ejecútala para comprobar el resultado.');
+}
+
+function isReadOnlyQuery(sql) {
+    const normalized = stripSqlComments(sql);
+    if (!normalized) return false;
+    const statements = normalized.split(';').map(statement => statement.trim()).filter(Boolean);
+    if (statements.length !== 1) return false;
+    if (!/^(SELECT|WITH)\b/i.test(statements[0])) return false;
+    return !/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE|PRAGMA|ATTACH|DETACH|VACUUM)\b/i.test(statements[0]);
+}
+
+function firstResultSet(result) {
+    return (result || []).find(set => set && Array.isArray(set.columns) && set.columns.length > 0) || null;
+}
+
+function normalizeChallengeRows(set) {
+    if (!set) return [];
+    return set.values.map(row => row.map(value => value === null || value === undefined ? 'NULL' : String(value)));
+}
+
+function compareChallengeResults(expected, actual, ordered) {
+    const expectedSet = firstResultSet(expected);
+    const actualSet = firstResultSet(actual);
+
+    if (!expectedSet) return { ok: false, reason: 'expected_empty' };
+    if (!actualSet) return { ok: false, reason: 'no_result' };
+
+    if (expectedSet.columns.length !== actualSet.columns.length) {
+        return {
+            ok: false,
+            reason: 'columns',
+            expectedColumns: expectedSet.columns.length,
+            actualColumns: actualSet.columns.length
+        };
+    }
+
+    const expectedRows = normalizeChallengeRows(expectedSet);
+    const actualRows = normalizeChallengeRows(actualSet);
+
+    if (expectedRows.length !== actualRows.length) {
+        return {
+            ok: false,
+            reason: 'rows',
+            expectedRows: expectedRows.length,
+            actualRows: actualRows.length
+        };
+    }
+
+    const serialize = row => JSON.stringify(row);
+    const expectedSerialized = ordered ? expectedRows.map(serialize) : expectedRows.map(serialize).sort();
+    const actualSerialized = ordered ? actualRows.map(serialize) : actualRows.map(serialize).sort();
+
+    for (let i = 0; i < expectedSerialized.length; i++) {
+        if (expectedSerialized[i] !== actualSerialized[i]) {
+            return { ok: false, reason: 'values', row: i + 1 };
+        }
+    }
+
+    return { ok: true };
+}
+
+function setChallengeResult(type, html) {
+    const result = document.getElementById('challengeResult');
+    if (!result) return;
+    result.className = `challenge-result ${type}`;
+    result.innerHTML = html;
+}
+
+function markChallengeComplete(challenge) {
+    challengeProgress[challenge.id] = {
+        completed: true,
+        completedAt: new Date().toISOString()
+    };
+    saveChallengeProgress();
+    renderChallengeList();
+}
+
+function runChallenge() {
+    const challenge = getChallengeById(currentChallengeId);
+    if (!challenge) {
+        showToast('warning', 'Elige un reto primero.');
+        return;
+    }
+    if (!dbInitialized) {
+        showToast('warning', 'Espera a que la base de datos termine de inicializarse.');
+        return;
+    }
+
+    const editor = document.getElementById('challengeEditor');
+    const query = editor ? editor.value.trim() : '';
+    if (!query) {
+        setChallengeResult('warning', '<strong><i class="fas fa-triangle-exclamation"></i> Consulta vacía</strong>Escribe una consulta antes de comprobar el reto.');
+        if (editor) editor.focus();
+        return;
+    }
+    if (!isReadOnlyQuery(query)) {
+        setChallengeResult('error', '<strong><i class="fas fa-shield-halved"></i> Solo lectura</strong>Los retos aceptan una única consulta SELECT o WITH. No se permiten modificaciones.');
+        return;
+    }
+
+    challengeAttempts += 1;
+
+    try {
+        const actual = db.exec(query);
+        const expected = db.exec(challenge.sqlEsperado);
+        const comparison = compareChallengeResults(expected, actual, challenge.ordenada);
+
+        if (comparison.ok) {
+            markChallengeComplete(challenge);
+            setChallengeResult('success', `
+                <strong><i class="fas fa-circle-check"></i> ¡Correcto!</strong>
+                Tu consulta devuelve el mismo resultado que la solución esperada.
+                <div class="challenge-result-actions">
+                    <button type="button" class="btn-secondary" onclick="nextChallenge()">
+                        <i class="fas fa-arrow-right"></i> Siguiente reto
+                    </button>
+                </div>
+            `);
+            return;
+        }
+
+        let message = 'Tu consulta todavía no coincide con el resultado esperado.';
+        if (comparison.reason === 'columns') {
+            message = `Se esperaban ${comparison.expectedColumns} columnas y tu consulta devolvió ${comparison.actualColumns}.`;
+        } else if (comparison.reason === 'rows') {
+            message = `Se esperaban ${comparison.expectedRows} filas y tu consulta devolvió ${comparison.actualRows}.`;
+        } else if (comparison.reason === 'values') {
+            message = `El número de filas y columnas coincide, pero los valores no son iguales (revisa el orden o los cálculos).`;
+        } else if (comparison.reason === 'no_result') {
+            message = 'Tu consulta no devolvió un conjunto de resultados.';
+        }
+
+        const canShowSolution = challengeAttempts >= 3;
+        setChallengeResult('error', `
+            <strong><i class="fas fa-circle-xmark"></i> Aún no</strong>
+            ${escapeHtml(message)}
+            <div class="challenge-result-actions">
+                <button type="button" class="btn-secondary" onclick="showChallengeHint()">
+                    <i class="fas fa-lightbulb"></i> Ver pista
+                </button>
+                ${canShowSolution ? `
+                    <button type="button" class="btn-secondary" onclick="showChallengeSolution()">
+                        <i class="fas fa-eye"></i> Ver solución
+                    </button>
+                ` : ''}
+            </div>
+        `);
+
+        if (challengeAttempts >= 2) {
+            showChallengeHint();
+        }
+    } catch (error) {
+        setChallengeResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Error en la consulta</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+        `);
+    }
+}
+
+function nextChallenge() {
+    const currentIndex = challengeCatalog.findIndex(challenge => challenge.id === currentChallengeId);
+    const next = challengeCatalog[currentIndex + 1];
+    if (next) {
+        openChallenge(next.id);
+    } else {
+        showToast('success', '¡Has llegado al final de los retos!');
+    }
+}
+
+function resetChallengeProgress() {
+    if (!confirm('¿Reiniciar el progreso de todos los retos?')) return;
+    challengeProgress = {};
+    removeStoredItem(STORAGE_KEYS.challenges);
+    renderChallengeList();
+    if (currentChallengeId) {
+        openChallenge(currentChallengeId);
+    }
+    showToast('info', 'Progreso de retos reiniciado.');
+}
+
 // NAVEGACIÓN ENTRE SECCIONES
 document.addEventListener('DOMContentLoaded', function() {
     // Navegación por pestañas del navbar
@@ -2943,6 +3335,7 @@ document.addEventListener('DOMContentLoaded', function() {
     applyPreferences();
     loadHistoryFromStorage();
     updateHistoryDisplay();
+    initChallenges();
 
     // Inicializar base de datos (restaura la copia local si existe).
     initDatabase();
@@ -3435,6 +3828,13 @@ window.exportResultCSV = exportResultCSV;
 window.exportResultJSON = exportResultJSON;
 window.copyResultTable = copyResultTable;
 window.copyResultCell = copyResultCell;
+window.openChallenge = openChallenge;
+window.runChallenge = runChallenge;
+window.showChallengeHint = showChallengeHint;
+window.showChallengeSolution = showChallengeSolution;
+window.clearChallengeEditor = clearChallengeEditor;
+window.nextChallenge = nextChallenge;
+window.resetChallengeProgress = resetChallengeProgress;
 window.saveTableChanges = saveTableChanges;
 window.generateDiagram = generateDiagram;
 window.toggleDiagramView = toggleDiagramView;
