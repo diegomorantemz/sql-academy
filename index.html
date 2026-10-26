@@ -4,7 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aprende SQL desde cero, practica con una base de datos real y comprueba tus resultados en el navegador.">
+    <meta name="theme-color" content="#336791">
     <title>SQL Academy</title>
+
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script>
+        try {
+            const savedPreferences = JSON.parse(localStorage.getItem('sql-academy-preferences-v1') || '{}');
+            if (savedPreferences.theme === 'dark') {
+                document.documentElement.dataset.theme = 'dark';
+            }
+        } catch (error) {
+            // Si localStorage está bloqueado, se usa el tema claro.
+        }
+    </script>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -17,6 +32,7 @@
 </head>
 
 <body>
+    <a class="skip-link" href="#mainContent">Saltar al contenido principal</a>
     <div class="app-container">
         <!-- ===== HEADER ===== -->
         <header class="app-header">
@@ -26,7 +42,7 @@
                     <i class="fas fa-terminal" style="color:#99b9e9; font-size:1em;"></i>
                     <span>SQL Academy</span>
                 </div>
-                <nav class="main-nav">
+                <nav class="main-nav" aria-label="Navegación principal">
                     <button class="nav-btn active" data-section="learn">
                         <i class="fas fa-book"></i> Aprender
                     </button>
@@ -44,11 +60,17 @@
                     </button>
                 </nav>
                 <div class="header-actions">
-  
+                    <button id="installAppBtn" class="header-icon-btn" type="button" hidden onclick="installApp()" aria-label="Instalar SQL Academy" title="Instalar app">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button id="themeToggle" class="header-icon-btn" type="button" onclick="toggleTheme()" aria-label="Activar modo oscuro" aria-pressed="false" title="Cambiar tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
                 </div>
             </div>
         </header>
 
+        <main id="mainContent">
         <!-- ===== SECCIÓN: APRENDER ===== -->
         <section id="section-learn" class="section active">
             <div class="section-header">
@@ -271,7 +293,7 @@
                 <!-- Panel derecho: Editor y resultados -->
                 <div class="practice-main">
                     <div class="editor-wrapper">
-                        <textarea id="sqlEditor" rows="6"
+                        <textarea id="sqlEditor" rows="6" aria-label="Editor de consultas SQL" spellcheck="false"
                             placeholder='Escribe tu consulta sql o Selecciona un ejemplo del menú y presiona "▶"'></textarea>
 
                         <div class="editor-toolbar">
@@ -307,7 +329,7 @@
                             </label>
 
                             <div class="example-selector">
-                                <select id="categorySelector">
+                                <select id="categorySelector" aria-label="Categoría de ejemplos SQL">
                                     <option value="basicos">Basicos</option>
                                     <option value="filtros">Filtros</option>
                                     <option value="orden">Ordenamiento</option>
@@ -355,7 +377,7 @@
             <div class="table-editor">
                 <h4><i class="fas fa-pen-to-square"></i> Editor de Tablas</h4>
                 <div class="table-editor-controls">
-                    <select id="tableSelector" onchange="loadTableEditor()">
+                    <select id="tableSelector" onchange="loadTableEditor()" aria-label="Tabla para editar">
                         <option value="estudiantes">Estudiantes</option>
                         <option value="cursos">Cursos</option>
                         <option value="inscripciones">Inscripciones</option>
@@ -566,6 +588,7 @@
                 </div>
             </div>
         </section>
+        </main>
 
         <!-- ===== FOOTER ===== -->
         <footer class="app-footer">

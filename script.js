@@ -54,6 +54,10 @@ let lastResultSets = [];
 let lastQueryMeta = { durationMs: 0, executedAt: null };
 let resultRowLimits = [];
 let resultSortState = [];
+let lastFocusedElement = null;
+let deferredInstallPrompt = null;
+
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // ============================================
 // UTILIDADES GENERALES
@@ -398,11 +402,23 @@ function showToast(type, message, duration = 2800) {
     }, duration);
 }
 
+function getFocusableElements(container) {
+    if (!container) return [];
+    return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR))
+        .filter(element => element.getClientRects().length > 0);
+}
+
 /** Abre un modal y bloquea el scroll de la página. */
 function openModal(modal) {
     if (!modal) return;
+    lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    setTimeout(() => {
+        const focusable = getFocusableElements(modal);
+        if (focusable.length > 0) focusable[0].focus();
+    }, 0);
 }
 
 /** Cierra un modal y restaura el scroll solo si no queda otro abierto. */
@@ -414,6 +430,10 @@ function closeModal(modal) {
     modal.classList.remove('active');
     if (!document.querySelector('.modal.active')) {
         document.body.style.overflow = '';
+        if (lastFocusedElement && document.contains(lastFocusedElement)) {
+            lastFocusedElement.focus();
+        }
+        lastFocusedElement = null;
     }
 }
 
@@ -1486,6 +1506,19 @@ function getDangerousQueryReason(sql) {
 function applyPreferences() {
     const safeModeToggle = document.getElementById('safeModeToggle');
     if (safeModeToggle) safeModeToggle.checked = preferences.safeMode;
+
+    const isDark = preferences.theme === 'dark';
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.setAttribute('content', isDark ? '#111827' : '#336791');
+
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.innerHTML = `<i class="fas ${isDark ? 'fa-sun' : 'fa-moon'}"></i>`;
+        themeToggle.setAttribute('aria-pressed', String(isDark));
+        themeToggle.setAttribute('aria-label', isDark ? 'Activar modo claro' : 'Activar modo oscuro');
+        themeToggle.title = isDark ? 'Activar modo claro' : 'Activar modo oscuro';
+    }
 }
 
 function toggleSafeMode(enabled) {
@@ -1497,6 +1530,41 @@ function toggleSafeMode(enabled) {
             ? 'Modo seguro activado: se pedirá confirmación antes de consultas destructivas.'
             : 'Modo seguro desactivado: las consultas destructivas se ejecutarán sin confirmación.'
     );
+}
+
+function toggleTheme() {
+    preferences.theme = preferences.theme === 'dark' ? 'light' : 'dark';
+    savePreferences();
+    applyPreferences();
+    if (dbInitialized) updateCharts();
+    showToast('info', preferences.theme === 'dark' ? 'Modo oscuro activado.' : 'Modo claro activado.');
+}
+
+async function installApp() {
+    if (!deferredInstallPrompt) {
+        showToast('info', 'Si tu navegador lo permite, usa el menú “Instalar app” o “Añadir a pantalla de inicio”.');
+        return;
+    }
+
+    deferredInstallPrompt.prompt();
+    try {
+        await deferredInstallPrompt.userChoice;
+    } finally {
+        deferredInstallPrompt = null;
+        const button = document.getElementById('installAppBtn');
+        if (button) button.hidden = true;
+    }
+}
+
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') return;
+
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(error => {
+            console.warn('No se pudo registrar el service worker:', error);
+        });
+    });
 }
 
 // EJECUTAR CONSULTA
@@ -2059,6 +2127,10 @@ function updateCharts() {
         console.warn('Chart.js no está disponible; se omiten los gráficos.');
         return;
     }
+
+    const isDarkTheme = document.documentElement.dataset.theme === 'dark';
+    Chart.defaults.color = isDarkTheme ? '#e2e8f0' : '#2C3E50';
+    Chart.defaults.borderColor = isDarkTheme ? 'rgba(148, 163, 184, 0.18)' : 'rgba(0, 0, 0, 0.1)';
 
     const hasStudentsTable = getUserTables().includes('estudiantes');
     if (!hasStudentsTable) {
@@ -3387,7 +3459,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Inicializar base de datos (restaura la copia local si existe).
     initDatabase();
-    
+    registerServiceWorker();
+
     // Año automático en el footer
     const yearSpan = document.getElementById('currentYear');
     if (yearSpan) {
@@ -3416,6 +3489,48 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
         closeModal(activeModal);
     }
+});
+
+// Mantiene el foco dentro del modal abierto.
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Tab') return;
+    const activeModal = document.querySelector('.modal.active');
+    if (!activeModal) return;
+
+    const focusable = getFocusableElements(activeModal);
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    }
+});
+
+window.addEventListener('beforeinstallprompt', function(event) {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    const button = document.getElementById('installAppBtn');
+    if (button) button.hidden = false;
+});
+
+window.addEventListener('appinstalled', function() {
+    deferredInstallPrompt = null;
+    const button = document.getElementById('installAppBtn');
+    if (button) button.hidden = true;
+    showToast('success', 'SQL Academy se instaló correctamente.');
+});
+
+window.addEventListener('offline', function() {
+    showToast('warning', 'Sin conexión. El simulador SQL sigue funcionando; el asistente IA no estará disponible.');
+});
+
+window.addEventListener('online', function() {
+    showToast('success', 'Conexión restablecida.');
 });
 
 // ATAJOS DE TECLADO
@@ -3870,6 +3985,8 @@ window.addRow = addRow;
 window.updateCharts = updateCharts;
 window.clearEditor = clearEditor;
 window.toggleSafeMode = toggleSafeMode;
+window.toggleTheme = toggleTheme;
+window.installApp = installApp;
 window.sortResult = sortResult;
 window.showMoreResults = showMoreResults;
 window.exportResultCSV = exportResultCSV;
