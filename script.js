@@ -6,6 +6,27 @@ let queryHistory = [];
 let diagramFullView = false;
 
 // ============================================
+// PERSISTENCIA LOCAL
+// ============================================
+
+const STORAGE_KEYS = {
+    history: 'sql-academy-history-v1',
+    preferences: 'sql-academy-preferences-v1',
+    challenges: 'sql-academy-challenges-v1'
+};
+const PERSIST_DB_NAME = 'sql-academy';
+const PERSIST_DB_VERSION = 1;
+const PERSIST_STORE = 'database';
+const HISTORY_LIMIT = 30;
+
+let persistenceDbPromise = null;
+let persistTimer = null;
+let preferences = {
+    theme: 'light',
+    safeMode: true
+};
+
+// ============================================
 // ASISTENTE IA
 // ============================================
 
@@ -45,6 +66,209 @@ function escapeHtml(value) {
 /** Escapa un nombre de identificador SQL (tabla/columna). */
 function quoteIdent(name) {
     return '"' + String(name).replace(/"/g, '""') + '"';
+}
+
+/** Lee un valor JSON de localStorage sin romper la app si está bloqueado. */
+function readStoredJSON(key, fallback) {
+    try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        return parsed ?? fallback;
+    } catch (error) {
+        console.warn(`No se pudo leer ${key} de localStorage:`, error);
+        return fallback;
+    }
+}
+
+/** Guarda un valor JSON en localStorage. */
+function writeStoredJSON(key, value) {
+    try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    } catch (error) {
+        console.warn(`No se pudo guardar ${key} en localStorage:`, error);
+        return false;
+    }
+}
+
+function removeStoredItem(key) {
+    try {
+        window.localStorage.removeItem(key);
+    } catch (error) {
+        console.warn(`No se pudo eliminar ${key} de localStorage:`, error);
+    }
+}
+
+function loadPreferences() {
+    const stored = readStoredJSON(STORAGE_KEYS.preferences, {});
+    preferences = {
+        theme: stored.theme === 'dark' ? 'dark' : 'light',
+        safeMode: stored.safeMode !== false
+    };
+    return preferences;
+}
+
+function savePreferences() {
+    writeStoredJSON(STORAGE_KEYS.preferences, preferences);
+}
+
+function loadHistoryFromStorage() {
+    const stored = readStoredJSON(STORAGE_KEYS.history, []);
+    if (!Array.isArray(stored)) {
+        queryHistory = [];
+        return;
+    }
+
+    const seen = new Set();
+    queryHistory = stored
+        .filter(item => typeof item === 'string' && item.trim())
+        .filter(item => {
+            if (seen.has(item)) return false;
+            seen.add(item);
+            return true;
+        })
+        .slice(0, HISTORY_LIMIT);
+}
+
+function saveHistoryToStorage() {
+    writeStoredJSON(STORAGE_KEYS.history, queryHistory.slice(0, HISTORY_LIMIT));
+}
+
+/** Abre (o reutiliza) la base IndexedDB donde se guarda el archivo SQLite. */
+function openPersistenceDb() {
+    if (!('indexedDB' in window)) {
+        return Promise.reject(new Error('IndexedDB no está disponible'));
+    }
+    if (persistenceDbPromise) return persistenceDbPromise;
+
+    persistenceDbPromise = new Promise((resolve, reject) => {
+        const request = window.indexedDB.open(PERSIST_DB_NAME, PERSIST_DB_VERSION);
+
+        request.onupgradeneeded = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains(PERSIST_STORE)) {
+                database.createObjectStore(PERSIST_STORE, { keyPath: 'id' });
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('No se pudo abrir IndexedDB'));
+        request.onblocked = () => reject(new Error('IndexedDB está bloqueada por otra pestaña'));
+    }).catch(error => {
+        persistenceDbPromise = null;
+        throw error;
+    });
+
+    return persistenceDbPromise;
+}
+
+/** Restaura el último archivo SQLite guardado. Devuelve null si no hay uno válido. */
+async function loadDatabaseFromIndexedDB(SQL) {
+    try {
+        const database = await openPersistenceDb();
+        const record = await new Promise((resolve, reject) => {
+            const transaction = database.transaction(PERSIST_STORE, 'readonly');
+            const request = transaction.objectStore(PERSIST_STORE).get('main');
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error || new Error('No se pudo leer la base guardada'));
+        });
+
+        if (!record || !record.bytes) return null;
+
+        const restored = new SQL.Database(new Uint8Array(record.bytes));
+        // Valida que el archivo sea SQLite y que se pueda leer antes de usarlo.
+        restored.exec('SELECT name FROM sqlite_master LIMIT 1;');
+        restored.run('PRAGMA foreign_keys = ON;');
+        return restored;
+    } catch (error) {
+        console.warn('No se pudo restaurar la base de datos guardada:', error);
+        // Un archivo corrupto no debe impedir que la app arranque con los datos de ejemplo.
+        try { await clearSavedDatabase(); } catch (cleanupError) { /* ignorar */ }
+        return null;
+    }
+}
+
+async function saveDatabaseToIndexedDB() {
+    if (!db || !dbInitialized) return false;
+
+    const bytes = db.export();
+    const database = await openPersistenceDb();
+
+    await new Promise((resolve, reject) => {
+        const transaction = database.transaction(PERSIST_STORE, 'readwrite');
+        const request = transaction.objectStore(PERSIST_STORE).put({
+            id: 'main',
+            bytes,
+            updatedAt: Date.now()
+        });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error || new Error('No se pudo guardar la base de datos'));
+        transaction.onerror = () => reject(transaction.error || new Error('La transacción de guardado falló'));
+    });
+
+    return true;
+}
+
+async function clearSavedDatabase() {
+    try {
+        const database = await openPersistenceDb();
+        await new Promise((resolve, reject) => {
+            const transaction = database.transaction(PERSIST_STORE, 'readwrite');
+            const request = transaction.objectStore(PERSIST_STORE).delete('main');
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error || new Error('No se pudo borrar la base guardada'));
+            transaction.onerror = () => reject(transaction.error || new Error('La transacción de borrado falló'));
+        });
+    } catch (error) {
+        console.warn('No se pudo borrar la base de datos guardada:', error);
+    }
+}
+
+function setPersistenceStatus(state) {
+    const status = document.getElementById('persistenceStatus');
+    if (!status) return;
+
+    status.classList.remove('is-saving', 'is-saved', 'is-error');
+    if (state === 'saving') {
+        status.classList.add('is-saving');
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        status.title = 'Guardando la base de datos en este navegador';
+    } else if (state === 'error') {
+        status.classList.add('is-error');
+        status.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Sin guardado';
+        status.title = 'No se pudo guardar la base de datos en este navegador';
+    } else {
+        status.classList.add('is-saved');
+        status.innerHTML = '<i class="fas fa-hard-drive"></i> Guardado local';
+        status.title = 'La base de datos se guarda en este navegador (IndexedDB)';
+    }
+}
+
+async function persistDatabase() {
+    if (!db || !dbInitialized) return;
+    setPersistenceStatus('saving');
+    try {
+        await saveDatabaseToIndexedDB();
+        setPersistenceStatus('saved');
+    } catch (error) {
+        console.warn('No se pudo guardar la base de datos:', error);
+        setPersistenceStatus('error');
+    }
+}
+
+function schedulePersistDatabase() {
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => { persistDatabase(); }, 250);
+}
+
+/** Detecta consultas que pueden modificar el esquema o los datos. */
+function isWriteQuery(sql) {
+    const normalized = String(sql || '')
+        .replace(/--[^\n]*/g, ' ')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .trim();
+    return /^(INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER|TRUNCATE|VACUUM|REINDEX|ANALYZE|PRAGMA)\b/i.test(normalized);
 }
 
 /** Devuelve las tablas de usuario de la base de datos actual. */
@@ -177,7 +401,8 @@ function clearEditor() {
 }
 
 // INICIALIZAR BASE DE DATOS
-function initDatabase() {
+function initDatabase(options = {}) {
+    const restore = options.restore !== false;
     dbInitialized = false;
 
     if (typeof initSqlJs !== 'function') {
@@ -193,8 +418,26 @@ function initDatabase() {
 
     initSqlJs({
         locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}`
-    }).then(SQL => {
+    }).then(async SQL => {
         SQLModule = SQL;
+
+        if (restore) {
+            const restored = await loadDatabaseFromIndexedDB(SQL);
+            if (restored) {
+                db = restored;
+                dbInitialized = true;
+                lastQueryError = null;
+                refreshAll();
+                setPersistenceStatus('saved');
+                showMessage(
+                    'success',
+                    'Base de datos restaurada',
+                    'Se recuperaron los datos guardados en este navegador. Usa “Reiniciar BD” si quieres volver a los datos de ejemplo.'
+                );
+                return;
+            }
+        }
+
         db = new SQL.Database();
         // SQLite desactiva las claves foráneas por defecto; el simulador las enseña,
         // así que deben aplicarse de verdad.
@@ -362,8 +605,10 @@ function initDatabase() {
         `);
         
         dbInitialized = true;
+        setPersistenceStatus('saved');
         refreshAll();
         showMessage('success', 'Base de datos lista. Escribe una consulta SQL.');
+        schedulePersistDatabase();
     }).catch(error => {
         showMessage('error', 'Error al cargar SQL.js', `<code>${escapeHtml(error.message)}</code>`);
     });
@@ -920,7 +1165,8 @@ function runQuery() {
     }
 
     const editor = document.getElementById('sqlEditor');
-    const query = editor.value.trim();
+    const selection = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+    const query = (selection.trim() || editor.value).trim();
 
     if (!query) {
         showMessage('warning', 'Por favor, escribe una consulta SQL');
@@ -934,6 +1180,9 @@ function runQuery() {
         lastQueryError = null;
         displayResults(result);
         refreshAll();
+        if (isWriteQuery(query) || db.getRowsModified() > 0) {
+            schedulePersistDatabase();
+        }
     } catch (error) {
         const message = error && error.message ? error.message : String(error);
         lastQueryError = { query, message };
@@ -944,9 +1193,11 @@ function runQuery() {
 // HISTORIAL
 function addToHistory(query) {
     if (!query || query.trim() === '') return;
-    if (queryHistory.includes(query)) return;
+    const existingIndex = queryHistory.indexOf(query);
+    if (existingIndex >= 0) queryHistory.splice(existingIndex, 1);
     queryHistory.unshift(query);
-    if (queryHistory.length > 20) queryHistory.pop();
+    if (queryHistory.length > HISTORY_LIMIT) queryHistory.pop();
+    saveHistoryToStorage();
     updateHistoryDisplay();
 }
 
@@ -981,6 +1232,7 @@ function loadHistoryQuery(query) {
 function clearHistory() {
     if (confirm('¿Limpiar todo el historial?')) {
         queryHistory = [];
+        removeStoredItem(STORAGE_KEYS.history);
         updateHistoryDisplay();
         showMessage('info', 'Historial limpiado');
     }
@@ -1039,6 +1291,7 @@ function importDatabase() {
                 aiCooldownUntil = 0;
                 aiResponseCache.clear();
                 refreshAll();
+                schedulePersistDatabase();
                 showMessage('success', 'Base de datos importada correctamente', `Archivo: ${escapeHtml(file.name)}`);
             } catch (e) {
                 if (imported) {
@@ -1234,6 +1487,7 @@ function saveTableChanges(tableName) {
         if (updatedCount === 0) {
             showMessage('info', 'No había cambios que guardar');
         } else {
+            schedulePersistDatabase();
             showMessage('success', 'Cambios guardados correctamente', `${updatedCount} fila(s) actualizada(s) en ${escapeHtml(tableName)}`);
         }
     } catch (e) {
@@ -1256,6 +1510,7 @@ function deleteRow(tableName, pkValue) {
         const value = parseColumnValue(pkValue, pkColumn);
         db.run(`DELETE FROM ${quoteIdent(tableName)} WHERE ${quoteIdent(pkColumn.name)} = ?`, [value]);
         refreshAll();
+        schedulePersistDatabase();
         showMessage('success', 'Registro eliminado correctamente');
     } catch (e) {
         showMessage('error', 'Error al eliminar', `<code>${escapeHtml(e.message)}</code>`);
@@ -1302,6 +1557,7 @@ function addRow(tableName) {
         }
 
         refreshAll();
+        schedulePersistDatabase();
         showMessage('success', `Nueva fila agregada a ${tableName}`);
     } catch (e) {
         showMessage('error', 'Error al agregar fila', `<code>${escapeHtml(e.message)}</code>`);
@@ -1552,13 +1808,14 @@ function updateCharts() {
 }
 
 // REINICIAR BASE DE DATOS
-function resetDatabase() {
-    if (confirm('¿Seguro que quieres reiniciar la base de datos a su estado original?')) {
+async function resetDatabase() {
+    if (confirm('¿Seguro que quieres reiniciar la base de datos a su estado original? Se borrará la copia guardada en este navegador.')) {
         dbInitialized = false;
         lastQueryError = null;
         aiCooldownUntil = 0;
         showMessage('warning', 'Reiniciando base de datos...');
-        initDatabase();
+        await clearSavedDatabase();
+        initDatabase({ restore: false });
     }
 }
 
@@ -2372,7 +2629,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Inicializar base de datos
+    // Preferencias e historial guardados en el navegador.
+    loadPreferences();
+    loadHistoryFromStorage();
+    updateHistoryDisplay();
+
+    // Inicializar base de datos (restaura la copia local si existe).
     initDatabase();
     
     // Año automático en el footer
