@@ -1,6 +1,6 @@
 # SQL Academy - Simulador de Base de Datos
 
-Simulador educativo de SQL que se ejecuta en el navegador con una base de datos SQLite real mediante [sql.js](https://sql.js.org/). Incluye editor de consultas, ejemplos guiados, retos con validación automática, editor visual de tablas, diagrama de relaciones, gráficos, persistencia local, PWA y un asistente opcional que explica errores y propone ejercicios en español.
+Simulador educativo de SQL y NoSQL que se ejecuta en el navegador. El laboratorio SQL usa una base de datos SQLite real mediante [sql.js](https://sql.js.org/); el laboratorio NoSQL incluye un motor documental propio inspirado en MongoDB. Incluye editores de consultas, ejemplos guiados, retos con validación automática, editor visual de tablas, diagrama de relaciones, gráficos, persistencia local, PWA y un asistente opcional que explica errores y propone ejercicios en español.
 
 **Demo:** [https://sql-academy.netlify.app](https://sql-academy.netlify.app)
 
@@ -14,7 +14,8 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
 - Ocho retos con validación por resultados, pistas y progreso guardado.
 - Tres datasets de práctica: Escuela, Tienda y Biblioteca.
-- Asistente IA con modos de error, explicación, pista, revisión y generación de ejercicios.
+- Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, retos y persistencia local.
+- Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
 - Aplicación instalable (PWA), modo oscuro y mejoras de accesibilidad.
 - Tests automatizados, CI y escaneo de secretos con Gitleaks.
 
@@ -22,6 +23,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 
 - HTML5, CSS3 y JavaScript sin frameworks.
 - SQLite en el navegador con `sql.js`.
+- Motor documental propio para el laboratorio NoSQL, sin `eval`.
 - Chart.js para los gráficos.
 - Font Awesome para los iconos.
 - IndexedDB y `localStorage` para persistencia.
@@ -77,6 +79,9 @@ sql-academy/
 ├── index.html                  # Interfaz, secciones, modales y metadatos PWA
 ├── style.css                   # Estilos responsive, componentes y modo oscuro
 ├── script.js                   # Lógica de la app, persistencia, retos, IA y editor
+├── nosql-engine.js             # Motor documental seguro inspirado en MongoDB
+├── nosql-datasets.js           # Documentos, ejemplos y retos NoSQL
+├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
 ├── datasets.js                 # Datasets Tienda y Biblioteca
 ├── service-worker.js           # Caché PWA y estrategia de red
 ├── manifest.webmanifest        # Configuración de la aplicación instalable
@@ -88,6 +93,7 @@ sql-academy/
 │       └── explain.mjs         # Proxy seguro hacia Gemini
 ├── tests/
 │   ├── core.test.mjs           # Utilidades del frontend con jsdom
+│   ├── nosql.test.mjs          # Motor documental, filtros, CRUD y agregaciones
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
 ├── .gitleaks.toml              # Configuración del escaneo de secretos
@@ -200,6 +206,7 @@ Modos disponibles:
 | `hint` | Da una pista sin revelar la solución completa |
 | `review` | Revisa legibilidad, riesgos y mejoras |
 | `exercise` | Genera un ejercicio a partir del esquema actual |
+| `nosql` | Explica un comando del laboratorio documental |
 
 El modo se valida en el backend con una allowlist. El frontend envía la consulta, el error cuando existe y un resumen del esquema; **nunca los valores de las filas ni el archivo SQLite**.
 
@@ -215,6 +222,26 @@ El modo se valida en el backend con una allowlist. El frontend envía la consult
 ### Datasets
 
 Selector con tres bases de práctica. Al cambiar de dataset se reemplaza la base actual y se borra la copia guardada, por lo que se pide confirmación. El dataset activo se conserva al recargar.
+
+### Laboratorio NoSQL
+
+El laboratorio NoSQL es un simulador documental educativo, no una instancia real de MongoDB. Los documentos se guardan como JSON y se ejecutan en el navegador con un motor propio que no usa `eval`.
+
+- Colecciones y documentos con `_id` de texto.
+- Consola simplificada de Mongo shell:
+  ```js
+  db.estudiantes.find({ edad: { $gt: 18 } }).sort({ promedio: -1 }).limit(5)
+  ```
+- Operaciones `find`, `findOne`, `insertOne`, `insertMany`, `updateOne`, `updateMany`, `deleteOne`, `deleteMany`, `countDocuments`, `distinct`, `aggregate` y `drop`.
+- Operadores de consulta `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$exists`, `$regex`, `$and`, `$or`, `$nor` y `$elemMatch`.
+- Actualizaciones con `$set`, `$unset`, `$inc`, `$push`, `$addToSet`, `$pull` y `$rename`.
+- Aggregation con `$match`, `$project`, `$group`, `$sort`, `$skip`, `$limit`, `$count`, `$unwind`, `$addFields` y `$unset`.
+- Datasets documentales de Escuela y Tienda, con cursos y pedidos embebidos.
+- Historial, ejemplos guiados, tres retos con validación y progreso persistente.
+- Modo seguro para `deleteMany({})`, `updateMany({})` y `drop()`.
+- Persistencia en IndexedDB y ayuda opcional con IA para comandos NoSQL.
+
+La sintaxis está limitada a un subconjunto seguro: no se aceptan funciones, llamadas arbitrarias ni JavaScript ejecutable. Las claves pueden escribirse sin comillas y los textos deben ir entre comillas simples o dobles.
 
 ### PWA, modo oscuro y accesibilidad
 
@@ -259,7 +286,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 
 ### Privacidad y límites
 
-- Solo se envían la consulta SQL, el mensaje de error (cuando exista) y un resumen del esquema (nombres de tablas y columnas, tipos, claves y restricciones). **Nunca se envían los valores de las filas ni el archivo de base de datos.**
+- Solo se envían la consulta, el mensaje de error (cuando exista) y un resumen del esquema (nombres de tablas o colecciones y campos). **Nunca se envían los valores de las filas ni los documentos.**
 - En el modo `exercise` no se envía la consulta; solo el esquema.
 - La explicación se solicita únicamente al pulsar un botón. No se envía automáticamente al ejecutar una consulta.
 - El frontend guarda una caché en memoria y aplica un pequeño tiempo de espera entre solicitudes para cuidar la cuota gratuita. La función también limita las peticiones por IP.
@@ -270,6 +297,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 ## Tests, CI y seguridad
 
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV y datasets.
+- `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
 - `_headers` añade `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS y cachés específicas.
@@ -279,8 +307,8 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Flujo de ramas y despliegue
 
-- `diego-dev` es la rama de desarrollo.
-- `main` se reserva para la versión publicada en producción.
+- `diego-dev` y `oscar-dev` son ramas personales de desarrollo.
+- `main` se reserva para la versión publicada en producción y solo recibe cambios revisados.
 - Los cambios se agrupan en commits por fase (persistencia, modo seguro, resultados, retos, IA, PWA, datasets, calidad).
 - Antes de fusionar con `main`, ejecutar `npm run check` y probar la app con `npx netlify-cli dev`.
 - La configuración de Netlify puede construir automáticamente al recibir cambios en la rama de producción. No hagas push ni merge a esa rama hasta estar listo para consumir créditos de build.
@@ -296,6 +324,15 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Los retos y ejemplos guiados usan el dataset Escuela. Con Tienda o Biblioteca, la app permite practicar libremente pero bloquea esos contenidos.
 
 ## Release Notes
+
+### v1.5.0
+
+- **Laboratorio NoSQL documental:** consola tipo MongoDB, colecciones JSON, proyecciones, orden, límites y agregaciones.
+- **CRUD seguro:** inserción, actualización y eliminación con operadores de actualización y confirmación de operaciones destructivas.
+- **Datasets NoSQL:** Escuela y Tienda con documentos embebidos para comparar el modelo relacional con el documental.
+- **Aprendizaje:** ejemplos guiados, tres retos con validación y progreso persistente.
+- **Persistencia e IA:** estado en IndexedDB, historial local y modo `nosql` del asistente.
+- **Calidad:** tests del motor, documentación y caché PWA actualizada.
 
 ### v1.4.0
 
