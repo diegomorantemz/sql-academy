@@ -3407,15 +3407,16 @@ function showChallengeSolution() {
 function isReadOnlyQuery(sql) {
     const normalized = stripSqlComments(sql);
     if (!normalized) return false;
-    const statements = normalized.split(';').map(statement => statement.trim()).filter(Boolean);
+
+    // Sustituye literales antes de buscar puntos y comas o palabras reservadas.
+    const withoutStrings = normalized
+        .replace(/'(?:''|[^'])*'/g, "''")
+        .replace(/"(?:\"\"|[^\"])*"/g, '""');
+    const statements = withoutStrings.split(';').map(statement => statement.trim()).filter(Boolean);
     if (statements.length !== 1) return false;
     if (!/^(SELECT|WITH)\b/i.test(statements[0])) return false;
 
-    // Ignora el contenido de literales para no confundir palabras como "delete".
-    const withoutStrings = statements[0]
-        .replace(/'(?:''|[^'])*'/g, ' ')
-        .replace(/"(?:""|[^"])*"/g, ' ');
-    return !/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE|PRAGMA|ATTACH|DETACH|VACUUM)\b/i.test(withoutStrings);
+    return !/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE|PRAGMA|ATTACH|DETACH|VACUUM)\b/i.test(statements[0]);
 }
 
 function firstResultSet(result) {
