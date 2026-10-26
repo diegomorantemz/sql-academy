@@ -300,9 +300,17 @@
                             <button id="executeBtn" onclick="runQuery()">
                                 <i class="fas fa-play"></i> Ejecutar (Ctrl+Enter)
                             </button>
+                            <button onclick="formatEditorSql()" class="btn-secondary" title="Formatear SQL (Ctrl+Shift+F)">
+                                <i class="fas fa-align-left"></i> Formatear
+                            </button>
                             <button onclick="clearEditor()" class="btn-secondary">
                                 <i class="fas fa-eraser"></i> Limpiar
                             </button>
+                            <select id="datasetSelector" class="dataset-selector" onchange="loadDataset(this.value)" aria-label="Dataset de práctica">
+                                <option value="escuela" selected>Dataset: Escuela</option>
+                                <option value="tienda">Dataset: Tienda</option>
+                                <option value="biblioteca">Dataset: Biblioteca</option>
+                            </select>
                             <button onclick="resetDatabase()" class="btn-secondary">
                                 <i class="fas fa-rotate"></i> Reiniciar BD
                             </button>
@@ -707,6 +715,9 @@
     </div>
 
     <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Datasets de práctica -->
+    <script src="datasets.js"></script>
 
     <!-- Cargar sql.js -->
     <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>

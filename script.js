@@ -23,7 +23,8 @@ let persistenceDbPromise = null;
 let persistTimer = null;
 let preferences = {
     theme: 'light',
-    safeMode: true
+    safeMode: true,
+    dataset: 'escuela'
 };
 
 // ============================================
@@ -118,7 +119,8 @@ function loadPreferences() {
     const stored = readStoredJSON(STORAGE_KEYS.preferences, {});
     preferences = {
         theme: stored.theme === 'dark' ? 'dark' : 'light',
-        safeMode: stored.safeMode !== false
+        safeMode: stored.safeMode !== false,
+        dataset: ['escuela', 'tienda', 'biblioteca'].includes(stored.dataset) ? stored.dataset : 'escuela'
     };
     return preferences;
 }
@@ -661,6 +663,9 @@ function initDatabase(options = {}) {
         `);
         
         dbInitialized = true;
+        preferences.dataset = 'escuela';
+        savePreferences();
+        syncDatasetSelector();
         setPersistenceStatus('saved');
         refreshAll();
         showMessage('success', 'Base de datos lista. Escribe una consulta SQL.');
@@ -742,6 +747,7 @@ function showTablesInfo() {
 
 // MOSTRAR RESULTADOS
 function formatDuration(ms) {
+    if (ms === null || ms === undefined || ms === '') return '';
     const value = Number(ms);
     if (!Number.isFinite(value) || value < 0) return '';
     return value < 10 ? `${value.toFixed(1)} ms` : `${Math.round(value)} ms`;
@@ -1461,6 +1467,76 @@ async function copyAIResponse() {
     }
 }
 
+// FORMATEO DE SQL
+function formatSql(sql) {
+    let text = String(sql || '').trim();
+    if (!text) return '';
+
+    // Protege literales, identificadores entre comillas y comentarios.
+    const stringLiterals = [];
+    const protect = match => {
+        stringLiterals.push(match);
+        return `\u0000STR${stringLiterals.length - 1}\u0000`;
+    };
+    text = text
+        .replace(/\/\*[\s\S]*?\*\//g, protect)
+        .replace(/--[^\n]*/g, protect)
+        .replace(/'(?:''|[^'])*'/g, protect)
+        .replace(/"(?:""|[^"])*"/g, protect);
+
+    text = text.replace(/\s+/g, ' ');
+
+    const clauses = [
+        'SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
+        'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'CROSS JOIN', 'JOIN',
+        'UNION ALL', 'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM'
+    ];
+
+    clauses.forEach(clause => {
+        const words = clause.split(' ').join('\\s+');
+        const pattern = new RegExp(`\\s+(${words})\\s+`, 'gi');
+        text = text.replace(pattern, `\n$1 `);
+    });
+
+    // Evita que "LEFT JOIN" o "INNER JOIN" queden partidos en dos líneas.
+    text = text.replace(/\b(LEFT|RIGHT|INNER|CROSS)\nJOIN\b/gi, '$1 JOIN');
+
+    // Las condiciones ON van en una línea indentada.
+    text = text.replace(/\s+(ON)\s+/gi, '\n  $1 ');
+
+    const keywordPattern = /\b(select|from|where|group by|order by|having|limit|offset|left join|right join|inner join|cross join|join|on|union all|insert into|values|update|set|delete from|and|or|not|as|distinct|count|avg|sum|min|max|round)\b/gi;
+    text = text.replace(keywordPattern, match => match.toUpperCase());
+    text = text.replace(/\n{2,}/g, '\n');
+    text = text.replace(/[ \t]+\n/g, '\n');
+    text = text.replace(/\u0000STR(\d+)\u0000/g, (_, index) => stringLiterals[Number(index)]);
+
+    return text.trim();
+}
+
+function formatEditorSql() {
+    const editor = document.getElementById('sqlEditor');
+    if (!editor) return;
+
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const hasSelection = end > start;
+    const source = hasSelection ? editor.value.slice(start, end) : editor.value;
+
+    if (!source.trim()) {
+        showToast('warning', 'No hay ninguna consulta para formatear.');
+        return;
+    }
+
+    const formatted = formatSql(source);
+    if (hasSelection) {
+        editor.setRangeText(formatted, start, end, 'select');
+    } else {
+        editor.value = formatted;
+    }
+    editor.focus();
+    showToast('success', 'Consulta formateada.');
+}
+
 // MODO SEGURO
 function stripSqlComments(sql) {
     return String(sql || '')
@@ -1503,9 +1579,15 @@ function getDangerousQueryReason(sql) {
     return '';
 }
 
+function syncDatasetSelector() {
+    const selector = document.getElementById('datasetSelector');
+    if (selector) selector.value = preferences.dataset;
+}
+
 function applyPreferences() {
     const safeModeToggle = document.getElementById('safeModeToggle');
     if (safeModeToggle) safeModeToggle.checked = preferences.safeMode;
+    syncDatasetSelector();
 
     const isDark = preferences.theme === 'dark';
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
@@ -2236,12 +2318,82 @@ function updateCharts() {
     }
 }
 
+// DATASETS
+async function loadDataset(name) {
+    const dataset = name === 'escuela' ? null : window.SQL_ACADEMY_DATASETS?.[name];
+    if (name !== 'escuela' && !dataset) {
+        showToast('error', 'El dataset seleccionado no está disponible.');
+        syncDatasetSelector();
+        return;
+    }
+    if (!SQLModule) {
+        showToast('warning', 'Espera a que la base de datos termine de inicializarse.');
+        syncDatasetSelector();
+        return;
+    }
+
+    const label = name === 'escuela' ? 'Escuela' : dataset.name;
+    const confirmed = confirm(
+        `¿Cambiar al dataset ${label}?\n\nSe reemplazará la base de datos actual y se borrará la copia guardada. Exporta tu base si quieres conservarla.`
+    );
+    if (!confirmed) {
+        syncDatasetSelector();
+        return;
+    }
+
+    try {
+        dbInitialized = false;
+        lastQueryError = null;
+        aiCooldownUntil = 0;
+        aiResponseCache.clear();
+        if (db) {
+            try { db.close(); } catch (error) { /* ignorar */ }
+            db = null;
+        }
+        await clearSavedDatabase();
+
+        preferences.dataset = name;
+        savePreferences();
+        syncDatasetSelector();
+
+        if (name === 'escuela') {
+            initDatabase({ restore: false });
+            return;
+        }
+
+        const nextDb = new SQLModule.Database();
+        nextDb.run('PRAGMA foreign_keys = ON;');
+        nextDb.run(dataset.sql);
+        db = nextDb;
+        dbInitialized = true;
+        refreshAll();
+        schedulePersistDatabase();
+        showMessage(
+            'success',
+            `Dataset ${escapeHtml(dataset.name)} cargado`,
+            `${escapeHtml(dataset.description)} Los retos y los ejemplos guiados siguen usando el dataset Escuela.`
+        );
+        showToast('success', `Dataset ${dataset.name} listo.`);
+    } catch (error) {
+        console.error('No se pudo cargar el dataset:', error);
+        preferences.dataset = 'escuela';
+        savePreferences();
+        syncDatasetSelector();
+        showMessage('error', 'No se pudo cargar el dataset', `<code>${escapeHtml(error.message)}</code>`);
+        showToast('error', 'Se restauró el dataset Escuela.');
+        initDatabase({ restore: false });
+    }
+}
+
 // REINICIAR BASE DE DATOS
 async function resetDatabase() {
     if (confirm('¿Seguro que quieres reiniciar la base de datos a su estado original? Se borrará la copia guardada en este navegador.')) {
         dbInitialized = false;
         lastQueryError = null;
         aiCooldownUntil = 0;
+        preferences.dataset = 'escuela';
+        savePreferences();
+        syncDatasetSelector();
         showMessage('warning', 'Reiniciando base de datos...');
         await clearSavedDatabase();
         initDatabase({ restore: false });
@@ -2372,6 +2524,15 @@ function showExampleByCategory() {
     const selector = document.getElementById('categorySelector');
     if (!selector) {
         console.error('No se encontro el selector de categorias');
+        return;
+    }
+
+    if (!getUserTables().includes('estudiantes')) {
+        showMessage(
+            'warning',
+            'Los ejemplos guiados usan el dataset Escuela',
+            'Cambia el dataset a “Escuela” para usar estos ejemplos, o escribe tus propias consultas sobre las tablas actuales.'
+        );
         return;
     }
     
@@ -3249,7 +3410,12 @@ function isReadOnlyQuery(sql) {
     const statements = normalized.split(';').map(statement => statement.trim()).filter(Boolean);
     if (statements.length !== 1) return false;
     if (!/^(SELECT|WITH)\b/i.test(statements[0])) return false;
-    return !/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE|PRAGMA|ATTACH|DETACH|VACUUM)\b/i.test(statements[0]);
+
+    // Ignora el contenido de literales para no confundir palabras como "delete".
+    const withoutStrings = statements[0]
+        .replace(/'(?:''|[^'])*'/g, ' ')
+        .replace(/"(?:""|[^"])*"/g, ' ');
+    return !/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE|PRAGMA|ATTACH|DETACH|VACUUM)\b/i.test(withoutStrings);
 }
 
 function firstResultSet(result) {
@@ -3326,6 +3492,14 @@ function runChallenge() {
     }
     if (!dbInitialized) {
         showToast('warning', 'Espera a que la base de datos termine de inicializarse.');
+        return;
+    }
+
+    if (!getUserTables().includes('estudiantes')) {
+        setChallengeResult(
+            'warning',
+            '<strong><i class="fas fa-triangle-exclamation"></i> Dataset incompatible</strong>Los retos están diseñados para el dataset Escuela. Cambia el dataset desde la sección Practicar para resolverlos.'
+        );
         return;
     }
 
@@ -3542,6 +3716,10 @@ document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r') {
         e.preventDefault();
         resetDatabase();
+    }
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        formatEditorSql();
     }
     if (e.ctrlKey && e.key.toLowerCase() === 'e') {
         e.preventDefault();
@@ -3974,6 +4152,7 @@ function previousGuideStep() {
 // EXPONER FUNCIONES GLOBALES
 window.runQuery = runQuery;
 window.resetDatabase = resetDatabase;
+window.loadDataset = loadDataset;
 window.showExamples = showExamples;
 window.clearHistory = clearHistory;
 window.loadHistoryQuery = loadHistoryQuery;
@@ -3987,6 +4166,7 @@ window.clearEditor = clearEditor;
 window.toggleSafeMode = toggleSafeMode;
 window.toggleTheme = toggleTheme;
 window.installApp = installApp;
+window.formatEditorSql = formatEditorSql;
 window.sortResult = sortResult;
 window.showMoreResults = showMoreResults;
 window.exportResultCSV = exportResultCSV;

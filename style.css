@@ -601,7 +601,8 @@ button {
     margin-left: auto;
 }
 
-.example-selector select {
+.example-selector select,
+.dataset-selector {
     padding: 6px 12px;
     border: 1px solid var(--postgres-border);
     border-radius: 6px;
@@ -609,6 +610,13 @@ button {
     background: white;
     color: var(--postgres-text);
     cursor: pointer;
+}
+
+.dataset-selector:focus,
+.example-selector select:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
 }
 
 /* ===== HISTORIAL ===== */
@@ -2678,6 +2686,7 @@ button {
 [data-theme="dark"] #sqlEditor,
 [data-theme="dark"] #challengeEditor,
 [data-theme="dark"] .example-selector select,
+[data-theme="dark"] .dataset-selector,
 [data-theme="dark"] .table-editor select,
 [data-theme="dark"] #tableEditorContent td input {
     background: #0f172a;
