@@ -1017,12 +1017,36 @@ function getDatabaseSchemaSummary() {
     }
 }
 
+const AI_MODES = new Set(['error', 'explain', 'hint', 'exercise', 'review']);
+const AI_MODE_LABELS = {
+    error: 'Diagnóstico',
+    explain: 'Explicación',
+    hint: 'Pista',
+    exercise: 'Ejercicio propuesto',
+    review: 'Revisión'
+};
+const AI_MODE_ICONS = {
+    error: 'fa-stethoscope',
+    explain: 'fa-lightbulb',
+    hint: 'fa-compass',
+    exercise: 'fa-dumbbell',
+    review: 'fa-magnifying-glass'
+};
+
 /** Prepara la consulta, el error y el esquema que se enviarán. */
 function buildAIContext(mode) {
     const editor = document.getElementById('sqlEditor');
     const currentQuery = editor ? editor.value.trim() : '';
 
-    if (mode === 'error' && lastQueryError) {
+    let normalizedMode = String(mode || 'explain');
+    if (normalizedMode === 'manual') normalizedMode = 'explain';
+    if (!AI_MODES.has(normalizedMode)) normalizedMode = 'explain';
+
+    if (normalizedMode === 'explain' && lastQueryError && lastQueryError.query === currentQuery) {
+        normalizedMode = 'error';
+    }
+
+    if (normalizedMode === 'error' && lastQueryError) {
         return {
             query: lastQueryError.query,
             error: lastQueryError.message,
@@ -1031,15 +1055,15 @@ function buildAIContext(mode) {
         };
     }
 
-    const errorMessage = lastQueryError && lastQueryError.query === currentQuery
-        ? lastQueryError.message
-        : '';
+    if (normalizedMode === 'error') {
+        normalizedMode = 'explain';
+    }
 
     return {
         query: currentQuery,
-        error: errorMessage,
+        error: '',
         schema: getDatabaseSchemaSummary(),
-        mode: errorMessage ? 'error' : 'explain'
+        mode: normalizedMode
     };
 }
 
@@ -1050,10 +1074,15 @@ function openAIHelp(mode = 'error') {
 
     const context = buildAIContext(mode);
 
-    if (!context.query) {
+    if (!context.query && context.mode !== 'exercise') {
         showMessage('warning', 'Escribe una consulta antes de pedir ayuda al asistente');
         const editor = document.getElementById('sqlEditor');
         if (editor) editor.focus();
+        return;
+    }
+
+    if (context.mode === 'exercise' && !context.schema) {
+        showMessage('warning', 'Espera a que la base de datos termine de inicializarse para generar un ejercicio');
         return;
     }
 
@@ -1119,6 +1148,10 @@ function getAIErrorMessage(code) {
             return 'La IA no devolvió una explicación. Intenta reformular la consulta.';
         case 'empty_query':
             return 'No hay una consulta para explicar.';
+        case 'empty_schema':
+            return 'No se pudo leer el esquema de la base de datos para generar el ejercicio.';
+        case 'invalid_mode':
+            return 'El modo del asistente no es válido. Recarga la página e inténtalo de nuevo.';
         case 'http_404':
         case 'http_405':
             return 'El asistente no está disponible en este entorno. Si trabajas en local, abre el proyecto con Netlify Dev.';
@@ -1269,11 +1302,19 @@ function renderAILoading(context) {
     const body = document.getElementById('aiHelpBody');
     if (!body) return;
 
+    const messages = {
+        error: 'Diagnosticando el error...',
+        explain: 'Analizando la consulta...',
+        hint: 'Preparando una pista...',
+        exercise: 'Diseñando un ejercicio...',
+        review: 'Revisando la consulta...'
+    };
+
     body.innerHTML = `
         ${renderAIContext(context)}
         <div class="ai-loading">
             <i class="fas fa-spinner fa-spin"></i>
-            <p>Analizando la consulta...</p>
+            <p>${escapeHtml(messages[context.mode] || 'Analizando...')}</p>
             <p>Esto puede tardar unos segundos.</p>
         </div>
     `;
@@ -1282,6 +1323,7 @@ function renderAILoading(context) {
 function renderAIContext(context) {
     if (!context) return '';
 
+    const isExercise = context.mode === 'exercise';
     const query = context.query.length > 600
         ? `${context.query.slice(0, 600)}...`
         : context.query;
@@ -1291,8 +1333,10 @@ function renderAIContext(context) {
 
     return `
         <div class="ai-context">
-            <div class="ai-context-title"><i class="fas fa-code"></i> Consulta enviada</div>
-            <pre>${escapeHtml(query)}</pre>
+            <div class="ai-context-title"><i class="fas fa-code"></i> ${isExercise ? 'Esquema enviado' : 'Consulta enviada'}</div>
+            ${query
+                ? `<pre>${escapeHtml(query)}</pre>`
+                : `<p class="ai-context-note">Se enviará únicamente el esquema de las tablas para generar el ejercicio.</p>`}
             ${error ? `
                 <div class="ai-context-error">
                     <strong>Error:</strong>
@@ -1309,9 +1353,13 @@ function renderAIResponse(explanation) {
     const retryBtn = document.getElementById('aiRetryBtn');
     if (!body) return;
 
+    const mode = aiLastContext?.mode || 'explain';
+    const label = AI_MODE_LABELS[mode] || 'Respuesta';
+    const icon = AI_MODE_ICONS[mode] || 'fa-lightbulb';
+
     body.innerHTML = `
         ${renderAIContext(aiLastContext)}
-        <div class="ai-response-title"><i class="fas fa-lightbulb"></i> Explicación</div>
+        <div class="ai-response-title"><i class="fas ${icon}"></i> ${escapeHtml(label)}</div>
         <div class="ai-response">${formatAIResponse(explanation)}</div>
     `;
 
