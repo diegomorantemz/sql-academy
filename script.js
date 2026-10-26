@@ -1049,14 +1049,16 @@ const AI_MODE_LABELS = {
     explain: 'Explicación',
     hint: 'Pista',
     exercise: 'Ejercicio propuesto',
-    review: 'Revisión'
+    review: 'Revisión',
+    nosql: 'Explicación NoSQL'
 };
 const AI_MODE_ICONS = {
     error: 'fa-stethoscope',
     explain: 'fa-lightbulb',
     hint: 'fa-compass',
     exercise: 'fa-dumbbell',
-    review: 'fa-magnifying-glass'
+    review: 'fa-magnifying-glass',
+    nosql: 'fa-leaf'
 };
 
 /** Prepara la consulta, el error y el esquema que se enviarán. */
@@ -1333,7 +1335,8 @@ function renderAILoading(context) {
         explain: 'Analizando la consulta...',
         hint: 'Preparando una pista...',
         exercise: 'Diseñando un ejercicio...',
-        review: 'Revisando la consulta...'
+        review: 'Revisando la consulta...',
+        nosql: 'Analizando el comando NoSQL...'
     };
 
     body.innerHTML = `

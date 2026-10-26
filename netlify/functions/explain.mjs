@@ -8,7 +8,7 @@ const MAX_OUTPUT_TOKENS = 850;
 const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_FALLBACK_MODEL = 'gemini-3.5-flash';
 const FALLBACK_STATUSES = new Set([404, 503]);
-const ALLOWED_MODES = new Set(['error', 'explain', 'hint', 'exercise', 'review']);
+const ALLOWED_MODES = new Set(['error', 'explain', 'hint', 'exercise', 'review', 'nosql']);
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 6;
@@ -38,7 +38,8 @@ function getModeSystemPrompt(mode) {
         exercise: '\nModo actual: EJERCICIO. Crea un reto práctico basado en el esquema. Incluye: título, enunciado, columnas esperadas, criterio de éxito y una pista. No reveles la consulta solución.',
         review: '\nModo actual: REVISIÓN. Señala fortalezas, riesgos, legibilidad y una versión mejorada si aporta valor.',
         explain: '\nModo actual: EXPLICACIÓN. Explica qué hace la consulta y cómo se lee paso a paso.',
-        error: '\nModo actual: ERROR. Diagnostica el fallo y ofrece la corrección.'
+        error: '\nModo actual: ERROR. Diagnostica el fallo y ofrece la corrección.',
+        nosql: '\nModo actual: NOSQL. Ayuda con una consola educativa de MongoDB. Usa terminología de colecciones, documentos, filtros y operadores ($gt, $in, $set, $group). No confundas esta consulta con SQL ni inventes colecciones.'
     };
     return SYSTEM_PROMPT + (additions[mode] || '');
 }
@@ -124,6 +125,21 @@ ${schemaBlock}
 ${queryBlock}
 
 Da una pista breve y progresiva. No escribas la solución completa. Si hay un error, explica solo la causa principal y cómo investigarla.`;
+    }
+
+    if (mode === 'nosql') {
+        return `Analiza este comando de una consola educativa de MongoDB.
+
+${schemaBlock}
+
+${queryBlock}
+
+Explica:
+1. Qué documentos devuelve o qué modifica.
+2. Cómo se lee el filtro, la proyección o el pipeline.
+3. Una mejora o advertencia concreta.
+
+Si el comando tiene un error de sintaxis, muestra la versión corregida. No lo ejecutes y no inventes datos.`;
     }
 
     if (mode === 'review') {

@@ -12,7 +12,7 @@ import handler, {
 test('ALLOWED_MODES contiene todos los modos del asistente', () => {
     assert.deepEqual(
         [...ALLOWED_MODES].sort(),
-        ['error', 'exercise', 'explain', 'hint', 'review']
+        ['error', 'exercise', 'explain', 'hint', 'nosql', 'review']
     );
 });
 
@@ -45,6 +45,7 @@ test('getModeSystemPrompt añade instrucciones específicas', () => {
     assert.match(getModeSystemPrompt('review'), /REVISIÓN/);
     assert.match(getModeSystemPrompt('explain'), /EXPLICACIÓN/);
     assert.match(getModeSystemPrompt('error'), /ERROR/);
+    assert.match(getModeSystemPrompt('nosql'), /NOSQL/);
 });
 
 test('buildUserPrompt cambia según el modo', () => {
@@ -84,6 +85,15 @@ test('buildUserPrompt cambia según el modo', () => {
     });
     assert.match(error, /near "SELEC"/);
     assert.match(error, /consulta corregida/);
+
+    const nosql = buildUserPrompt({
+        query: 'db.estudiantes.find({ edad: { $gt: 18 } })',
+        schema: 'estudiantes(_id:string, nombre:string, edad:number)',
+        mode: 'nosql'
+    });
+    assert.match(nosql, /consola educativa de MongoDB/);
+    assert.match(nosql, /db\.estudiantes\.find/);
+    assert.match(nosql, /No lo ejecutes/);
 });
 
 test('el handler rechaza métodos no POST y claves ausentes', async () => {
