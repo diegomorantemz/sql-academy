@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Aprende SQL desde cero, practica con una base de datos real y comprueba tus resultados en el navegador.">
+    <meta name="description" content="Aprende SQL y NoSQL desde cero, practica con una base de datos real y comprueba tus resultados en el navegador.">
     <meta name="theme-color" content="#336791">
     <title>SQL Academy</title>
 
@@ -48,6 +48,9 @@
                     </button>
                     <button class="nav-btn" data-section="practice">
                         <i class="fas fa-laptop-code"></i> Practicar
+                    </button>
+                    <button class="nav-btn" data-section="nosql">
+                        <i class="fas fa-leaf"></i> NoSQL
                     </button>
                     <button class="nav-btn" data-section="challenges">
                         <i class="fas fa-trophy"></i> Retos
@@ -408,6 +411,115 @@
             </div>
         </section>
 
+        <!-- ===== SECCIÓN: NOSQL ===== -->
+        <section id="section-nosql" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-leaf"></i> Laboratorio NoSQL</h2>
+                <p>Practica con documentos JSON y una consola tipo MongoDB, directamente en el navegador</p>
+            </div>
+
+            <div class="nosql-layout">
+                <aside class="nosql-sidebar">
+                    <div class="info-panel nosql-collections-panel">
+                        <h3><i class="fas fa-layer-group"></i> Colecciones</h3>
+                        <p id="nosqlCollectionSummary" class="nosql-muted">Cargando documentos...</p>
+                        <div id="nosqlCollectionList" class="nosql-collection-list"></div>
+                        <div class="nosql-sidebar-actions">
+                            <select id="nosqlDatasetSelector" class="dataset-selector" onchange="changeNoSQLDataset(this.value)" aria-label="Dataset NoSQL">
+                                <option value="escuela" selected>Dataset: Escuela</option>
+                                <option value="tienda">Dataset: Tienda</option>
+                            </select>
+                            <button type="button" onclick="resetNoSQLDatabase()" class="btn-secondary">
+                                <i class="fas fa-rotate"></i> Reiniciar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="info-panel nosql-help-panel">
+                        <h3><i class="fas fa-circle-info"></i> Sintaxis rápida</h3>
+                        <p>Usa una consola simplificada de MongoDB. No se ejecuta JavaScript arbitrario.</p>
+                        <code>db.estudiantes.find({ edad: { $gt: 18 } })</code>
+                        <code>db.estudiantes.insertOne({ nombre: "Ana" })</code>
+                        <code>db.estudiantes.updateMany({}, { $inc: { edad: 1 } })</code>
+                        <code>db.estudiantes.aggregate([{ $group: { _id: "$carrera", total: { $sum: 1 } } }])</code>
+                        <p class="nosql-muted">Operadores: <code>$gt</code>, <code>$gte</code>, <code>$lt</code>, <code>$in</code>, <code>$and</code>, <code>$or</code>, <code>$set</code>, <code>$inc</code>, <code>$push</code>.</p>
+                    </div>
+                </aside>
+
+                <div class="nosql-main">
+                    <div class="editor-wrapper">
+                        <textarea id="nosqlEditor" rows="6" aria-label="Editor de comandos NoSQL" spellcheck="false"
+                            placeholder="Escribe un comando, por ejemplo: db.estudiantes.find({})"></textarea>
+
+                        <div class="editor-toolbar nosql-toolbar">
+                            <button id="nosqlExecuteBtn" onclick="runNoSQLQuery()">
+                                <i class="fas fa-play"></i> Ejecutar (Ctrl+Enter)
+                            </button>
+                            <button type="button" onclick="clearNoSQLResult()" class="btn-secondary">
+                                <i class="fas fa-eraser"></i> Limpiar
+                            </button>
+                            <div class="example-selector">
+                                <select id="nosqlExampleSelector" aria-label="Ejemplos NoSQL"></select>
+                                <button type="button" onclick="loadNoSQLExample()" class="btn-secondary">
+                                    <i class="fas fa-lightbulb"></i> Ejemplo
+                                </button>
+                            </div>
+                            <button type="button" onclick="openNoSQLAIHelp()" class="btn-secondary btn-ai" title="Explicar tu comando con IA">
+                                <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
+                            </button>
+                            <label class="safe-mode-toggle" title="Pide confirmación antes de operaciones destructivas">
+                                <input type="checkbox" id="nosqlSafeModeToggle" checked onchange="toggleNoSQLSafeMode(this.checked)">
+                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                            </label>
+                            <span id="nosqlPersistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite">
+                                <i class="fas fa-hard-drive"></i> Guardado local
+                            </span>
+                            <button type="button" onclick="clearNoSQLHistory()" class="btn-secondary">
+                                <i class="fas fa-trash"></i> Limpiar historial
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="history-wrapper">
+                        <h4><i class="fas fa-clock-rotate-left"></i> Historial NoSQL</h4>
+                        <ul id="nosqlHistoryList">
+                            <li class="empty-history">Todavía no hay comandos ejecutados</li>
+                        </ul>
+                    </div>
+
+                    <div class="results-wrapper">
+                        <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
+                        <div id="nosqlResultOutput" class="result-placeholder" aria-live="polite">
+                            <i class="fas fa-lightbulb placeholder-icon"></i>
+                            <p>Ejecuta un comando para ver los documentos</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nosql-challenges-panel">
+                <div class="nosql-challenges-head">
+                    <div>
+                        <h3><i class="fas fa-trophy"></i> Retos NoSQL</h3>
+                        <p class="nosql-muted">Los retos validan los documentos devueltos, no el texto exacto del comando.</p>
+                    </div>
+                    <button type="button" onclick="resetNoSQLChallengeProgress()" class="btn-secondary">
+                        <i class="fas fa-rotate-left"></i> Reiniciar progreso
+                    </button>
+                </div>
+                <div class="nosql-challenges-layout">
+                    <div id="nosqlChallengeList" class="nosql-challenge-list" aria-label="Lista de retos NoSQL"></div>
+                    <div id="nosqlChallengeDetail" class="nosql-challenge-detail">
+                        <div class="challenge-empty">
+                            <i class="fas fa-trophy"></i>
+                            <h3>Elige un reto NoSQL</h3>
+                            <p>Selecciona un reto de la izquierda para cargar su plantilla y comprobar tu resultado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- ===== SECCIÓN: RETOS ===== -->
         <section id="section-challenges" class="section">
             <div class="section-header">
@@ -700,7 +812,7 @@
                 </div>
                 <p class="ai-privacy">
                     <i class="fas fa-shield-halved"></i>
-                    Se envían la consulta, el error (si existe) y el esquema de las tablas. Nunca los datos de los registros.
+                    Se envían la consulta, el error (si existe) y el esquema de la base. Nunca los datos de los registros.
                 </p>
                 <div class="ai-panel-actions">
                     <button type="button" id="aiCopyBtn" class="btn-secondary" onclick="copyAIResponse()" disabled>
@@ -718,10 +830,15 @@
 
     <!-- Datasets de práctica -->
     <script src="datasets.js"></script>
+    <script src="nosql-datasets.js"></script>
+
+    <!-- Motor documental del laboratorio NoSQL -->
+    <script src="nosql-engine.js"></script>
 
     <!-- Cargar sql.js -->
     <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
     <script src="script.js"></script>
+    <script src="nosql.js"></script>
 </body>
 
 </html>

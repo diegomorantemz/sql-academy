@@ -1,10 +1,13 @@
-const CACHE_VERSION = 'sql-academy-v2';
+const CACHE_VERSION = 'sql-academy-v3';
 const APP_SHELL = [
     './',
     './index.html',
     './style.css',
     './datasets.js',
+    './nosql-datasets.js',
+    './nosql-engine.js',
     './script.js',
+    './nosql.js',
     './manifest.webmanifest',
     './icons/icon-192.png',
     './icons/icon-512.png',

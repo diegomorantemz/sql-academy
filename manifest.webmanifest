@@ -1,7 +1,7 @@
 {
   "name": "SQL Academy",
   "short_name": "SQL Academy",
-  "description": "Aprende SQL desde cero, practica con una base de datos real y comprueba tus resultados en el navegador.",
+  "description": "Aprende SQL y NoSQL desde cero, practica con una base de datos real y comprueba tus resultados en el navegador.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
