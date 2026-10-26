@@ -776,6 +776,83 @@ button {
     margin-bottom: 12px;
 }
 
+.result-summary {
+    font-weight: 600;
+    color: #333;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.result-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f0f4ff;
+    color: #336791;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.result-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.result-action-btn {
+    padding: 5px 9px;
+    border: 1px solid #dbe3ec;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #336791;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.result-action-btn:hover {
+    background: #eaf2fa;
+    border-color: #b9cfe3;
+    transform: translateY(-1px);
+}
+
+.result-container thead th.sortable-result {
+    cursor: pointer;
+    user-select: none;
+}
+
+.result-container thead th.sortable-result:hover {
+    background: var(--postgres-light);
+}
+
+.result-container thead th.sortable-result i {
+    margin-left: 4px;
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+.result-container tbody td.copyable-cell {
+    cursor: copy;
+}
+
+.result-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px;
+    margin: 8px 0 12px;
+    font-size: 12px;
+    color: #667085;
+}
+
 .result-scroll-hint {
     margin-top: 8px;
     font-size: 11px;
