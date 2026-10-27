@@ -1,0 +1,10 @@
+title = "SQL Academy secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Archivo de variables de entorno de ejemplo"
+paths = [
+  '''\.env\.example$'''
+]

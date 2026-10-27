@@ -4,6 +4,18 @@
     box-sizing: border-box;
 }
 
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 :root {
     --postgres-blue: #336791;
     --postgres-light: #0064A5;
@@ -111,6 +123,44 @@ body {
     gap: 8px;
 }
 
+.header-icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+}
+
+.header-icon-btn[hidden] {
+    display: none;
+}
+
+.skip-link {
+    position: fixed;
+    top: -60px;
+    left: 12px;
+    z-index: 3000;
+    padding: 10px 16px;
+    border-radius: 0 0 8px 8px;
+    background: #111827;
+    color: white;
+    font-weight: 700;
+    text-decoration: none;
+    transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
 .btn-outline {
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.2);
@@ -126,6 +176,12 @@ body {
 }
 
 /* ===== SECCIONES ===== */
+#mainContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
 .section {
     display: none;
     padding: 30px;
@@ -411,6 +467,133 @@ button {
     margin-top: 12px;
 }
 
+.persistence-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #52606d;
+    background: rgba(51, 103, 145, 0.08);
+    border: 1px solid rgba(51, 103, 145, 0.18);
+    white-space: nowrap;
+}
+
+.persistence-status.is-saving {
+    color: #8a6d3b;
+    background: #fff8e1;
+    border-color: #f0d58a;
+}
+
+.persistence-status.is-error {
+    color: #a12828;
+    background: #fdecec;
+    border-color: #f3b6b6;
+}
+
+.persistence-status.is-saved {
+    color: #256b3d;
+    background: #eaf7ef;
+    border-color: #b9e4c8;
+}
+
+.safe-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.safe-mode-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.safe-mode-toggle span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #256b3d;
+    background: #eaf7ef;
+    border: 1px solid #b9e4c8;
+    transition: all 0.2s ease;
+}
+
+.safe-mode-toggle input:not(:checked) + span {
+    color: #8a5a00;
+    background: #fff6e5;
+    border-color: #f0d58a;
+}
+
+.safe-mode-toggle input:focus-visible + span {
+    outline: 3px solid rgba(51, 103, 145, 0.25);
+    outline-offset: 2px;
+}
+
+.safe-mode-toggle input:checked + span {
+    color: #256b3d;
+    background: #eaf7ef;
+    border-color: #b9e4c8;
+}
+
+.toast-container {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(380px, calc(100vw - 36px));
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #1f2937;
+    color: #f8fafc;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+    font-size: 13px;
+    line-height: 1.45;
+    pointer-events: auto;
+    animation: toast-in 0.2s ease both;
+}
+
+.toast.toast-success { background: #14532d; }
+.toast.toast-warning { background: #78350f; }
+.toast.toast-error { background: #7f1d1d; }
+.toast.toast-info { background: #1e3a5f; }
+
+.toast i {
+    margin-top: 2px;
+}
+
+.toast.toast-hiding {
+    animation: toast-out 0.2s ease both;
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(8px); }
+}
+
 .example-selector {
     display: flex;
     gap: 6px;
@@ -418,7 +601,8 @@ button {
     margin-left: auto;
 }
 
-.example-selector select {
+.example-selector select,
+.dataset-selector {
     padding: 6px 12px;
     border: 1px solid var(--postgres-border);
     border-radius: 6px;
@@ -426,6 +610,13 @@ button {
     background: white;
     color: var(--postgres-text);
     cursor: pointer;
+}
+
+.dataset-selector:focus,
+.example-selector select:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
 }
 
 /* ===== HISTORIAL ===== */
@@ -649,6 +840,83 @@ button {
     margin-bottom: 12px;
 }
 
+.result-summary {
+    font-weight: 600;
+    color: #333;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.result-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f0f4ff;
+    color: #336791;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.result-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.result-action-btn {
+    padding: 5px 9px;
+    border: 1px solid #dbe3ec;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #336791;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.result-action-btn:hover {
+    background: #eaf2fa;
+    border-color: #b9cfe3;
+    transform: translateY(-1px);
+}
+
+.result-container thead th.sortable-result {
+    cursor: pointer;
+    user-select: none;
+}
+
+.result-container thead th.sortable-result:hover {
+    background: var(--postgres-light);
+}
+
+.result-container thead th.sortable-result i {
+    margin-left: 4px;
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+.result-container tbody td.copyable-cell {
+    cursor: copy;
+}
+
+.result-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px;
+    margin: 8px 0 12px;
+    font-size: 12px;
+    color: #667085;
+}
+
 .result-scroll-hint {
     margin-top: 8px;
     font-size: 11px;
@@ -754,6 +1022,300 @@ button {
 }
 
 /* ===== ANALYZE SECTION ===== */
+/* ===== RETOS ===== */
+.challenges-layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.challenge-list-panel {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.challenge-progress {
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.challenge-progress-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #5b6775;
+}
+
+.challenge-progress-head strong {
+    color: #336791;
+}
+
+.challenge-progress-track {
+    height: 8px;
+    border-radius: 999px;
+    background: #edf1f5;
+    overflow: hidden;
+}
+
+#challengeProgressBar {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #336791, #6c5ce7);
+    transition: width 0.35s ease;
+}
+
+.challenge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.challenge-card {
+    width: 100%;
+    text-align: left;
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-left: 4px solid #cbd5e1;
+    border-radius: 9px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.challenge-card:hover {
+    border-color: #b9cfe3;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(51, 103, 145, 0.08);
+}
+
+.challenge-card.active {
+    border-left-color: #336791;
+    background: #f4f8fc;
+}
+
+.challenge-card.completed {
+    border-left-color: #28a745;
+    background: #f4fbf6;
+}
+
+.challenge-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.challenge-card-title i {
+    color: #28a745;
+}
+
+.challenge-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: #7b8794;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.challenge-level {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: #eef2f7;
+    color: #52606d;
+}
+
+.challenge-level.basico { background: #e8f7ee; color: #1f7a42; }
+.challenge-level.intermedio { background: #fff5e5; color: #9a6100; }
+.challenge-level.avanzado { background: #fdeaea; color: #a12828; }
+
+.challenge-reset-btn {
+    justify-content: center;
+    font-size: 11px;
+}
+
+.challenge-play-panel {
+    min-width: 0;
+}
+
+.challenge-detail {
+    background: var(--postgres-bg);
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.challenge-empty {
+    text-align: center;
+    padding: 46px 18px;
+    color: #7b8794;
+}
+
+.challenge-empty > i {
+    font-size: 2.6em;
+    color: #c2a14b;
+    margin-bottom: 12px;
+}
+
+.challenge-empty h3 {
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.challenge-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.challenge-detail-header h3 {
+    color: var(--postgres-dark);
+    font-size: 1.25em;
+    margin-bottom: 4px;
+}
+
+.challenge-detail-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.challenge-description {
+    background: white;
+    border: 1px solid #e5eaf0;
+    border-radius: 9px;
+    padding: 12px 14px;
+    color: #4b5563;
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: 12px;
+}
+
+.challenge-description code {
+    background: #f1f5f9;
+    color: #b42318;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+#challengeEditor {
+    width: 100%;
+    min-height: 130px;
+    padding: 12px 14px;
+    border: 2px solid var(--postgres-border);
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    background: white;
+    color: var(--postgres-text);
+}
+
+#challengeEditor:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
+}
+
+.challenge-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.challenge-result {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 9px;
+    font-size: 13px;
+    line-height: 1.55;
+    border-left: 4px solid #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+}
+
+.challenge-result.success {
+    border-left-color: #28a745;
+    background: #f0fff4;
+    color: #1e6b37;
+}
+
+.challenge-result.error {
+    border-left-color: #dc3545;
+    background: #fff5f5;
+    color: #8b1e1e;
+}
+
+.challenge-result.warning {
+    border-left-color: #e0a800;
+    background: #fff9e8;
+    color: #7a5a00;
+}
+
+.challenge-result strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.challenge-result code {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.challenge-result-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.challenge-hint {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fff9e8;
+    border: 1px dashed #e0a800;
+    color: #7a5a00;
+    font-size: 13px;
+}
+
+@media (max-width: 992px) {
+    .challenges-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
 .analyze-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1445,6 +2007,15 @@ button {
     margin-bottom: 6px;
 }
 
+.ai-context-note {
+    margin: 0 0 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #eef4fb;
+    color: #486581;
+    font-size: 12px;
+}
+
 .ai-context pre {
     margin: 0;
     padding: 8px 10px;
@@ -1540,6 +2111,18 @@ button {
 .ai-error strong {
     display: block;
     margin-bottom: 4px;
+}
+
+.ai-quick-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.ai-quick-actions button {
+    padding: 6px 10px;
+    font-size: 11px;
 }
 
 .ai-panel-footer {
@@ -1889,7 +2472,7 @@ button {
     }
 
     .header-actions {
-        display: none;
+        display: flex;
     }
 }
 
@@ -1979,3 +2562,732 @@ button {
 .concept-card .fa-table-cells { color: #00b894; }
 .concept-card .fa-share-nodes { color: #6c5ce7; }
 .concept-card .fa-bolt { color: #fdcb6e; }
+
+/* ===== MODO OSCURO ===== */
+[data-theme="dark"] {
+    color-scheme: dark;
+    --postgres-bg: #0f172a;
+    --postgres-white: #111827;
+    --postgres-border: #334155;
+    --postgres-text: #e2e8f0;
+    --postgres-shadow: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] body {
+    background: #0b1120;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .app-container {
+    background: #111827;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .section-header {
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .section-header h2,
+[data-theme="dark"] .db-group-title,
+[data-theme="dark"] .learn-card h3,
+[data-theme="dark"] .concept-card h3,
+[data-theme="dark"] .info-panel h3,
+[data-theme="dark"] .history-wrapper h4,
+[data-theme="dark"] .results-wrapper h4,
+[data-theme="dark"] .table-editor h4,
+[data-theme="dark"] .table-title,
+[data-theme="dark"] .diagram-relations h4,
+[data-theme="dark"] .diagram-relations code,
+[data-theme="dark"] .comparison-table td:first-child,
+[data-theme="dark"] .analyze-card h3,
+[data-theme="dark"] .comparison-wrapper h3,
+[data-theme="dark"] .challenge-detail-header h3,
+[data-theme="dark"] .challenge-empty h3,
+[data-theme="dark"] .modal-header h2,
+[data-theme="dark"] .modal-body h3,
+[data-theme="dark"] .ai-empty h3,
+[data-theme="dark"] .ai-response-title {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .section-header p,
+[data-theme="dark"] .db-group-subtitle,
+[data-theme="dark"] .learn-card p,
+[data-theme="dark"] .concept-card p,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .footer-center p,
+[data-theme="dark"] .footer-left .brand-tagline,
+[data-theme="dark"] .challenge-card-meta,
+[data-theme="dark"] .challenge-empty,
+[data-theme="dark"] .ai-empty,
+[data-theme="dark"] .ai-loading,
+[data-theme="dark"] .ai-privacy,
+[data-theme="dark"] .result-more {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .learn-card,
+[data-theme="dark"] .concept-card,
+[data-theme="dark"] .analyze-card,
+[data-theme="dark"] .table-card,
+[data-theme="dark"] .result-meta,
+[data-theme="dark"] #resultOutput,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .challenge-card,
+[data-theme="dark"] .challenge-progress,
+[data-theme="dark"] .challenge-description,
+[data-theme="dark"] .ai-panel-body,
+[data-theme="dark"] .ai-panel-footer,
+[data-theme="dark"] #historyList li,
+[data-theme="dark"] #tableEditorContent,
+[data-theme="dark"] .chart-box,
+[data-theme="dark"] #diagramContainer,
+[data-theme="dark"] .diagram-overlay,
+[data-theme="dark"] .entity-box,
+[data-theme="dark"] #sqlGuideBody .btn-secondary,
+[data-theme="dark"] .qr-footer {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] #historyList li.empty-history:hover {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .learn-card,
+[data-theme="dark"] .concept-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .challenge-card.active {
+    background: #172554;
+    border-left-color: #60a5fa;
+}
+
+[data-theme="dark"] .challenge-card.completed {
+    background: #052e1a;
+    border-left-color: #4ade80;
+}
+
+[data-theme="dark"] .challenge-card-title {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .challenge-level {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .challenge-level.basico { background: #064e3b; color: #a7f3d0; }
+[data-theme="dark"] .challenge-level.intermedio { background: #78350f; color: #fde68a; }
+[data-theme="dark"] .challenge-level.avanzado { background: #7f1d1d; color: #fecaca; }
+
+[data-theme="dark"] #sqlEditor,
+[data-theme="dark"] #challengeEditor,
+[data-theme="dark"] .example-selector select,
+[data-theme="dark"] .dataset-selector,
+[data-theme="dark"] .table-editor select,
+[data-theme="dark"] #tableEditorContent td input {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background: #273449;
+}
+
+[data-theme="dark"] .persistence-status,
+[data-theme="dark"] .safe-mode-toggle span {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .safe-mode-toggle input:checked + span {
+    color: #a7f3d0;
+    background: #064e3b;
+    border-color: #065f46;
+}
+
+[data-theme="dark"] .safe-mode-toggle input:not(:checked) + span {
+    color: #fde68a;
+    background: #78350f;
+    border-color: #92400e;
+}
+
+[data-theme="dark"] .result-container tbody td,
+[data-theme="dark"] .info-table td,
+[data-theme="dark"] .comparison-table td {
+    border-bottom-color: #273449;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .result-container tbody tr:hover td,
+[data-theme="dark"] .comparison-table tr:hover td,
+[data-theme="dark"] .info-table tbody tr:hover {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .info-table th {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .result-summary {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .result-time {
+    background: #172554;
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .result-action-btn {
+    background: #0f172a;
+    color: #bfdbfe;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .result-action-btn:hover {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .msg {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .msg-detail {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .msg-detail code {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .modal-body p,
+[data-theme="dark"] .modal-body ul li,
+[data-theme="dark"] .modal-body .info-item .value,
+[data-theme="dark"] .ai-response,
+[data-theme="dark"] .ai-text {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .modal-body .info-item {
+    background: #0f172a;
+}
+
+[data-theme="dark"] .modal-body .info-item .label,
+[data-theme="dark"] .qr-title {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .ai-context {
+    background: #1e1b4b;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .ai-context-title {
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .ai-context-note {
+    background: #172554;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .ai-context pre {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .ai-context-error,
+[data-theme="dark"] .ai-context-error pre {
+    color: #fecaca;
+    background: #3f1d1d;
+}
+
+[data-theme="dark"] .ai-error {
+    background: #3f1d1d;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .challenge-result {
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .challenge-result.success {
+    background: #052e1a;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .challenge-result.error {
+    background: #3f1d1d;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .challenge-result.warning,
+[data-theme="dark"] .challenge-hint {
+    background: #3b2f14;
+    color: #fde68a;
+    border-color: #a16207;
+}
+
+[data-theme="dark"] .challenge-result code,
+[data-theme="dark"] .challenge-description code {
+    background: #0f172a;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .comparison-table td {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+
+[data-theme="dark"] * {
+    scrollbar-color: #475569 #1e293b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ===== LABORATORIO NOSQL ===== */
+.nosql-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.nosql-sidebar,
+.nosql-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.nosql-collections-panel,
+.nosql-help-panel {
+    margin: 0;
+}
+
+.nosql-muted {
+    color: #6b7280;
+    font-size: 0.82em;
+    line-height: 1.45;
+}
+
+.nosql-collection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 0 12px;
+}
+
+.nosql-collection-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    background: white;
+    color: #2c3e50;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.nosql-collection-btn:hover {
+    border-color: var(--postgres-blue);
+    color: var(--postgres-blue);
+    transform: translateY(-1px);
+}
+
+.nosql-collection-btn small {
+    color: #6b7280;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.nosql-sidebar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nosql-sidebar-actions select {
+    width: 100%;
+}
+
+.nosql-help-panel code {
+    display: block;
+    margin: 6px 0;
+    padding: 6px 8px;
+    border-radius: 5px;
+    background: #0f172a;
+    color: #dbeafe;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.nosql-help-panel .nosql-muted code {
+    display: inline;
+    padding: 1px 5px;
+    background: #eef2f7;
+    color: #334155;
+}
+
+#nosqlEditor {
+    width: 100%;
+    height: 180px;
+    padding: 12px 16px;
+    border: 2px solid var(--postgres-border);
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    background: white;
+    color: var(--postgres-text);
+    transition: border-color 0.3s;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+#nosqlEditor:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
+}
+
+.nosql-toolbar {
+    align-items: center;
+}
+
+#nosqlHistoryList {
+    list-style: none;
+    padding: 0;
+    max-height: 120px;
+    overflow: auto;
+}
+
+#nosqlHistoryList li {
+    padding: 5px 8px;
+    margin: 2px 0;
+    background: white;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+#nosqlHistoryList li:hover {
+    background: #e9f0f7;
+}
+
+.nosql-history-query {
+    display: block;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: #2c3e50;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 400;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nosql-result-output {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 80px;
+    max-height: 520px;
+    overflow: auto;
+    font-size: 14px;
+}
+
+.nosql-result-meta {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+}
+
+.nosql-json {
+    margin: 10px 0 0;
+    padding: 12px;
+    border-radius: 7px;
+    background: #0f172a;
+    color: #dbeafe;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow: auto;
+    white-space: pre;
+}
+
+.nosql-json-details {
+    margin-top: 10px;
+}
+
+.nosql-json-details summary {
+    cursor: pointer;
+    color: var(--postgres-blue);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.nosql-challenges-panel {
+    margin-top: 8px;
+    padding: 18px;
+    border: 2px solid var(--postgres-border);
+    border-radius: 12px;
+    background: var(--postgres-bg);
+}
+
+.nosql-challenges-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.nosql-challenges-head h3 {
+    color: var(--postgres-dark);
+    font-size: 1.05em;
+    margin-bottom: 3px;
+}
+
+.nosql-challenges-head h3 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+.nosql-challenges-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
+    gap: 14px;
+}
+
+.nosql-challenge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nosql-challenge-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: white;
+    color: #2c3e50;
+    text-align: left;
+    font-size: 12px;
+}
+
+.nosql-challenge-card:hover {
+    border-color: var(--postgres-blue);
+    transform: translateY(-1px);
+}
+
+.nosql-challenge-card.active {
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 2px rgba(51, 103, 145, 0.15);
+}
+
+.nosql-challenge-card.completed .nosql-challenge-title {
+    color: #1f7a42;
+}
+
+.nosql-challenge-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+}
+
+.nosql-challenge-title i {
+    color: var(--postgres-blue);
+}
+
+.nosql-challenge-detail {
+    min-height: 170px;
+    padding: 16px;
+    border-radius: 9px;
+    background: white;
+    border: 1px solid var(--postgres-border);
+}
+
+.nosql-challenge-detail .challenge-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.nosql-challenge-detail .challenge-description {
+    margin-bottom: 12px;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.nosql-hint {
+    margin: 10px 0;
+    padding: 8px 10px;
+    border-left: 3px solid var(--postgres-blue);
+    background: #f7fafc;
+    border-radius: 0 6px 6px 0;
+}
+
+.nosql-hint summary {
+    cursor: pointer;
+    color: var(--postgres-blue);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.nosql-hint p {
+    margin: 6px 0 0;
+    color: #4b5563;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.nosql-challenge-detail .challenge-actions {
+    margin-top: 10px;
+}
+
+[data-theme="dark"] .nosql-muted,
+[data-theme="dark"] .nosql-collection-btn small,
+[data-theme="dark"] .nosql-challenge-detail .challenge-description,
+[data-theme="dark"] .nosql-hint p {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .nosql-collection-btn,
+[data-theme="dark"] .nosql-challenge-card,
+[data-theme="dark"] .nosql-challenge-detail,
+[data-theme="dark"] .nosql-result-output,
+[data-theme="dark"] #nosqlHistoryList li {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] #nosqlEditor {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .nosql-history-query {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] #nosqlHistoryList li:hover {
+    background: #293548;
+}
+
+[data-theme="dark"] .nosql-help-panel .nosql-muted code {
+    background: #0f172a;
+    color: #dbeafe;
+}
+
+[data-theme="dark"] .nosql-challenges-panel {
+    background: #111c2e;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .nosql-challenges-head h3 {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .nosql-hint {
+    background: #172236;
+    border-left-color: var(--postgres-blue);
+}
+
+[data-theme="dark"] .nosql-challenge-card.completed .nosql-challenge-title {
+    color: #a7f3d0;
+}
+
+@media (max-width: 900px) {
+    .nosql-layout,
+    .nosql-challenges-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .nosql-collection-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .nosql-sidebar-actions {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .nosql-sidebar-actions select {
+        flex: 1;
+    }
+}
+
+@media (max-width: 600px) {
+    .nosql-challenges-head {
+        flex-direction: column;
+    }
+
+    .nosql-collection-list {
+        grid-template-columns: 1fr;
+    }
+
+    .nosql-sidebar-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nosql-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nosql-toolbar .example-selector {
+        width: 100%;
+        margin-left: 0;
+    }
+}

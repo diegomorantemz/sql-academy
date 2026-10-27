@@ -6,6 +6,28 @@ let queryHistory = [];
 let diagramFullView = false;
 
 // ============================================
+// PERSISTENCIA LOCAL
+// ============================================
+
+const STORAGE_KEYS = {
+    history: 'sql-academy-history-v1',
+    preferences: 'sql-academy-preferences-v1',
+    challenges: 'sql-academy-challenges-v1'
+};
+const PERSIST_DB_NAME = 'sql-academy';
+const PERSIST_DB_VERSION = 1;
+const PERSIST_STORE = 'database';
+const HISTORY_LIMIT = 30;
+
+let persistenceDbPromise = null;
+let persistTimer = null;
+let preferences = {
+    theme: 'light',
+    safeMode: true,
+    dataset: 'escuela'
+};
+
+// ============================================
 // ASISTENTE IA
 // ============================================
 
@@ -23,6 +45,20 @@ let aiAbortController = null;
 let aiCooldownUntil = 0;
 
 const aiResponseCache = new Map();
+
+// ============================================
+// RESULTADOS
+// ============================================
+
+const RESULTS_PAGE_SIZE = 100;
+let lastResultSets = [];
+let lastQueryMeta = { durationMs: 0, executedAt: null };
+let resultRowLimits = [];
+let resultSortState = [];
+let lastFocusedElement = null;
+let deferredInstallPrompt = null;
+
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // ============================================
 // UTILIDADES GENERALES
@@ -45,6 +81,210 @@ function escapeHtml(value) {
 /** Escapa un nombre de identificador SQL (tabla/columna). */
 function quoteIdent(name) {
     return '"' + String(name).replace(/"/g, '""') + '"';
+}
+
+/** Lee un valor JSON de localStorage sin romper la app si está bloqueado. */
+function readStoredJSON(key, fallback) {
+    try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) return fallback;
+        const parsed = JSON.parse(raw);
+        return parsed ?? fallback;
+    } catch (error) {
+        console.warn(`No se pudo leer ${key} de localStorage:`, error);
+        return fallback;
+    }
+}
+
+/** Guarda un valor JSON en localStorage. */
+function writeStoredJSON(key, value) {
+    try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    } catch (error) {
+        console.warn(`No se pudo guardar ${key} en localStorage:`, error);
+        return false;
+    }
+}
+
+function removeStoredItem(key) {
+    try {
+        window.localStorage.removeItem(key);
+    } catch (error) {
+        console.warn(`No se pudo eliminar ${key} de localStorage:`, error);
+    }
+}
+
+function loadPreferences() {
+    const stored = readStoredJSON(STORAGE_KEYS.preferences, {});
+    preferences = {
+        theme: stored.theme === 'dark' ? 'dark' : 'light',
+        safeMode: stored.safeMode !== false,
+        dataset: ['escuela', 'tienda', 'biblioteca'].includes(stored.dataset) ? stored.dataset : 'escuela'
+    };
+    return preferences;
+}
+
+function savePreferences() {
+    writeStoredJSON(STORAGE_KEYS.preferences, preferences);
+}
+
+function loadHistoryFromStorage() {
+    const stored = readStoredJSON(STORAGE_KEYS.history, []);
+    if (!Array.isArray(stored)) {
+        queryHistory = [];
+        return;
+    }
+
+    const seen = new Set();
+    queryHistory = stored
+        .filter(item => typeof item === 'string' && item.trim())
+        .filter(item => {
+            if (seen.has(item)) return false;
+            seen.add(item);
+            return true;
+        })
+        .slice(0, HISTORY_LIMIT);
+}
+
+function saveHistoryToStorage() {
+    writeStoredJSON(STORAGE_KEYS.history, queryHistory.slice(0, HISTORY_LIMIT));
+}
+
+/** Abre (o reutiliza) la base IndexedDB donde se guarda el archivo SQLite. */
+function openPersistenceDb() {
+    if (!('indexedDB' in window)) {
+        return Promise.reject(new Error('IndexedDB no está disponible'));
+    }
+    if (persistenceDbPromise) return persistenceDbPromise;
+
+    persistenceDbPromise = new Promise((resolve, reject) => {
+        const request = window.indexedDB.open(PERSIST_DB_NAME, PERSIST_DB_VERSION);
+
+        request.onupgradeneeded = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains(PERSIST_STORE)) {
+                database.createObjectStore(PERSIST_STORE, { keyPath: 'id' });
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('No se pudo abrir IndexedDB'));
+        request.onblocked = () => reject(new Error('IndexedDB está bloqueada por otra pestaña'));
+    }).catch(error => {
+        persistenceDbPromise = null;
+        throw error;
+    });
+
+    return persistenceDbPromise;
+}
+
+/** Restaura el último archivo SQLite guardado. Devuelve null si no hay uno válido. */
+async function loadDatabaseFromIndexedDB(SQL) {
+    try {
+        const database = await openPersistenceDb();
+        const record = await new Promise((resolve, reject) => {
+            const transaction = database.transaction(PERSIST_STORE, 'readonly');
+            const request = transaction.objectStore(PERSIST_STORE).get('main');
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error || new Error('No se pudo leer la base guardada'));
+        });
+
+        if (!record || !record.bytes) return null;
+
+        const restored = new SQL.Database(new Uint8Array(record.bytes));
+        // Valida que el archivo sea SQLite y que se pueda leer antes de usarlo.
+        restored.exec('SELECT name FROM sqlite_master LIMIT 1;');
+        restored.run('PRAGMA foreign_keys = ON;');
+        return restored;
+    } catch (error) {
+        console.warn('No se pudo restaurar la base de datos guardada:', error);
+        // Un archivo corrupto no debe impedir que la app arranque con los datos de ejemplo.
+        try { await clearSavedDatabase(); } catch (cleanupError) { /* ignorar */ }
+        return null;
+    }
+}
+
+async function saveDatabaseToIndexedDB() {
+    if (!db || !dbInitialized) return false;
+
+    const bytes = db.export();
+    const database = await openPersistenceDb();
+
+    await new Promise((resolve, reject) => {
+        const transaction = database.transaction(PERSIST_STORE, 'readwrite');
+        const request = transaction.objectStore(PERSIST_STORE).put({
+            id: 'main',
+            bytes,
+            updatedAt: Date.now()
+        });
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error || new Error('No se pudo guardar la base de datos'));
+        transaction.onerror = () => reject(transaction.error || new Error('La transacción de guardado falló'));
+    });
+
+    return true;
+}
+
+async function clearSavedDatabase() {
+    try {
+        const database = await openPersistenceDb();
+        await new Promise((resolve, reject) => {
+            const transaction = database.transaction(PERSIST_STORE, 'readwrite');
+            const request = transaction.objectStore(PERSIST_STORE).delete('main');
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error || new Error('No se pudo borrar la base guardada'));
+            transaction.onerror = () => reject(transaction.error || new Error('La transacción de borrado falló'));
+        });
+    } catch (error) {
+        console.warn('No se pudo borrar la base de datos guardada:', error);
+    }
+}
+
+function setPersistenceStatus(state) {
+    const status = document.getElementById('persistenceStatus');
+    if (!status) return;
+
+    status.classList.remove('is-saving', 'is-saved', 'is-error');
+    if (state === 'saving') {
+        status.classList.add('is-saving');
+        status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        status.title = 'Guardando la base de datos en este navegador';
+    } else if (state === 'error') {
+        status.classList.add('is-error');
+        status.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Sin guardado';
+        status.title = 'No se pudo guardar la base de datos en este navegador';
+    } else {
+        status.classList.add('is-saved');
+        status.innerHTML = '<i class="fas fa-hard-drive"></i> Guardado local';
+        status.title = 'La base de datos se guarda en este navegador (IndexedDB)';
+    }
+}
+
+async function persistDatabase() {
+    if (!db || !dbInitialized) return;
+    setPersistenceStatus('saving');
+    try {
+        await saveDatabaseToIndexedDB();
+        setPersistenceStatus('saved');
+    } catch (error) {
+        console.warn('No se pudo guardar la base de datos:', error);
+        setPersistenceStatus('error');
+    }
+}
+
+function schedulePersistDatabase() {
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => { persistDatabase(); }, 250);
+}
+
+/** Detecta consultas que pueden modificar el esquema o los datos. */
+function isWriteQuery(sql) {
+    const normalized = String(sql || '')
+        .replace(/--[^\n]*/g, ' ')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .trim();
+    return /^(INSERT|UPDATE|DELETE|REPLACE|CREATE|DROP|ALTER|TRUNCATE|VACUUM|REINDEX|ANALYZE|PRAGMA)\b/i.test(normalized);
 }
 
 /** Devuelve las tablas de usuario de la base de datos actual. */
@@ -138,11 +378,49 @@ function showMessage(type, title, detail) {
     `;
 }
 
+/** Muestra una notificación breve sin sustituir los resultados de la consulta. */
+function showToast(type, message, duration = 2800) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const icons = {
+        success: 'fa-check-circle',
+        warning: 'fa-triangle-exclamation',
+        error: 'fa-circle-exclamation',
+        info: 'fa-circle-info'
+    };
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${icons[type] ? type : 'info'}`;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.innerHTML = `
+        <i class="fas ${icons[type] || icons.info}" aria-hidden="true"></i>
+        <span>${escapeHtml(message)}</span>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('toast-hiding');
+        setTimeout(() => toast.remove(), 220);
+    }, duration);
+}
+
+function getFocusableElements(container) {
+    if (!container) return [];
+    return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR))
+        .filter(element => element.getClientRects().length > 0);
+}
+
 /** Abre un modal y bloquea el scroll de la página. */
 function openModal(modal) {
     if (!modal) return;
+    lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+
+    setTimeout(() => {
+        const focusable = getFocusableElements(modal);
+        if (focusable.length > 0) focusable[0].focus();
+    }, 0);
 }
 
 /** Cierra un modal y restaura el scroll solo si no queda otro abierto. */
@@ -154,6 +432,10 @@ function closeModal(modal) {
     modal.classList.remove('active');
     if (!document.querySelector('.modal.active')) {
         document.body.style.overflow = '';
+        if (lastFocusedElement && document.contains(lastFocusedElement)) {
+            lastFocusedElement.focus();
+        }
+        lastFocusedElement = null;
     }
 }
 
@@ -177,7 +459,8 @@ function clearEditor() {
 }
 
 // INICIALIZAR BASE DE DATOS
-function initDatabase() {
+function initDatabase(options = {}) {
+    const restore = options.restore !== false;
     dbInitialized = false;
 
     if (typeof initSqlJs !== 'function') {
@@ -193,8 +476,26 @@ function initDatabase() {
 
     initSqlJs({
         locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}`
-    }).then(SQL => {
+    }).then(async SQL => {
         SQLModule = SQL;
+
+        if (restore) {
+            const restored = await loadDatabaseFromIndexedDB(SQL);
+            if (restored) {
+                db = restored;
+                dbInitialized = true;
+                lastQueryError = null;
+                refreshAll();
+                setPersistenceStatus('saved');
+                showMessage(
+                    'success',
+                    'Base de datos restaurada',
+                    'Se recuperaron los datos guardados en este navegador. Usa “Reiniciar BD” si quieres volver a los datos de ejemplo.'
+                );
+                return;
+            }
+        }
+
         db = new SQL.Database();
         // SQLite desactiva las claves foráneas por defecto; el simulador las enseña,
         // así que deben aplicarse de verdad.
@@ -362,8 +663,13 @@ function initDatabase() {
         `);
         
         dbInitialized = true;
+        preferences.dataset = 'escuela';
+        savePreferences();
+        syncDatasetSelector();
+        setPersistenceStatus('saved');
         refreshAll();
         showMessage('success', 'Base de datos lista. Escribe una consulta SQL.');
+        schedulePersistDatabase();
     }).catch(error => {
         showMessage('error', 'Error al cargar SQL.js', `<code>${escapeHtml(error.message)}</code>`);
     });
@@ -440,48 +746,167 @@ function showTablesInfo() {
 }
 
 // MOSTRAR RESULTADOS
-function displayResults(result) {
-    const resultSets = (result || []).filter(set => set && set.columns && set.columns.length > 0);
+function formatDuration(ms) {
+    if (ms === null || ms === undefined || ms === '') return '';
+    const value = Number(ms);
+    if (!Number.isFinite(value) || value < 0) return '';
+    return value < 10 ? `${value.toFixed(1)} ms` : `${Math.round(value)} ms`;
+}
 
-    if (resultSets.length === 0) {
-        showMessage('success', 'Consulta ejecutada correctamente');
+function compareResultValues(a, b) {
+    if (a === b) return 0;
+    if (a === null || a === undefined) return -1;
+    if (b === null || b === undefined) return 1;
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' });
+}
+
+function getSortedResultSet(index) {
+    const set = lastResultSets[index];
+    if (!set) return null;
+    const sort = resultSortState[index];
+    if (!sort) return set;
+
+    const values = set.values.map(row => row.slice());
+    values.sort((left, right) => {
+        const comparison = compareResultValues(left[sort.column], right[sort.column]);
+        return sort.direction === 'asc' ? comparison : -comparison;
+    });
+
+    return { ...set, values };
+}
+
+function resultSetToObjects(set) {
+    if (!set) return [];
+    return set.values.map(row => {
+        const object = {};
+        set.columns.forEach((column, index) => {
+            object[column] = row[index] === undefined ? null : row[index];
+        });
+        return object;
+    });
+}
+
+function escapeCsvCell(value) {
+    const text = value === null || value === undefined ? '' : String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function resultSetToCsv(set) {
+    if (!set) return '';
+    const header = set.columns.map(escapeCsvCell).join(',');
+    const rows = set.values.map(row => row.map(escapeCsvCell).join(','));
+    return [header, ...rows].join('\r\n');
+}
+
+function resultSetToTsv(set) {
+    if (!set) return '';
+    const clean = value => String(value ?? '').replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
+    const header = set.columns.map(clean).join('\t');
+    const rows = set.values.map(row => row.map(clean).join('\t'));
+    return [header, ...rows].join('\n');
+}
+
+function downloadTextFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function resultFileTimestamp() {
+    return new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+}
+
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text);
         return;
     }
 
-    const multiple = resultSets.length > 1;
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = typeof document.execCommand === 'function' ? document.execCommand('copy') : false;
+    textarea.remove();
+    if (!copied) throw new Error('No se pudo copiar al portapapeles');
+}
+
+function renderResultSets() {
+    const output = document.getElementById('resultOutput');
+    if (!output) return;
+
+    const multiple = lastResultSets.length > 1;
     let html = '';
 
-    resultSets.forEach((set, index) => {
-        const rowCount = set.values.length;
-        const colCount = set.columns.length;
+    lastResultSets.forEach((set, index) => {
+        const sortedSet = getSortedResultSet(index) || set;
+        const rowCount = sortedSet.values.length;
+        const colCount = sortedSet.columns.length;
+        const limit = Math.max(RESULTS_PAGE_SIZE, resultRowLimits[index] || RESULTS_PAGE_SIZE);
+        const visibleRows = sortedSet.values.slice(0, limit);
+        const sort = resultSortState[index];
+        const duration = index === 0 ? formatDuration(lastQueryMeta.durationMs) : '';
 
         html += `
             <div class="result-meta">
-                <span style="font-weight:600; color:#333;">
+                <span class="result-summary">
                     <i class="fas fa-list"></i>
-                    ${multiple ? `Resultado ${index + 1} de ${resultSets.length}: ` : ''}
+                    ${multiple ? `Resultado ${index + 1} de ${lastResultSets.length}: ` : ''}
                     ${rowCount} ${rowCount === 1 ? 'fila' : 'filas'} | ${colCount} columnas
+                    ${duration ? `<span class="result-time"><i class="fas fa-stopwatch"></i> ${escapeHtml(duration)}</span>` : ''}
                 </span>
-                <span style="font-size:12px; color:#999;">
-                    <i class="fas fa-arrows-left-right"></i> <strong>Desliza</strong> para ver todo
+                <span class="result-actions">
+                    <button type="button" class="result-action-btn" onclick="copyResultTable(${index})" title="Copiar toda la tabla">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <button type="button" class="result-action-btn" onclick="exportResultCSV(${index})" title="Descargar como CSV">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </button>
+                    <button type="button" class="result-action-btn" onclick="exportResultJSON(${index})" title="Descargar como JSON">
+                        <i class="fas fa-file-code"></i> JSON
+                    </button>
                 </span>
             </div>
             <div class="result-container">
                 <table>
                     <thead>
                         <tr>
-                            ${set.columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}
+                            ${sortedSet.columns.map((col, colIndex) => {
+                                const ariaSort = sort && sort.column === colIndex
+                                    ? (sort.direction === 'asc' ? 'ascending' : 'descending')
+                                    : 'none';
+                                const icon = sort && sort.column === colIndex
+                                    ? (sort.direction === 'asc' ? 'fa-arrow-up-short-wide' : 'fa-arrow-down-wide-short')
+                                    : 'fa-sort';
+                                return `<th class="sortable-result" tabindex="0" scope="col" aria-sort="${ariaSort}"
+                                    title="Ordenar por ${escapeHtml(col)}"
+                                    onclick="sortResult(${index}, ${colIndex})"
+                                    onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); sortResult(${index}, ${colIndex}); }">
+                                    ${escapeHtml(col)} <i class="fas ${icon}" aria-hidden="true"></i>
+                                </th>`;
+                            }).join('')}
                         </tr>
                     </thead>
                     <tbody>
                         ${rowCount === 0
                             ? `<tr><td colspan="${colCount}" style="text-align:center;color:#999;">Sin filas</td></tr>`
-                            : set.values.map(row => `
+                            : visibleRows.map(row => `
                                 <tr>
                                     ${row.map(value => {
                                         const displayValue = value !== null && value !== undefined ? String(value) : 'NULL';
                                         const truncated = displayValue.length > 50 ? displayValue.substring(0, 50) + '...' : displayValue;
-                                        return `<td title="${escapeHtml(displayValue)}">${escapeHtml(truncated)}</td>`;
+                                        return `<td class="copyable-cell" title="${escapeHtml(displayValue)} (doble clic para copiar)"
+                                            data-copy-value="${escapeHtml(displayValue)}">${escapeHtml(truncated)}</td>`;
                                     }).join('')}
                                 </tr>
                             `).join('')}
@@ -489,17 +914,99 @@ function displayResults(result) {
                 </table>
             </div>
         `;
+
+        if (rowCount > limit) {
+            const remaining = rowCount - limit;
+            html += `
+                <div class="result-more">
+                    <span>Mostrando ${visibleRows.length} de ${rowCount} filas.</span>
+                    <button type="button" class="result-action-btn" onclick="showMoreResults(${index})">
+                        <i class="fas fa-plus"></i> Mostrar ${Math.min(RESULTS_PAGE_SIZE, remaining)} más
+                    </button>
+                </div>
+            `;
+        }
     });
 
     html += `
         <div class="result-scroll-hint">
             <span><i class="fas fa-arrow-left"></i><i class="fas fa-arrow-right"></i> Scroll horizontal</span>
             <span><i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i> Scroll vertical</span>
+            <span><i class="fas fa-copy"></i> Doble clic en una celda para copiarla</span>
         </div>
     `;
 
-    document.getElementById('resultOutput').classList.remove('result-placeholder');
-    document.getElementById('resultOutput').innerHTML = html;
+    output.classList.remove('result-placeholder');
+    output.innerHTML = html;
+}
+
+function displayResults(result, meta = {}) {
+    const resultSets = (result || []).filter(set => set && set.columns && set.columns.length > 0);
+    lastQueryMeta = {
+        durationMs: Number(meta.durationMs) || 0,
+        executedAt: new Date()
+    };
+
+    if (resultSets.length === 0) {
+        const time = formatDuration(lastQueryMeta.durationMs);
+        showMessage('success', 'Consulta ejecutada correctamente', time ? `<span class="result-time"><i class="fas fa-stopwatch"></i> ${escapeHtml(time)}</span>` : '');
+        lastResultSets = [];
+        return;
+    }
+
+    lastResultSets = resultSets;
+    resultRowLimits = resultSets.map(() => RESULTS_PAGE_SIZE);
+    resultSortState = resultSets.map(() => null);
+    renderResultSets();
+}
+
+function sortResult(index, column) {
+    if (!lastResultSets[index]) return;
+    const current = resultSortState[index];
+    resultSortState[index] = current && current.column === column
+        ? { column, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+        : { column, direction: 'asc' };
+    renderResultSets();
+}
+
+function showMoreResults(index) {
+    if (!lastResultSets[index]) return;
+    resultRowLimits[index] = (resultRowLimits[index] || RESULTS_PAGE_SIZE) + RESULTS_PAGE_SIZE;
+    renderResultSets();
+}
+
+function exportResultCSV(index) {
+    const set = getSortedResultSet(index);
+    if (!set) return;
+    downloadTextFile(resultSetToCsv(set), `resultado_${resultFileTimestamp()}.csv`, 'text/csv');
+    showToast('success', 'Resultado exportado como CSV.');
+}
+
+function exportResultJSON(index) {
+    const set = getSortedResultSet(index);
+    if (!set) return;
+    downloadTextFile(JSON.stringify(resultSetToObjects(set), null, 2), `resultado_${resultFileTimestamp()}.json`, 'application/json');
+    showToast('success', 'Resultado exportado como JSON.');
+}
+
+async function copyResultTable(index) {
+    const set = getSortedResultSet(index);
+    if (!set) return;
+    try {
+        await copyTextToClipboard(resultSetToTsv(set));
+        showToast('success', 'Resultado copiado al portapapeles.');
+    } catch (error) {
+        showToast('error', 'No se pudo copiar. Selecciona la tabla manualmente.');
+    }
+}
+
+async function copyResultCell(value) {
+    try {
+        await copyTextToClipboard(value);
+        showToast('success', 'Celda copiada al portapapeles.');
+    } catch (error) {
+        showToast('error', 'No se pudo copiar la celda.');
+    }
 }
 
 // ============================================
@@ -536,12 +1043,38 @@ function getDatabaseSchemaSummary() {
     }
 }
 
+const AI_MODES = new Set(['error', 'explain', 'hint', 'exercise', 'review']);
+const AI_MODE_LABELS = {
+    error: 'Diagnóstico',
+    explain: 'Explicación',
+    hint: 'Pista',
+    exercise: 'Ejercicio propuesto',
+    review: 'Revisión',
+    nosql: 'Explicación NoSQL'
+};
+const AI_MODE_ICONS = {
+    error: 'fa-stethoscope',
+    explain: 'fa-lightbulb',
+    hint: 'fa-compass',
+    exercise: 'fa-dumbbell',
+    review: 'fa-magnifying-glass',
+    nosql: 'fa-leaf'
+};
+
 /** Prepara la consulta, el error y el esquema que se enviarán. */
 function buildAIContext(mode) {
     const editor = document.getElementById('sqlEditor');
     const currentQuery = editor ? editor.value.trim() : '';
 
-    if (mode === 'error' && lastQueryError) {
+    let normalizedMode = String(mode || 'explain');
+    if (normalizedMode === 'manual') normalizedMode = 'explain';
+    if (!AI_MODES.has(normalizedMode)) normalizedMode = 'explain';
+
+    if (normalizedMode === 'explain' && lastQueryError && lastQueryError.query === currentQuery) {
+        normalizedMode = 'error';
+    }
+
+    if (normalizedMode === 'error' && lastQueryError) {
         return {
             query: lastQueryError.query,
             error: lastQueryError.message,
@@ -550,15 +1083,15 @@ function buildAIContext(mode) {
         };
     }
 
-    const errorMessage = lastQueryError && lastQueryError.query === currentQuery
-        ? lastQueryError.message
-        : '';
+    if (normalizedMode === 'error') {
+        normalizedMode = 'explain';
+    }
 
     return {
         query: currentQuery,
-        error: errorMessage,
+        error: '',
         schema: getDatabaseSchemaSummary(),
-        mode: errorMessage ? 'error' : 'explain'
+        mode: normalizedMode
     };
 }
 
@@ -569,10 +1102,15 @@ function openAIHelp(mode = 'error') {
 
     const context = buildAIContext(mode);
 
-    if (!context.query) {
+    if (!context.query && context.mode !== 'exercise') {
         showMessage('warning', 'Escribe una consulta antes de pedir ayuda al asistente');
         const editor = document.getElementById('sqlEditor');
         if (editor) editor.focus();
+        return;
+    }
+
+    if (context.mode === 'exercise' && !context.schema) {
+        showMessage('warning', 'Espera a que la base de datos termine de inicializarse para generar un ejercicio');
         return;
     }
 
@@ -638,6 +1176,10 @@ function getAIErrorMessage(code) {
             return 'La IA no devolvió una explicación. Intenta reformular la consulta.';
         case 'empty_query':
             return 'No hay una consulta para explicar.';
+        case 'empty_schema':
+            return 'No se pudo leer el esquema de la base de datos para generar el ejercicio.';
+        case 'invalid_mode':
+            return 'El modo del asistente no es válido. Recarga la página e inténtalo de nuevo.';
         case 'http_404':
         case 'http_405':
             return 'El asistente no está disponible en este entorno. Si trabajas en local, abre el proyecto con Netlify Dev.';
@@ -788,11 +1330,20 @@ function renderAILoading(context) {
     const body = document.getElementById('aiHelpBody');
     if (!body) return;
 
+    const messages = {
+        error: 'Diagnosticando el error...',
+        explain: 'Analizando la consulta...',
+        hint: 'Preparando una pista...',
+        exercise: 'Diseñando un ejercicio...',
+        review: 'Revisando la consulta...',
+        nosql: 'Analizando el comando NoSQL...'
+    };
+
     body.innerHTML = `
         ${renderAIContext(context)}
         <div class="ai-loading">
             <i class="fas fa-spinner fa-spin"></i>
-            <p>Analizando la consulta...</p>
+            <p>${escapeHtml(messages[context.mode] || 'Analizando...')}</p>
             <p>Esto puede tardar unos segundos.</p>
         </div>
     `;
@@ -801,6 +1352,7 @@ function renderAILoading(context) {
 function renderAIContext(context) {
     if (!context) return '';
 
+    const isExercise = context.mode === 'exercise';
     const query = context.query.length > 600
         ? `${context.query.slice(0, 600)}...`
         : context.query;
@@ -810,8 +1362,10 @@ function renderAIContext(context) {
 
     return `
         <div class="ai-context">
-            <div class="ai-context-title"><i class="fas fa-code"></i> Consulta enviada</div>
-            <pre>${escapeHtml(query)}</pre>
+            <div class="ai-context-title"><i class="fas fa-code"></i> ${isExercise ? 'Esquema enviado' : 'Consulta enviada'}</div>
+            ${query
+                ? `<pre>${escapeHtml(query)}</pre>`
+                : `<p class="ai-context-note">Se enviará únicamente el esquema de las tablas para generar el ejercicio.</p>`}
             ${error ? `
                 <div class="ai-context-error">
                     <strong>Error:</strong>
@@ -828,9 +1382,13 @@ function renderAIResponse(explanation) {
     const retryBtn = document.getElementById('aiRetryBtn');
     if (!body) return;
 
+    const mode = aiLastContext?.mode || 'explain';
+    const label = AI_MODE_LABELS[mode] || 'Respuesta';
+    const icon = AI_MODE_ICONS[mode] || 'fa-lightbulb';
+
     body.innerHTML = `
         ${renderAIContext(aiLastContext)}
-        <div class="ai-response-title"><i class="fas fa-lightbulb"></i> Explicación</div>
+        <div class="ai-response-title"><i class="fas ${icon}"></i> ${escapeHtml(label)}</div>
         <div class="ai-response">${formatAIResponse(explanation)}</div>
     `;
 
@@ -912,6 +1470,188 @@ async function copyAIResponse() {
     }
 }
 
+// FORMATEO DE SQL
+function formatSql(sql) {
+    let text = String(sql || '').trim();
+    if (!text) return '';
+
+    // Protege literales, identificadores entre comillas y comentarios.
+    const stringLiterals = [];
+    const protect = match => {
+        stringLiterals.push(match);
+        return `\u0000STR${stringLiterals.length - 1}\u0000`;
+    };
+    text = text
+        .replace(/\/\*[\s\S]*?\*\//g, protect)
+        .replace(/--[^\n]*/g, protect)
+        .replace(/'(?:''|[^'])*'/g, protect)
+        .replace(/"(?:""|[^"])*"/g, protect);
+
+    text = text.replace(/\s+/g, ' ');
+
+    const clauses = [
+        'SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
+        'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'CROSS JOIN', 'JOIN',
+        'UNION ALL', 'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM'
+    ];
+
+    clauses.forEach(clause => {
+        const words = clause.split(' ').join('\\s+');
+        const pattern = new RegExp(`\\s+(${words})\\s+`, 'gi');
+        text = text.replace(pattern, `\n$1 `);
+    });
+
+    // Evita que "LEFT JOIN" o "INNER JOIN" queden partidos en dos líneas.
+    text = text.replace(/\b(LEFT|RIGHT|INNER|CROSS)\nJOIN\b/gi, '$1 JOIN');
+
+    // Las condiciones ON van en una línea indentada.
+    text = text.replace(/\s+(ON)\s+/gi, '\n  $1 ');
+
+    const keywordPattern = /\b(select|from|where|group by|order by|having|limit|offset|left join|right join|inner join|cross join|join|on|union all|insert into|values|update|set|delete from|and|or|not|as|distinct|count|avg|sum|min|max|round)\b/gi;
+    text = text.replace(keywordPattern, match => match.toUpperCase());
+    text = text.replace(/\n{2,}/g, '\n');
+    text = text.replace(/[ \t]+\n/g, '\n');
+    text = text.replace(/\u0000STR(\d+)\u0000/g, (_, index) => stringLiterals[Number(index)]);
+
+    return text.trim();
+}
+
+function formatEditorSql() {
+    const editor = document.getElementById('sqlEditor');
+    if (!editor) return;
+
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const hasSelection = end > start;
+    const source = hasSelection ? editor.value.slice(start, end) : editor.value;
+
+    if (!source.trim()) {
+        showToast('warning', 'No hay ninguna consulta para formatear.');
+        return;
+    }
+
+    const formatted = formatSql(source);
+    if (hasSelection) {
+        editor.setRangeText(formatted, start, end, 'select');
+    } else {
+        editor.value = formatted;
+    }
+    editor.focus();
+    showToast('success', 'Consulta formateada.');
+}
+
+// MODO SEGURO
+function stripSqlComments(sql) {
+    return String(sql || '')
+        .replace(/--[^\n]*/g, ' ')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
+ * Devuelve una explicación si la consulta es potencialmente destructiva.
+ * Es una comprobación heurística pensada para principiantes, no un parser SQL.
+ */
+function getDangerousQueryReason(sql) {
+    const normalized = stripSqlComments(sql);
+    if (!normalized) return '';
+
+    if (/^DROP\s+(TABLE|VIEW|INDEX|TRIGGER|DATABASE|SCHEMA)\b/i.test(normalized)) {
+        return 'La consulta elimina un objeto de la base de datos con DROP.';
+    }
+
+    if (/^TRUNCATE\b/i.test(normalized)) {
+        return 'TRUNCATE vacía una tabla completa sin posibilidad de recuperar los datos.';
+    }
+
+    const deleteMatch = normalized.match(/^DELETE\s+FROM\s+[^;]+/i);
+    if (deleteMatch && !/\bWHERE\b/i.test(deleteMatch[0])) {
+        return 'DELETE sin WHERE elimina todos los registros de la tabla.';
+    }
+
+    const updateMatch = normalized.match(/^UPDATE\s+[^;]+/i);
+    if (updateMatch && !/\bWHERE\b/i.test(updateMatch[0])) {
+        return 'UPDATE sin WHERE modifica todos los registros de la tabla.';
+    }
+
+    if (/^ALTER\s+TABLE\s+.+\s+DROP\s+(COLUMN|CONSTRAINT)\b/i.test(normalized)) {
+        return 'ALTER TABLE ... DROP elimina parte del esquema de la base de datos.';
+    }
+
+    return '';
+}
+
+function syncDatasetSelector() {
+    const selector = document.getElementById('datasetSelector');
+    if (selector) selector.value = preferences.dataset;
+}
+
+function applyPreferences() {
+    const safeModeToggle = document.getElementById('safeModeToggle');
+    if (safeModeToggle) safeModeToggle.checked = preferences.safeMode;
+    syncDatasetSelector();
+
+    const isDark = preferences.theme === 'dark';
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeMeta) themeMeta.setAttribute('content', isDark ? '#111827' : '#336791');
+
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        themeToggle.innerHTML = `<i class="fas ${isDark ? 'fa-sun' : 'fa-moon'}"></i>`;
+        themeToggle.setAttribute('aria-pressed', String(isDark));
+        themeToggle.setAttribute('aria-label', isDark ? 'Activar modo claro' : 'Activar modo oscuro');
+        themeToggle.title = isDark ? 'Activar modo claro' : 'Activar modo oscuro';
+    }
+}
+
+function toggleSafeMode(enabled) {
+    preferences.safeMode = Boolean(enabled);
+    savePreferences();
+    showToast(
+        preferences.safeMode ? 'success' : 'warning',
+        preferences.safeMode
+            ? 'Modo seguro activado: se pedirá confirmación antes de consultas destructivas.'
+            : 'Modo seguro desactivado: las consultas destructivas se ejecutarán sin confirmación.'
+    );
+}
+
+function toggleTheme() {
+    preferences.theme = preferences.theme === 'dark' ? 'light' : 'dark';
+    savePreferences();
+    applyPreferences();
+    if (dbInitialized) updateCharts();
+    showToast('info', preferences.theme === 'dark' ? 'Modo oscuro activado.' : 'Modo claro activado.');
+}
+
+async function installApp() {
+    if (!deferredInstallPrompt) {
+        showToast('info', 'Si tu navegador lo permite, usa el menú “Instalar app” o “Añadir a pantalla de inicio”.');
+        return;
+    }
+
+    deferredInstallPrompt.prompt();
+    try {
+        await deferredInstallPrompt.userChoice;
+    } finally {
+        deferredInstallPrompt = null;
+        const button = document.getElementById('installAppBtn');
+        if (button) button.hidden = true;
+    }
+}
+
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') return;
+
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(error => {
+            console.warn('No se pudo registrar el service worker:', error);
+        });
+    });
+}
+
 // EJECUTAR CONSULTA
 function runQuery() {
     if (!dbInitialized) {
@@ -920,20 +1660,39 @@ function runQuery() {
     }
 
     const editor = document.getElementById('sqlEditor');
-    const query = editor.value.trim();
+    const selection = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+    const query = (selection.trim() || editor.value).trim();
 
     if (!query) {
         showMessage('warning', 'Por favor, escribe una consulta SQL');
         return;
     }
 
+    if (preferences.safeMode) {
+        const dangerReason = getDangerousQueryReason(query);
+        if (dangerReason) {
+            const confirmed = confirm(
+                `Modo seguro activado\n\n${dangerReason}\n\n¿Quieres ejecutar la consulta de todos modos?`
+            );
+            if (!confirmed) {
+                showToast('info', 'Consulta cancelada. No se modificó la base de datos.');
+                return;
+            }
+        }
+    }
+
     addToHistory(query);
 
     try {
+        const startedAt = performance.now();
         const result = db.exec(query);
+        const durationMs = performance.now() - startedAt;
         lastQueryError = null;
-        displayResults(result);
+        displayResults(result, { durationMs });
         refreshAll();
+        if (isWriteQuery(query) || db.getRowsModified() > 0) {
+            schedulePersistDatabase();
+        }
     } catch (error) {
         const message = error && error.message ? error.message : String(error);
         lastQueryError = { query, message };
@@ -944,9 +1703,11 @@ function runQuery() {
 // HISTORIAL
 function addToHistory(query) {
     if (!query || query.trim() === '') return;
-    if (queryHistory.includes(query)) return;
+    const existingIndex = queryHistory.indexOf(query);
+    if (existingIndex >= 0) queryHistory.splice(existingIndex, 1);
     queryHistory.unshift(query);
-    if (queryHistory.length > 20) queryHistory.pop();
+    if (queryHistory.length > HISTORY_LIMIT) queryHistory.pop();
+    saveHistoryToStorage();
     updateHistoryDisplay();
 }
 
@@ -981,6 +1742,7 @@ function loadHistoryQuery(query) {
 function clearHistory() {
     if (confirm('¿Limpiar todo el historial?')) {
         queryHistory = [];
+        removeStoredItem(STORAGE_KEYS.history);
         updateHistoryDisplay();
         showMessage('info', 'Historial limpiado');
     }
@@ -1039,6 +1801,7 @@ function importDatabase() {
                 aiCooldownUntil = 0;
                 aiResponseCache.clear();
                 refreshAll();
+                schedulePersistDatabase();
                 showMessage('success', 'Base de datos importada correctamente', `Archivo: ${escapeHtml(file.name)}`);
             } catch (e) {
                 if (imported) {
@@ -1234,6 +1997,7 @@ function saveTableChanges(tableName) {
         if (updatedCount === 0) {
             showMessage('info', 'No había cambios que guardar');
         } else {
+            schedulePersistDatabase();
             showMessage('success', 'Cambios guardados correctamente', `${updatedCount} fila(s) actualizada(s) en ${escapeHtml(tableName)}`);
         }
     } catch (e) {
@@ -1256,6 +2020,7 @@ function deleteRow(tableName, pkValue) {
         const value = parseColumnValue(pkValue, pkColumn);
         db.run(`DELETE FROM ${quoteIdent(tableName)} WHERE ${quoteIdent(pkColumn.name)} = ?`, [value]);
         refreshAll();
+        schedulePersistDatabase();
         showMessage('success', 'Registro eliminado correctamente');
     } catch (e) {
         showMessage('error', 'Error al eliminar', `<code>${escapeHtml(e.message)}</code>`);
@@ -1302,6 +2067,7 @@ function addRow(tableName) {
         }
 
         refreshAll();
+        schedulePersistDatabase();
         showMessage('success', `Nueva fila agregada a ${tableName}`);
     } catch (e) {
         showMessage('error', 'Error al agregar fila', `<code>${escapeHtml(e.message)}</code>`);
@@ -1447,6 +2213,10 @@ function updateCharts() {
         return;
     }
 
+    const isDarkTheme = document.documentElement.dataset.theme === 'dark';
+    Chart.defaults.color = isDarkTheme ? '#e2e8f0' : '#2C3E50';
+    Chart.defaults.borderColor = isDarkTheme ? 'rgba(148, 163, 184, 0.18)' : 'rgba(0, 0, 0, 0.1)';
+
     const hasStudentsTable = getUserTables().includes('estudiantes');
     if (!hasStudentsTable) {
         if (chartCarreras) { chartCarreras.destroy(); chartCarreras = null; }
@@ -1551,14 +2321,85 @@ function updateCharts() {
     }
 }
 
-// REINICIAR BASE DE DATOS
-function resetDatabase() {
-    if (confirm('¿Seguro que quieres reiniciar la base de datos a su estado original?')) {
+// DATASETS
+async function loadDataset(name) {
+    const dataset = name === 'escuela' ? null : window.SQL_ACADEMY_DATASETS?.[name];
+    if (name !== 'escuela' && !dataset) {
+        showToast('error', 'El dataset seleccionado no está disponible.');
+        syncDatasetSelector();
+        return;
+    }
+    if (!SQLModule) {
+        showToast('warning', 'Espera a que la base de datos termine de inicializarse.');
+        syncDatasetSelector();
+        return;
+    }
+
+    const label = name === 'escuela' ? 'Escuela' : dataset.name;
+    const confirmed = confirm(
+        `¿Cambiar al dataset ${label}?\n\nSe reemplazará la base de datos actual y se borrará la copia guardada. Exporta tu base si quieres conservarla.`
+    );
+    if (!confirmed) {
+        syncDatasetSelector();
+        return;
+    }
+
+    try {
         dbInitialized = false;
         lastQueryError = null;
         aiCooldownUntil = 0;
+        aiResponseCache.clear();
+        if (db) {
+            try { db.close(); } catch (error) { /* ignorar */ }
+            db = null;
+        }
+        await clearSavedDatabase();
+
+        preferences.dataset = name;
+        savePreferences();
+        syncDatasetSelector();
+
+        if (name === 'escuela') {
+            initDatabase({ restore: false });
+            return;
+        }
+
+        const nextDb = new SQLModule.Database();
+        nextDb.run('PRAGMA foreign_keys = ON;');
+        nextDb.run(dataset.sql);
+        db = nextDb;
+        dbInitialized = true;
+        refreshAll();
+        schedulePersistDatabase();
+        showMessage(
+            'success',
+            `Dataset ${escapeHtml(dataset.name)} cargado`,
+            `${escapeHtml(dataset.description)} Los retos y los ejemplos guiados siguen usando el dataset Escuela.`
+        );
+        showToast('success', `Dataset ${dataset.name} listo.`);
+    } catch (error) {
+        console.error('No se pudo cargar el dataset:', error);
+        preferences.dataset = 'escuela';
+        savePreferences();
+        syncDatasetSelector();
+        showMessage('error', 'No se pudo cargar el dataset', `<code>${escapeHtml(error.message)}</code>`);
+        showToast('error', 'Se restauró el dataset Escuela.');
+        initDatabase({ restore: false });
+    }
+}
+
+// REINICIAR BASE DE DATOS
+async function resetDatabase() {
+    if (confirm('¿Seguro que quieres reiniciar la base de datos a su estado original? Se borrará la copia guardada en este navegador.')) {
+        dbInitialized = false;
+        lastQueryError = null;
+        aiCooldownUntil = 0;
+        preferences.dataset = 'escuela';
+        savePreferences();
+        syncDatasetSelector();
         showMessage('warning', 'Reiniciando base de datos...');
-        initDatabase();
+        await clearSavedDatabase();
+        initDatabase({ restore: false });
     }
 }
 
@@ -1686,6 +2527,15 @@ function showExampleByCategory() {
     const selector = document.getElementById('categorySelector');
     if (!selector) {
         console.error('No se encontro el selector de categorias');
+        return;
+    }
+
+    if (!getUserTables().includes('estudiantes')) {
+        showMessage(
+            'warning',
+            'Los ejemplos guiados usan el dataset Escuela',
+            'Cambia el dataset a “Escuela” para usar estos ejemplos, o escribe tus propias consultas sobre las tablas actuales.'
+        );
         return;
     }
     
@@ -2343,6 +3193,412 @@ function closeConceptModal() {
     closeModal(document.getElementById('conceptModal'));
 }
 
+// ============================================
+// RETOS
+// ============================================
+
+const challengeCatalog = [
+    {
+        id: 'basico-01',
+        titulo: 'Primer contacto',
+        nivel: 'basico',
+        descripcion: 'Muestra todos los estudiantes de la tabla estudiantes.',
+        pista: 'Usa SELECT * FROM estudiantes; para ver todas las columnas y filas.',
+        sqlEsperado: 'SELECT * FROM estudiantes;',
+        ordenada: false
+    },
+    {
+        id: 'filtro-01',
+        titulo: 'Solo Ingeniería',
+        nivel: 'basico',
+        descripcion: 'Muestra el nombre y la carrera de los estudiantes cuya carrera sea Ingenieria.',
+        pista: 'Combina SELECT nombre, carrera con un WHERE carrera = \'Ingenieria\'.',
+        sqlEsperado: "SELECT nombre, carrera FROM estudiantes WHERE carrera = 'Ingenieria';",
+        ordenada: false
+    },
+    {
+        id: 'orden-01',
+        titulo: 'Top 5 promedios',
+        nivel: 'intermedio',
+        descripcion: 'Muestra el nombre y el promedio de los 5 estudiantes con mejor promedio. Ordena de mayor a menor y desempata por nombre ascendente.',
+        pista: 'Usa ORDER BY promedio DESC, nombre ASC y LIMIT 5.',
+        sqlEsperado: 'SELECT nombre, promedio FROM estudiantes ORDER BY promedio DESC, nombre ASC LIMIT 5;',
+        ordenada: true
+    },
+    {
+        id: 'agregacion-01',
+        titulo: 'Estudiantes por carrera',
+        nivel: 'intermedio',
+        descripcion: 'Muestra cada carrera y la cantidad de estudiantes que tiene. Ordena alfabéticamente por carrera.',
+        pista: 'Agrupa con GROUP BY carrera y cuenta con COUNT(*).',
+        sqlEsperado: 'SELECT carrera, COUNT(*) AS cantidad FROM estudiantes GROUP BY carrera ORDER BY carrera ASC;',
+        ordenada: true
+    },
+    {
+        id: 'join-01',
+        titulo: 'Estudiantes y sus cursos',
+        nivel: 'intermedio',
+        descripcion: 'Muestra el nombre del estudiante y el nombre del curso de todas las inscripciones. Ordena por nombre del estudiante y luego por nombre del curso.',
+        pista: 'Une estudiantes con inscripciones y luego con cursos usando JOIN.',
+        sqlEsperado: 'SELECT e.nombre AS estudiante, c.nombre AS curso FROM estudiantes e JOIN inscripciones i ON e.id = i.estudiante_id JOIN cursos c ON i.curso_id = c.id ORDER BY e.nombre ASC, c.nombre ASC;',
+        ordenada: true
+    },
+    {
+        id: 'subconsulta-01',
+        titulo: 'Por encima del promedio',
+        nivel: 'avanzado',
+        descripcion: 'Muestra el nombre y el promedio de los estudiantes cuyo promedio sea mayor al promedio general. Ordena por promedio descendente y nombre ascendente.',
+        pista: 'Compara promedio con una subconsulta: (SELECT AVG(promedio) FROM estudiantes).',
+        sqlEsperado: 'SELECT nombre, promedio FROM estudiantes WHERE promedio > (SELECT AVG(promedio) FROM estudiantes) ORDER BY promedio DESC, nombre ASC;',
+        ordenada: true
+    },
+    {
+        id: 'having-01',
+        titulo: 'Carreras con más alumnos',
+        nivel: 'avanzado',
+        descripcion: 'Muestra las carreras con 5 o más estudiantes y su cantidad. Ordena por cantidad descendente y luego por carrera ascendente.',
+        pista: 'Usa GROUP BY carrera y filtra el agregado con HAVING COUNT(*) >= 5.',
+        sqlEsperado: 'SELECT carrera, COUNT(*) AS cantidad FROM estudiantes GROUP BY carrera HAVING COUNT(*) >= 5 ORDER BY cantidad DESC, carrera ASC;',
+        ordenada: true
+    },
+    {
+        id: 'join-02',
+        titulo: 'Cursos e inscritos',
+        nivel: 'avanzado',
+        descripcion: 'Muestra el nombre de cada curso y cuántas inscripciones tiene, incluyendo cursos con cero inscritos. Ordena por inscritos descendente y nombre del curso ascendente.',
+        pista: 'Usa LEFT JOIN desde cursos hacia inscripciones y COUNT(i.id).',
+        sqlEsperado: 'SELECT c.nombre, COUNT(i.id) AS inscritos FROM cursos c LEFT JOIN inscripciones i ON c.id = i.curso_id GROUP BY c.id, c.nombre ORDER BY inscritos DESC, c.nombre ASC;',
+        ordenada: true
+    }
+];
+
+let currentChallengeId = null;
+let challengeAttempts = 0;
+let challengeProgress = {};
+
+function loadChallengeProgress() {
+    const stored = readStoredJSON(STORAGE_KEYS.challenges, {});
+    challengeProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+}
+
+function saveChallengeProgress() {
+    writeStoredJSON(STORAGE_KEYS.challenges, challengeProgress);
+}
+
+function getChallengeById(id) {
+    return challengeCatalog.find(challenge => challenge.id === id) || null;
+}
+
+function getCompletedChallengeCount() {
+    return challengeCatalog.filter(challenge => challengeProgress[challenge.id]?.completed).length;
+}
+
+function renderChallengeProgress() {
+    const completed = getCompletedChallengeCount();
+    const total = challengeCatalog.length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    const text = document.getElementById('challengeProgressText');
+    const bar = document.getElementById('challengeProgressBar');
+    const track = document.getElementById('challengeProgressTrack');
+    if (text) text.textContent = `${completed} de ${total}`;
+    if (bar) bar.style.width = `${percent}%`;
+    if (track) track.setAttribute('aria-valuenow', String(percent));
+}
+
+function renderChallengeList() {
+    const list = document.getElementById('challengeList');
+    if (!list) return;
+
+    list.innerHTML = challengeCatalog.map(challenge => {
+        const completed = Boolean(challengeProgress[challenge.id]?.completed);
+        const active = challenge.id === currentChallengeId;
+        return `
+            <button type="button" class="challenge-card${completed ? ' completed' : ''}${active ? ' active' : ''}"
+                onclick="openChallenge('${challenge.id}')"
+                aria-pressed="${active}">
+                <span class="challenge-card-title">
+                    ${escapeHtml(challenge.titulo)}
+                    ${completed ? '<i class="fas fa-circle-check" title="Completado"></i>' : ''}
+                </span>
+                <span class="challenge-card-meta">
+                    <span class="challenge-level ${escapeHtml(challenge.nivel)}">${escapeHtml(challenge.nivel)}</span>
+                    ${completed ? '<span>Completado</span>' : '<span>Pendiente</span>'}
+                </span>
+            </button>
+        `;
+    }).join('');
+
+    renderChallengeProgress();
+}
+
+function initChallenges() {
+    loadChallengeProgress();
+    renderChallengeList();
+}
+
+function openChallenge(id) {
+    const challenge = getChallengeById(id);
+    if (!challenge) return;
+
+    currentChallengeId = id;
+    challengeAttempts = 0;
+    const detail = document.getElementById('challengeDetail');
+    if (!detail) return;
+
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <h3>${escapeHtml(challenge.titulo)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${escapeHtml(challenge.nivel)}">${escapeHtml(challenge.nivel)}</span>
+                    <span class="text-muted">Validación por resultado</span>
+                </div>
+            </div>
+        </div>
+        <div class="challenge-description">${escapeHtml(challenge.descripcion)}</div>
+        <label for="challengeEditor" class="sr-only">Consulta SQL para el reto</label>
+        <textarea id="challengeEditor" spellcheck="false" placeholder="Escribe tu consulta SQL aquí..."></textarea>
+        <div class="challenge-actions">
+            <button type="button" id="challengeRunBtn" onclick="runChallenge()">
+                <i class="fas fa-play"></i> Comprobar reto
+            </button>
+            <button type="button" class="btn-secondary" onclick="showChallengeHint()">
+                <i class="fas fa-lightbulb"></i> Ver pista
+            </button>
+            <button type="button" class="btn-secondary" onclick="clearChallengeEditor()">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+        </div>
+        <div id="challengeHint" class="challenge-hint" hidden></div>
+        <div id="challengeResult" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para intentarlo</strong>
+            Escribe una consulta de solo lectura (SELECT o WITH) y pulsa “Comprobar reto”.
+        </div>
+    `;
+
+    renderChallengeList();
+    const editor = document.getElementById('challengeEditor');
+    if (editor) editor.focus();
+}
+
+function clearChallengeEditor() {
+    const editor = document.getElementById('challengeEditor');
+    if (editor) {
+        editor.value = '';
+        editor.focus();
+    }
+}
+
+function showChallengeHint() {
+    const challenge = getChallengeById(currentChallengeId);
+    const hint = document.getElementById('challengeHint');
+    if (!challenge || !hint) return;
+    hint.innerHTML = `<strong><i class="fas fa-lightbulb"></i> Pista:</strong> ${escapeHtml(challenge.pista)}`;
+    hint.hidden = false;
+}
+
+function showChallengeSolution() {
+    const challenge = getChallengeById(currentChallengeId);
+    const editor = document.getElementById('challengeEditor');
+    if (!challenge || !editor) return;
+    editor.value = challenge.sqlEsperado;
+    editor.focus();
+    showToast('info', 'Solución cargada. Ejecútala para comprobar el resultado.');
+}
+
+function isReadOnlyQuery(sql) {
+    const normalized = stripSqlComments(sql);
+    if (!normalized) return false;
+
+    // Sustituye literales antes de buscar puntos y comas o palabras reservadas.
+    const withoutStrings = normalized
+        .replace(/'(?:''|[^'])*'/g, "''")
+        .replace(/"(?:\"\"|[^\"])*"/g, '""');
+    const statements = withoutStrings.split(';').map(statement => statement.trim()).filter(Boolean);
+    if (statements.length !== 1) return false;
+    if (!/^(SELECT|WITH)\b/i.test(statements[0])) return false;
+
+    return !/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|REPLACE|TRUNCATE|PRAGMA|ATTACH|DETACH|VACUUM)\b/i.test(statements[0]);
+}
+
+function firstResultSet(result) {
+    return (result || []).find(set => set && Array.isArray(set.columns) && set.columns.length > 0) || null;
+}
+
+function normalizeChallengeRows(set) {
+    if (!set) return [];
+    return set.values.map(row => row.map(value => value === null || value === undefined ? 'NULL' : String(value)));
+}
+
+function compareChallengeResults(expected, actual, ordered) {
+    const expectedSet = firstResultSet(expected);
+    const actualSet = firstResultSet(actual);
+
+    if (!expectedSet) return { ok: false, reason: 'expected_empty' };
+    if (!actualSet) return { ok: false, reason: 'no_result' };
+
+    if (expectedSet.columns.length !== actualSet.columns.length) {
+        return {
+            ok: false,
+            reason: 'columns',
+            expectedColumns: expectedSet.columns.length,
+            actualColumns: actualSet.columns.length
+        };
+    }
+
+    const expectedRows = normalizeChallengeRows(expectedSet);
+    const actualRows = normalizeChallengeRows(actualSet);
+
+    if (expectedRows.length !== actualRows.length) {
+        return {
+            ok: false,
+            reason: 'rows',
+            expectedRows: expectedRows.length,
+            actualRows: actualRows.length
+        };
+    }
+
+    const serialize = row => JSON.stringify(row);
+    const expectedSerialized = ordered ? expectedRows.map(serialize) : expectedRows.map(serialize).sort();
+    const actualSerialized = ordered ? actualRows.map(serialize) : actualRows.map(serialize).sort();
+
+    for (let i = 0; i < expectedSerialized.length; i++) {
+        if (expectedSerialized[i] !== actualSerialized[i]) {
+            return { ok: false, reason: 'values', row: i + 1 };
+        }
+    }
+
+    return { ok: true };
+}
+
+function setChallengeResult(type, html) {
+    const result = document.getElementById('challengeResult');
+    if (!result) return;
+    result.className = `challenge-result ${type}`;
+    result.innerHTML = html;
+}
+
+function markChallengeComplete(challenge) {
+    challengeProgress[challenge.id] = {
+        completed: true,
+        completedAt: new Date().toISOString()
+    };
+    saveChallengeProgress();
+    renderChallengeList();
+}
+
+function runChallenge() {
+    const challenge = getChallengeById(currentChallengeId);
+    if (!challenge) {
+        showToast('warning', 'Elige un reto primero.');
+        return;
+    }
+    if (!dbInitialized) {
+        showToast('warning', 'Espera a que la base de datos termine de inicializarse.');
+        return;
+    }
+
+    if (!getUserTables().includes('estudiantes')) {
+        setChallengeResult(
+            'warning',
+            '<strong><i class="fas fa-triangle-exclamation"></i> Dataset incompatible</strong>Los retos están diseñados para el dataset Escuela. Cambia el dataset desde la sección Practicar para resolverlos.'
+        );
+        return;
+    }
+
+    const editor = document.getElementById('challengeEditor');
+    const query = editor ? editor.value.trim() : '';
+    if (!query) {
+        setChallengeResult('warning', '<strong><i class="fas fa-triangle-exclamation"></i> Consulta vacía</strong>Escribe una consulta antes de comprobar el reto.');
+        if (editor) editor.focus();
+        return;
+    }
+    if (!isReadOnlyQuery(query)) {
+        setChallengeResult('error', '<strong><i class="fas fa-shield-halved"></i> Solo lectura</strong>Los retos aceptan una única consulta SELECT o WITH. No se permiten modificaciones.');
+        return;
+    }
+
+    challengeAttempts += 1;
+
+    try {
+        const actual = db.exec(query);
+        const expected = db.exec(challenge.sqlEsperado);
+        const comparison = compareChallengeResults(expected, actual, challenge.ordenada);
+
+        if (comparison.ok) {
+            markChallengeComplete(challenge);
+            setChallengeResult('success', `
+                <strong><i class="fas fa-circle-check"></i> ¡Correcto!</strong>
+                Tu consulta devuelve el mismo resultado que la solución esperada.
+                <div class="challenge-result-actions">
+                    <button type="button" class="btn-secondary" onclick="nextChallenge()">
+                        <i class="fas fa-arrow-right"></i> Siguiente reto
+                    </button>
+                </div>
+            `);
+            return;
+        }
+
+        let message = 'Tu consulta todavía no coincide con el resultado esperado.';
+        if (comparison.reason === 'columns') {
+            message = `Se esperaban ${comparison.expectedColumns} columnas y tu consulta devolvió ${comparison.actualColumns}.`;
+        } else if (comparison.reason === 'rows') {
+            message = `Se esperaban ${comparison.expectedRows} filas y tu consulta devolvió ${comparison.actualRows}.`;
+        } else if (comparison.reason === 'values') {
+            message = `El número de filas y columnas coincide, pero los valores no son iguales (revisa el orden o los cálculos).`;
+        } else if (comparison.reason === 'no_result') {
+            message = 'Tu consulta no devolvió un conjunto de resultados.';
+        }
+
+        const canShowSolution = challengeAttempts >= 3;
+        setChallengeResult('error', `
+            <strong><i class="fas fa-circle-xmark"></i> Aún no</strong>
+            ${escapeHtml(message)}
+            <div class="challenge-result-actions">
+                <button type="button" class="btn-secondary" onclick="showChallengeHint()">
+                    <i class="fas fa-lightbulb"></i> Ver pista
+                </button>
+                ${canShowSolution ? `
+                    <button type="button" class="btn-secondary" onclick="showChallengeSolution()">
+                        <i class="fas fa-eye"></i> Ver solución
+                    </button>
+                ` : ''}
+            </div>
+        `);
+
+        if (challengeAttempts >= 2) {
+            showChallengeHint();
+        }
+    } catch (error) {
+        setChallengeResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Error en la consulta</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+        `);
+    }
+}
+
+function nextChallenge() {
+    const currentIndex = challengeCatalog.findIndex(challenge => challenge.id === currentChallengeId);
+    const next = challengeCatalog[currentIndex + 1];
+    if (next) {
+        openChallenge(next.id);
+    } else {
+        showToast('success', '¡Has llegado al final de los retos!');
+    }
+}
+
+function resetChallengeProgress() {
+    if (!confirm('¿Reiniciar el progreso de todos los retos?')) return;
+    challengeProgress = {};
+    removeStoredItem(STORAGE_KEYS.challenges);
+    renderChallengeList();
+    if (currentChallengeId) {
+        openChallenge(currentChallengeId);
+    }
+    showToast('info', 'Progreso de retos reiniciado.');
+}
+
 // NAVEGACIÓN ENTRE SECCIONES
 document.addEventListener('DOMContentLoaded', function() {
     // Navegación por pestañas del navbar
@@ -2372,9 +3628,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Inicializar base de datos
+    // Preferencias e historial guardados en el navegador.
+    loadPreferences();
+    applyPreferences();
+    loadHistoryFromStorage();
+    updateHistoryDisplay();
+    initChallenges();
+
+    // Inicializar base de datos (restaura la copia local si existe).
     initDatabase();
-    
+    registerServiceWorker();
+
     // Año automático en el footer
     const yearSpan = document.getElementById('currentYear');
     if (yearSpan) {
@@ -2389,6 +3653,13 @@ document.addEventListener('click', function(e) {
     }
 });
 
+document.addEventListener('dblclick', function(e) {
+    const cell = e.target && e.target.closest ? e.target.closest('[data-copy-value]') : null;
+    if (cell) {
+        copyResultCell(cell.dataset.copyValue || '');
+    }
+});
+
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
     const activeModal = document.querySelector('.modal.active');
@@ -2396,6 +3667,48 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
         closeModal(activeModal);
     }
+});
+
+// Mantiene el foco dentro del modal abierto.
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Tab') return;
+    const activeModal = document.querySelector('.modal.active');
+    if (!activeModal) return;
+
+    const focusable = getFocusableElements(activeModal);
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+    }
+});
+
+window.addEventListener('beforeinstallprompt', function(event) {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    const button = document.getElementById('installAppBtn');
+    if (button) button.hidden = false;
+});
+
+window.addEventListener('appinstalled', function() {
+    deferredInstallPrompt = null;
+    const button = document.getElementById('installAppBtn');
+    if (button) button.hidden = true;
+    showToast('success', 'SQL Academy se instaló correctamente.');
+});
+
+window.addEventListener('offline', function() {
+    showToast('warning', 'Sin conexión. El simulador SQL sigue funcionando; el asistente IA no estará disponible.');
+});
+
+window.addEventListener('online', function() {
+    showToast('success', 'Conexión restablecida.');
 });
 
 // ATAJOS DE TECLADO
@@ -2407,6 +3720,10 @@ document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'r') {
         e.preventDefault();
         resetDatabase();
+    }
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        formatEditorSql();
     }
     if (e.ctrlKey && e.key.toLowerCase() === 'e') {
         e.preventDefault();
@@ -2839,6 +4156,7 @@ function previousGuideStep() {
 // EXPONER FUNCIONES GLOBALES
 window.runQuery = runQuery;
 window.resetDatabase = resetDatabase;
+window.loadDataset = loadDataset;
 window.showExamples = showExamples;
 window.clearHistory = clearHistory;
 window.loadHistoryQuery = loadHistoryQuery;
@@ -2849,6 +4167,23 @@ window.deleteRow = deleteRow;
 window.addRow = addRow;
 window.updateCharts = updateCharts;
 window.clearEditor = clearEditor;
+window.toggleSafeMode = toggleSafeMode;
+window.toggleTheme = toggleTheme;
+window.installApp = installApp;
+window.formatEditorSql = formatEditorSql;
+window.sortResult = sortResult;
+window.showMoreResults = showMoreResults;
+window.exportResultCSV = exportResultCSV;
+window.exportResultJSON = exportResultJSON;
+window.copyResultTable = copyResultTable;
+window.copyResultCell = copyResultCell;
+window.openChallenge = openChallenge;
+window.runChallenge = runChallenge;
+window.showChallengeHint = showChallengeHint;
+window.showChallengeSolution = showChallengeSolution;
+window.clearChallengeEditor = clearChallengeEditor;
+window.nextChallenge = nextChallenge;
+window.resetChallengeProgress = resetChallengeProgress;
 window.saveTableChanges = saveTableChanges;
 window.generateDiagram = generateDiagram;
 window.toggleDiagramView = toggleDiagramView;
