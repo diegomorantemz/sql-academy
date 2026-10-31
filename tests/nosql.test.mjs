@@ -38,6 +38,14 @@ function createSchoolDatabase() {
     return NoSQL.createDatabase(datasets.escuela);
 }
 
+function createStoreDatabase() {
+    return NoSQL.createDatabase(datasets.tienda);
+}
+
+function createLibraryDatabase() {
+    return NoSQL.createDatabase(datasets.biblioteca);
+}
+
 test('parseCommand acepta claves sin comillas y valores anidados', () => {
     const command = NoSQL.parseCommand(
         "db.estudiantes.find({ edad: { $gte: 18 }, ciudad: 'Lima' }).sort({ promedio: -1 }).limit(3)"
@@ -175,4 +183,115 @@ test('createDatabase no comparte referencias con el dataset original', () => {
     const db = createSchoolDatabase();
     db.collections.estudiantes[0].nombre = 'Cambiado en la copia';
     assert.notEqual(datasets.escuela.collections.estudiantes[0].nombre, 'Cambiado en la copia');
+});
+
+test('el dataset Tienda permite consultas y agregaciones', () => {
+    const db = createStoreDatabase();
+
+    const stock = NoSQL.executeCommand(
+        db,
+        'db.productos.find({ stock: { $lte: 10 } }, { nombre: 1, stock: 1 })'
+    );
+    assert.deepEqual(
+        stock.documents.map(document => document._id).sort(),
+        ['prod-003', 'prod-005']
+    );
+
+    const sales = NoSQL.executeCommand(
+        db,
+        "db.pedidos.aggregate([{ $group: { _id: '$estado', pedidos: { $sum: 1 }, total: { $sum: '$total' } } }, { $sort: { total: -1 } }])"
+    );
+    assert.deepEqual(JSON.parse(JSON.stringify(sales.documents)), [
+        { _id: 'pagado', pedidos: 3, total: 654 },
+        { _id: 'pendiente', pedidos: 1, total: 620 },
+        { _id: 'cancelado', pedidos: 1, total: 75 }
+    ]);
+
+    const top = NoSQL.executeCommand(
+        db,
+        "db.pedidos.aggregate([{ $unwind: '$items' }, { $group: { _id: '$items.producto_nombre', unidades: { $sum: '$items.cantidad' } } }, { $sort: { unidades: -1, _id: 1 } }, { $limit: 3 }])"
+    );
+    assert.deepEqual(JSON.parse(JSON.stringify(top.documents)), [
+        { _id: 'Cuaderno A4', unidades: 15 },
+        { _id: 'Lámpara LED', unidades: 3 },
+        { _id: 'Mouse inalámbrico', unidades: 3 }
+    ]);
+});
+
+test('el dataset Biblioteca permite consultas y agregaciones', () => {
+    const db = createLibraryDatabase();
+
+    const available = NoSQL.executeCommand(
+        db,
+        'db.libros.find({ disponibles: { $gt: 0 } }, { titulo: 1 })'
+    );
+    assert.deepEqual(
+        available.documents.map(document => document._id),
+        ['lib-001', 'lib-003', 'lib-004', 'lib-005', 'lib-007', 'lib-008']
+    );
+
+    const status = NoSQL.executeCommand(
+        db,
+        "db.prestamos.aggregate([{ $group: { _id: '$estado', prestamos: { $sum: 1 }, multas: { $sum: '$multa' } } }, { $sort: { prestamos: -1, _id: 1 } }])"
+    );
+    assert.deepEqual(JSON.parse(JSON.stringify(status.documents)), [
+        { _id: 'devuelto', prestamos: 5, multas: 0 },
+        { _id: 'activo', prestamos: 3, multas: 0 },
+        { _id: 'vencido', prestamos: 3, multas: 35 }
+    ]);
+
+    const top = NoSQL.executeCommand(
+        db,
+        "db.prestamos.aggregate([{ $group: { _id: '$libro_titulo', prestamos: { $sum: 1 } } }, { $sort: { prestamos: -1, _id: 1 } }, { $limit: 3 }])"
+    );
+    assert.deepEqual(JSON.parse(JSON.stringify(top.documents)), [
+        { _id: 'Cien años de soledad', prestamos: 3 },
+        { _id: 'Dune', prestamos: 2 },
+        { _id: 'El principito', prestamos: 2 }
+    ]);
+});
+
+test('los ejemplos y retos pertenecen a datasets y colecciones existentes', () => {
+    const datasetNames = Object.keys(datasets).sort();
+    assert.deepEqual(datasetNames, ['biblioteca', 'escuela', 'tienda']);
+    assert.ok(runtime.NOSQL_EXAMPLES.length >= 28);
+    assert.ok(runtime.NOSQL_CHALLENGES.length >= 13);
+
+    for (const example of runtime.NOSQL_EXAMPLES) {
+        assert.ok(datasetNames.includes(example.dataset), `Dataset inválido en ejemplo: ${example.title}`);
+        const command = NoSQL.parseCommand(example.query);
+        assert.ok(
+            datasets[example.dataset].collections[command.collection],
+            `Colección inexistente: ${example.dataset}.${command.collection}`
+        );
+    }
+
+    for (const challenge of runtime.NOSQL_CHALLENGES) {
+        assert.ok(datasetNames.includes(challenge.dataset), `Dataset inválido en reto: ${challenge.id}`);
+        const command = NoSQL.parseCommand(challenge.starter);
+        assert.ok(
+            datasets[challenge.dataset].collections[command.collection],
+            `Colección inexistente: ${challenge.dataset}.${command.collection}`
+        );
+    }
+
+    for (const datasetName of datasetNames) {
+        assert.ok(runtime.getNoSQLExamplesForDataset(datasetName).length >= 8);
+        assert.ok(runtime.getNoSQLChallengesForDataset(datasetName).length >= 4);
+    }
+});
+
+test('las plantillas de los retos cumplen sus validadores', () => {
+    for (const challenge of runtime.NOSQL_CHALLENGES) {
+        const db = NoSQL.createDatabase(datasets[challenge.dataset]);
+        const result = NoSQL.executeCommand(db, challenge.starter);
+        const feedback = runtime.validateNoSQLChallenge(challenge, result);
+        assert.equal(feedback.ok, true, `${challenge.id}: ${feedback.message}`);
+    }
+});
+
+test('validateNoSQLChallenge rechaza resultados incompletos', () => {
+    const challenge = runtime.NOSQL_CHALLENGES.find(item => item.id === 'nosql-tienda-stock');
+    const feedback = runtime.validateNoSQLChallenge(challenge, { type: 'find', documents: [] });
+    assert.equal(feedback.ok, false);
 });

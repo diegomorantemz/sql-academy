@@ -428,6 +428,7 @@
                             <select id="nosqlDatasetSelector" class="dataset-selector" onchange="changeNoSQLDataset(this.value)" aria-label="Dataset NoSQL">
                                 <option value="escuela" selected>Dataset: Escuela</option>
                                 <option value="tienda">Dataset: Tienda</option>
+                                <option value="biblioteca">Dataset: Biblioteca</option>
                             </select>
                             <button type="button" onclick="resetNoSQLDatabase()" class="btn-secondary">
                                 <i class="fas fa-rotate"></i> Reiniciar
@@ -501,7 +502,7 @@
                 <div class="nosql-challenges-head">
                     <div>
                         <h3><i class="fas fa-trophy"></i> Retos NoSQL</h3>
-                        <p class="nosql-muted">Los retos validan los documentos devueltos, no el texto exacto del comando.</p>
+                        <p class="nosql-muted">Los retos se adaptan al dataset activo y validan los documentos devueltos, no el texto exacto del comando.</p>
                     </div>
                     <button type="button" onclick="resetNoSQLChallengeProgress()" class="btn-secondary">
                         <i class="fas fa-rotate-left"></i> Reiniciar progreso
