@@ -43,6 +43,24 @@
             .replace(/'/g, '&#39;');
     }
 
+    function getActiveExamples() {
+        if (typeof global.getNoSQLExamplesForDataset === 'function') {
+            return global.getNoSQLExamplesForDataset(datasetName);
+        }
+        return Array.isArray(global.NOSQL_EXAMPLES)
+            ? global.NOSQL_EXAMPLES.filter(example => example.dataset === datasetName)
+            : [];
+    }
+
+    function getActiveChallenges() {
+        if (typeof global.getNoSQLChallengesForDataset === 'function') {
+            return global.getNoSQLChallengesForDataset(datasetName);
+        }
+        return Array.isArray(global.NOSQL_CHALLENGES)
+            ? global.NOSQL_CHALLENGES.filter(challenge => challenge.dataset === datasetName)
+            : [];
+    }
+
     function readJSON(key, fallback) {
         try {
             const raw = global.localStorage.getItem(key);
@@ -279,9 +297,17 @@
 
     function populateExamples() {
         const select = getElement('nosqlExampleSelector');
-        if (!select || !Array.isArray(global.NOSQL_EXAMPLES)) return;
+        if (!select) return;
 
-        select.innerHTML = global.NOSQL_EXAMPLES.map((example, index) => (
+        const examples = getActiveExamples();
+        if (!examples.length) {
+            select.innerHTML = '<option value="">No hay ejemplos para este dataset</option>';
+            select.disabled = true;
+            return;
+        }
+
+        select.disabled = false;
+        select.innerHTML = examples.map((example, index) => (
             `<option value="${index}">${escapeHtml(example.category)} · ${escapeHtml(example.title)}</option>`
         )).join('');
     }
@@ -291,12 +317,11 @@
         const editor = getElement('nosqlEditor');
         if (!select || !editor) return;
 
-        const example = global.NOSQL_EXAMPLES[Number(select.value)];
+        const example = getActiveExamples()[Number(select.value)];
         if (!example) return;
 
-        const usesStore = /db\.(productos|pedidos|clientes)\b/.test(example.query);
-        if (usesStore && datasetName !== 'tienda') {
-            showToast('warning', 'Este ejemplo usa el dataset Tienda. Cambia el dataset para ejecutarlo.');
+        if (example.dataset && example.dataset !== datasetName) {
+            showToast('warning', 'Este ejemplo pertenece a otro dataset. Cambia de dataset para usarlo.');
             return;
         }
 
@@ -443,40 +468,18 @@
 
     function validateChallenge(result) {
         if (!activeChallengeId) return null;
-        const challenge = global.NOSQL_CHALLENGES.find(item => item.id === activeChallengeId);
+        const challenge = getActiveChallenges().find(item => item.id === activeChallengeId);
         if (!challenge) return null;
 
-        if (!['find', 'aggregate'].includes(result.type)) {
-            return { ok: false, message: 'Este reto se comprueba con una consulta de lectura: find o aggregate.' };
+        if (challenge.dataset && challenge.dataset !== datasetName) {
+            return { ok: false, message: 'Este reto pertenece a otro dataset. Cambia de dataset para comprobarlo.' };
         }
 
-        const documents = result.documents || [];
-
-        if (Array.isArray(challenge.expectedIds)) {
-            const actual = documents.map(document => document._id).filter(Boolean).sort();
-            const expected = challenge.expectedIds.slice().sort();
-            const ok = actual.length === expected.length && actual.every((id, index) => id === expected[index]);
-            return {
-                ok,
-                message: ok
-                    ? '¡Correcto! Encontraste todos los documentos esperados.'
-                    : `Aún no coincide. Se esperaban ${expected.length} documentos y obtuviste ${actual.length}. Revisa el filtro y la proyección.`
-            };
+        if (typeof global.validateNoSQLChallenge === 'function') {
+            return global.validateNoSQLChallenge(challenge, result);
         }
 
-        if (Array.isArray(challenge.expectedCities)) {
-            const actual = documents.map(document => document._id);
-            const ok = actual.length === challenge.expectedCities.length
-                && actual.every((city, index) => city === challenge.expectedCities[index]);
-            return {
-                ok,
-                message: ok
-                    ? '¡Correcto! Agrupaste y ordenaste las ciudades como se pedía.'
-                    : 'Aún no coincide. Revisa $group, $sum y el orden descendente con $sort.'
-            };
-        }
-
-        return { ok: false, message: 'Este reto no tiene un validador configurado.' };
+        return { ok: false, message: 'No se pudo validar el reto en este entorno.' };
     }
 
     function renderChallengeFeedback(feedback) {
@@ -571,9 +574,15 @@
 
     function renderChallenges() {
         const list = getElement('nosqlChallengeList');
-        if (!list || !Array.isArray(global.NOSQL_CHALLENGES)) return;
+        if (!list) return;
 
-        list.innerHTML = global.NOSQL_CHALLENGES.map(challenge => {
+        const challenges = getActiveChallenges();
+        if (!challenges.length) {
+            list.innerHTML = '<p class="nosql-muted">No hay retos para este dataset.</p>';
+            return;
+        }
+
+        list.innerHTML = challenges.map(challenge => {
             const completed = Boolean(challengeProgress[challenge.id]);
             const active = challenge.id === activeChallengeId;
             return `
@@ -593,10 +602,14 @@
     }
 
     function openChallenge(id) {
-        const challenge = global.NOSQL_CHALLENGES.find(item => item.id === id);
+        const challenge = getActiveChallenges().find(item => item.id === id);
         const detail = getElement('nosqlChallengeDetail');
         const editor = getElement('nosqlEditor');
-        if (!challenge || !detail) return;
+        if (!challenge) {
+            showToast('warning', 'Ese reto pertenece a otro dataset.');
+            return;
+        }
+        if (!detail) return;
 
         activeChallengeId = id;
         if (editor) editor.value = challenge.starter;
@@ -623,22 +636,25 @@
         if (editor) editor.focus();
     }
 
+    function renderChallengePlaceholder() {
+        const detail = getElement('nosqlChallengeDetail');
+        if (!detail) return;
+        detail.innerHTML = `
+            <div class="challenge-empty">
+                <i class="fas fa-trophy"></i>
+                <h3>Elige un reto NoSQL</h3>
+                <p>Selecciona un reto de la izquierda para cargar su plantilla y comprobar tu resultado.</p>
+            </div>
+        `;
+    }
+
     function resetChallengeProgress() {
         if (!global.confirm('¿Reiniciar el progreso de los retos NoSQL?')) return;
         challengeProgress = {};
         saveChallengeProgress();
         activeChallengeId = null;
         renderChallenges();
-        const detail = getElement('nosqlChallengeDetail');
-        if (detail) {
-            detail.innerHTML = `
-                <div class="challenge-empty">
-                    <i class="fas fa-trophy"></i>
-                    <h3>Elige un reto NoSQL</h3>
-                    <p>Selecciona un reto de la izquierda para cargar su plantilla y comprobar tu resultado.</p>
-                </div>
-            `;
-        }
+        renderChallengePlaceholder();
         showToast('info', 'Progreso de retos NoSQL reiniciado.');
     }
 
@@ -651,6 +667,7 @@
             return;
         }
 
+        const hadActiveChallenge = Boolean(activeChallengeId);
         datasetName = nextDataset;
         state = global.NoSQL.createDatabase(global.NOSQL_DATASETS[datasetName]);
         savePreferences();
@@ -658,6 +675,16 @@
         schedulePersist();
         renderCollections();
         clearResult();
+        activeChallengeId = null;
+        if (hadActiveChallenge) {
+            const editor = getElement('nosqlEditor');
+            if (editor) editor.value = '';
+        }
+        populateExamples();
+        renderChallenges();
+        renderChallengePlaceholder();
+        const selector = getElement('nosqlDatasetSelector');
+        if (selector) selector.value = datasetName;
         if (!settings.silent) showToast('success', `Dataset NoSQL cambiado a ${state.name}.`);
     }
 
@@ -707,6 +734,8 @@
                 state = saved.state;
                 const selector = getElement('nosqlDatasetSelector');
                 if (selector) selector.value = datasetName;
+                populateExamples();
+                renderChallenges();
                 renderCollections();
                 setPersistenceState('saved', 'Copia local restaurada');
             } else {

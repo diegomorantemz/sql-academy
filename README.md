@@ -13,8 +13,8 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Modo seguro activado por defecto para confirmar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, `UPDATE` sin `WHERE` y `ALTER TABLE ... DROP`.
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
 - Ocho retos con validación por resultados, pistas y progreso guardado.
-- Tres datasets de práctica: Escuela, Tienda y Biblioteca.
-- Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, retos y persistencia local.
+- Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
+- Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
 - Aplicación instalable (PWA), modo oscuro y mejoras de accesibilidad.
 - Tests automatizados, CI y escaneo de secretos con Gitleaks.
@@ -154,7 +154,7 @@ Las claves foráneas se aplican con `PRAGMA foreign_keys = ON`, por lo que no se
 - **Tienda:** `clientes`, `productos`, `pedidos` y `detalle_pedidos`.
 - **Biblioteca:** `autores`, `libros`, `socios` y `prestamos`.
 
-Los retos y los ejemplos guiados están diseñados para el dataset Escuela. Si cambias de dataset, la app lo avisa y puedes volver a Escuela desde la barra de herramientas.
+En SQL, los retos y los ejemplos guiados están diseñados para el dataset Escuela. Si cambias de dataset, la app lo avisa y puedes volver a Escuela desde la barra de herramientas.
 
 ## Funcionalidades
 
@@ -236,8 +236,8 @@ El laboratorio NoSQL es un simulador documental educativo, no una instancia real
 - Operadores de consulta `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`, `$nin`, `$exists`, `$regex`, `$and`, `$or`, `$nor` y `$elemMatch`.
 - Actualizaciones con `$set`, `$unset`, `$inc`, `$push`, `$addToSet`, `$pull` y `$rename`.
 - Aggregation con `$match`, `$project`, `$group`, `$sort`, `$skip`, `$limit`, `$count`, `$unwind`, `$addFields` y `$unset`.
-- Datasets documentales de Escuela y Tienda, con cursos y pedidos embebidos.
-- Historial, ejemplos guiados, tres retos con validación y progreso persistente.
+- Datasets documentales de Escuela, Tienda y Biblioteca, con cursos, pedidos y préstamos embebidos.
+- Historial, ejemplos guiados y retos por dataset con validación y progreso persistente.
 - Modo seguro para `deleteMany({})`, `updateMany({})` y `drop()`.
 - Persistencia en IndexedDB y ayuda opcional con IA para comandos NoSQL.
 
@@ -321,9 +321,17 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - El editor visual asume que la tabla tiene una clave primaria. Para tablas sin clave primaria, usa consultas SQL.
 - `sql.js` implementa SQLite, por lo que algunas funciones específicas de PostgreSQL, MySQL u Oracle no están disponibles.
 - La PWA necesita HTTPS (Netlify lo proporciona). El asistente IA requiere conexión y la Netlify Function desplegada.
-- Los retos y ejemplos guiados usan el dataset Escuela. Con Tienda o Biblioteca, la app permite practicar libremente pero bloquea esos contenidos.
+- En NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.5.1
+
+- **Biblioteca NoSQL:** nuevo dataset documental con libros, socios y préstamos, incluyendo autores embebidos y multas.
+- **Contenido por dataset:** los ejemplos y retos ahora se filtran según el dataset activo.
+- **Más práctica:** Escuela amplía sus retos, Tienda incorpora retos propios y Biblioteca incluye ejemplos y retos de consulta, filtros, CRUD y agregación.
+- **Validación flexible:** soporte para comparar documentos, valores ordenados y filas de agregaciones.
+- **Calidad:** pruebas de integridad del contenido, consultas de los tres datasets y caché PWA actualizada.
 
 ### v1.5.0
 
