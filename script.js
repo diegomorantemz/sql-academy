@@ -2358,6 +2358,7 @@ async function loadDataset(name) {
         preferences.dataset = name;
         savePreferences();
         syncDatasetSelector();
+        refreshPracticeContentForDataset();
 
         if (name === 'escuela') {
             initDatabase({ restore: false });
@@ -2374,7 +2375,7 @@ async function loadDataset(name) {
         showMessage(
             'success',
             `Dataset ${escapeHtml(dataset.name)} cargado`,
-            `${escapeHtml(dataset.description)} Los retos y los ejemplos guiados siguen usando el dataset Escuela.`
+            `${escapeHtml(dataset.description)} Los ejemplos y retos se adaptan a este dataset.`
         );
         showToast('success', `Dataset ${dataset.name} listo.`);
     } catch (error) {
@@ -2382,6 +2383,7 @@ async function loadDataset(name) {
         preferences.dataset = 'escuela';
         savePreferences();
         syncDatasetSelector();
+        refreshPracticeContentForDataset();
         showMessage('error', 'No se pudo cargar el dataset', `<code>${escapeHtml(error.message)}</code>`);
         showToast('error', 'Se restauró el dataset Escuela.');
         initDatabase({ restore: false });
@@ -2397,6 +2399,7 @@ async function resetDatabase() {
         preferences.dataset = 'escuela';
         savePreferences();
         syncDatasetSelector();
+        refreshPracticeContentForDataset();
         showMessage('warning', 'Reiniciando base de datos...');
         await clearSavedDatabase();
         initDatabase({ restore: false });
@@ -2404,7 +2407,7 @@ async function resetDatabase() {
 }
 
 // EJEMPLOS POR CATEGORIAS
-function getExamplesByCategory() {
+function getEscuelaExamplesByCategory() {
     return {
         'basicos': {
             titulo: 'Consultas Basicas',
@@ -2522,6 +2525,230 @@ function getExamplesByCategory() {
     };
 }
 
+const SQL_ADDITIONAL_EXAMPLE_CATALOGS = {
+    tienda: {
+        basicos: {
+            titulo: 'Consultas Basicas',
+            ejemplos: [
+                { titulo: 'Todos los clientes', sql: 'SELECT * FROM clientes;' },
+                { titulo: 'Todos los productos', sql: 'SELECT * FROM productos;' },
+                { titulo: 'Todos los pedidos', sql: 'SELECT * FROM pedidos;' },
+                { titulo: 'Nombres y ciudades', sql: 'SELECT nombre, ciudad FROM clientes;' }
+            ]
+        },
+        filtros: {
+            titulo: 'Filtros (WHERE)',
+            ejemplos: [
+                { titulo: 'Productos con stock bajo', sql: 'SELECT nombre, categoria, precio, stock FROM productos WHERE stock <= 10;' },
+                { titulo: 'Clientes de Lima', sql: "SELECT nombre, ciudad FROM clientes WHERE ciudad = 'Lima';" },
+                { titulo: 'Pedidos pagados', sql: "SELECT * FROM pedidos WHERE estado = 'pagado';" },
+                { titulo: 'Lineas con cantidad mayor a 1', sql: 'SELECT pedido_id, producto_id, cantidad FROM detalle_pedidos WHERE cantidad > 1;' }
+            ]
+        },
+        orden: {
+            titulo: 'Ordenamiento (ORDER BY)',
+            ejemplos: [
+                { titulo: 'Productos por precio', sql: 'SELECT nombre, precio FROM productos ORDER BY precio DESC;' },
+                { titulo: 'Productos por stock', sql: 'SELECT nombre, stock FROM productos ORDER BY stock ASC, nombre ASC;' },
+                { titulo: 'Clientes por ciudad', sql: 'SELECT nombre, ciudad FROM clientes ORDER BY ciudad ASC, nombre ASC;' },
+                { titulo: 'Pedidos recientes', sql: 'SELECT id, fecha, estado FROM pedidos ORDER BY fecha DESC;' }
+            ]
+        },
+        agregacion: {
+            titulo: 'Agregaciones (AVG, COUNT, MAX, MIN, SUM)',
+            ejemplos: [
+                { titulo: 'Contar clientes', sql: 'SELECT COUNT(*) AS total FROM clientes;' },
+                { titulo: 'Precio promedio', sql: 'SELECT ROUND(AVG(precio), 2) AS precio_promedio FROM productos;' },
+                { titulo: 'Stock total', sql: 'SELECT SUM(stock) AS stock_total FROM productos;' },
+                { titulo: 'Precio maximo y minimo', sql: 'SELECT MAX(precio) AS maximo, MIN(precio) AS minimo FROM productos;' }
+            ]
+        },
+        groupby: {
+            titulo: 'Agrupaciones (GROUP BY)',
+            ejemplos: [
+                { titulo: 'Productos por categoria', sql: 'SELECT categoria, COUNT(*) AS productos FROM productos GROUP BY categoria ORDER BY productos DESC, categoria ASC;' },
+                { titulo: 'Pedidos por estado', sql: 'SELECT estado, COUNT(*) AS pedidos FROM pedidos GROUP BY estado ORDER BY pedidos DESC, estado ASC;' },
+                { titulo: 'Stock por categoria', sql: 'SELECT categoria, SUM(stock) AS stock_total FROM productos GROUP BY categoria ORDER BY stock_total DESC, categoria ASC;' },
+                { titulo: 'Precio promedio por categoria', sql: 'SELECT categoria, ROUND(AVG(precio), 2) AS precio_promedio FROM productos GROUP BY categoria ORDER BY categoria ASC;' }
+            ]
+        },
+        having: {
+            titulo: 'Filtros de Agrupacion (HAVING)',
+            ejemplos: [
+                { titulo: 'Categorias con mas de un producto', sql: 'SELECT categoria, COUNT(*) AS productos FROM productos GROUP BY categoria HAVING COUNT(*) > 1 ORDER BY productos DESC, categoria ASC;' },
+                { titulo: 'Clientes con mas de un pedido', sql: 'SELECT cliente_id, COUNT(*) AS pedidos FROM pedidos GROUP BY cliente_id HAVING COUNT(*) > 1 ORDER BY pedidos DESC, cliente_id ASC;' }
+            ]
+        },
+        join: {
+            titulo: 'JOIN (Relaciones entre tablas)',
+            ejemplos: [
+                { titulo: 'Pedidos con cliente', sql: 'SELECT p.id AS pedido, c.nombre AS cliente, p.fecha, p.estado FROM pedidos p JOIN clientes c ON c.id = p.cliente_id ORDER BY p.id ASC;' },
+                { titulo: 'Detalle con producto', sql: 'SELECT d.pedido_id, pr.nombre AS producto, d.cantidad, d.precio_unitario FROM detalle_pedidos d JOIN productos pr ON pr.id = d.producto_id ORDER BY d.pedido_id ASC, pr.nombre ASC;' },
+                { titulo: 'Total por pedido', sql: 'SELECT p.id AS pedido, SUM(d.cantidad * d.precio_unitario) AS total FROM pedidos p JOIN detalle_pedidos d ON d.pedido_id = p.id GROUP BY p.id ORDER BY p.id ASC;' },
+                { titulo: 'Ventas por categoria', sql: 'SELECT pr.categoria, SUM(d.cantidad * d.precio_unitario) AS total FROM detalle_pedidos d JOIN productos pr ON pr.id = d.producto_id GROUP BY pr.categoria ORDER BY total DESC, pr.categoria ASC;' }
+            ]
+        },
+        subconsultas: {
+            titulo: 'Subconsultas',
+            ejemplos: [
+                { titulo: 'Productos sobre el precio promedio', sql: 'SELECT nombre, precio FROM productos WHERE precio > (SELECT AVG(precio) FROM productos) ORDER BY precio DESC;' },
+                { titulo: 'Clientes con pedidos', sql: 'SELECT nombre FROM clientes WHERE id IN (SELECT cliente_id FROM pedidos) ORDER BY nombre ASC;' },
+                { titulo: 'Pedido con mayor total', sql: 'SELECT pedido_id, SUM(cantidad * precio_unitario) AS total FROM detalle_pedidos GROUP BY pedido_id ORDER BY total DESC LIMIT 1;' }
+            ]
+        },
+        operadores: {
+            titulo: 'Operadores Especiales',
+            ejemplos: [
+                { titulo: 'IN: Lima o Arequipa', sql: "SELECT nombre, ciudad FROM clientes WHERE ciudad IN ('Lima', 'Arequipa') ORDER BY nombre ASC;" },
+                { titulo: 'NOT IN: Sin perifericos ni audio', sql: "SELECT nombre, categoria FROM productos WHERE categoria NOT IN ('Perifericos', 'Audio') ORDER BY nombre ASC;" },
+                { titulo: 'BETWEEN: Precio entre 40 y 100', sql: 'SELECT nombre, precio FROM productos WHERE precio BETWEEN 40 AND 100 ORDER BY precio ASC;' },
+                { titulo: 'LIKE: Nombres que empiezan con A', sql: "SELECT nombre FROM clientes WHERE nombre LIKE 'A%';" },
+                { titulo: 'DISTINCT: Categorias unicas', sql: 'SELECT DISTINCT categoria FROM productos ORDER BY categoria ASC;' }
+            ]
+        },
+        avanzado: {
+            titulo: 'Consultas Avanzadas',
+            ejemplos: [
+                { titulo: 'Top 3 productos por unidades', sql: 'SELECT pr.nombre, SUM(d.cantidad) AS unidades FROM detalle_pedidos d JOIN productos pr ON pr.id = d.producto_id GROUP BY pr.id, pr.nombre ORDER BY unidades DESC, pr.nombre ASC LIMIT 3;' },
+                { titulo: 'Top 3 clientes por total gastado', sql: 'SELECT c.nombre, SUM(d.cantidad * d.precio_unitario) AS total FROM clientes c JOIN pedidos p ON p.cliente_id = c.id JOIN detalle_pedidos d ON d.pedido_id = p.id GROUP BY c.id, c.nombre ORDER BY total DESC, c.nombre ASC LIMIT 3;' },
+                { titulo: 'Pedidos sobre el total promedio', sql: 'SELECT p.id AS pedido, SUM(d.cantidad * d.precio_unitario) AS total FROM pedidos p JOIN detalle_pedidos d ON d.pedido_id = p.id GROUP BY p.id HAVING SUM(d.cantidad * d.precio_unitario) > (SELECT AVG(total) FROM (SELECT SUM(cantidad * precio_unitario) AS total FROM detalle_pedidos GROUP BY pedido_id)) ORDER BY total DESC;' }
+            ]
+        },
+        modificacion: {
+            titulo: 'Modificacion (INSERT, UPDATE, DELETE)',
+            ejemplos: [
+                { titulo: 'INSERT: Agregar cliente', sql: "INSERT INTO clientes (id, nombre, ciudad, email) VALUES (7, 'Gabriela Nunez', 'Lima', 'gabriela@example.com');" },
+                { titulo: 'INSERT: Agregar producto', sql: "INSERT INTO productos (id, nombre, categoria, precio, stock) VALUES (9, 'Tablet 10 pulgadas', 'Computadoras', 320.00, 8);" },
+                { titulo: 'UPDATE: Incrementar stock', sql: 'UPDATE productos SET stock = stock + 5 WHERE id = 8;' },
+                { titulo: 'DELETE: Eliminar producto', sql: 'DELETE FROM productos WHERE id = 9;' }
+            ]
+        }
+    },
+    biblioteca: {
+        basicos: {
+            titulo: 'Consultas Basicas',
+            ejemplos: [
+                { titulo: 'Todos los autores', sql: 'SELECT * FROM autores;' },
+                { titulo: 'Todos los libros', sql: 'SELECT * FROM libros;' },
+                { titulo: 'Todos los socios', sql: 'SELECT * FROM socios;' },
+                { titulo: 'Todos los prestamos', sql: 'SELECT * FROM prestamos;' }
+            ]
+        },
+        filtros: {
+            titulo: 'Filtros (WHERE)',
+            ejemplos: [
+                { titulo: 'Libros disponibles', sql: 'SELECT titulo, genero, disponible FROM libros WHERE disponible = 1;' },
+                { titulo: 'Libros de Novela', sql: "SELECT titulo, genero FROM libros WHERE genero = 'Novela';" },
+                { titulo: 'Autores de Colombia', sql: "SELECT nombre, pais FROM autores WHERE pais = 'Colombia';" },
+                { titulo: 'Prestamos sin devolver', sql: 'SELECT * FROM prestamos WHERE fecha_devolucion IS NULL;' }
+            ]
+        },
+        orden: {
+            titulo: 'Ordenamiento (ORDER BY)',
+            ejemplos: [
+                { titulo: 'Libros por anio', sql: 'SELECT titulo, anio FROM libros ORDER BY anio DESC, titulo ASC;' },
+                { titulo: 'Libros por titulo', sql: 'SELECT titulo FROM libros ORDER BY titulo ASC;' },
+                { titulo: 'Socios por fecha de alta', sql: 'SELECT nombre, fecha_alta FROM socios ORDER BY fecha_alta DESC;' },
+                { titulo: 'Prestamos recientes', sql: 'SELECT id, fecha_prestamo FROM prestamos ORDER BY fecha_prestamo DESC;' }
+            ]
+        },
+        agregacion: {
+            titulo: 'Agregaciones (AVG, COUNT, MAX, MIN, SUM)',
+            ejemplos: [
+                { titulo: 'Contar libros', sql: 'SELECT COUNT(*) AS total FROM libros;' },
+                { titulo: 'Anio promedio', sql: 'SELECT ROUND(AVG(anio), 0) AS anio_promedio FROM libros;' },
+                { titulo: 'Libros disponibles', sql: 'SELECT COUNT(*) AS disponibles FROM libros WHERE disponible = 1;' },
+                { titulo: 'Anio maximo y minimo', sql: 'SELECT MAX(anio) AS maximo, MIN(anio) AS minimo FROM libros;' }
+            ]
+        },
+        groupby: {
+            titulo: 'Agrupaciones (GROUP BY)',
+            ejemplos: [
+                { titulo: 'Libros por genero', sql: 'SELECT genero, COUNT(*) AS libros FROM libros GROUP BY genero ORDER BY libros DESC, genero ASC;' },
+                { titulo: 'Autores por pais', sql: 'SELECT pais, COUNT(*) AS autores FROM autores GROUP BY pais ORDER BY autores DESC, pais ASC;' },
+                { titulo: 'Prestamos por socio', sql: 'SELECT socio_id, COUNT(*) AS prestamos FROM prestamos GROUP BY socio_id ORDER BY prestamos DESC, socio_id ASC;' },
+                { titulo: 'Libros por autor', sql: 'SELECT autor_id, COUNT(*) AS libros FROM libros GROUP BY autor_id ORDER BY libros DESC, autor_id ASC;' }
+            ]
+        },
+        having: {
+            titulo: 'Filtros de Agrupacion (HAVING)',
+            ejemplos: [
+                { titulo: 'Generos con mas de dos libros', sql: 'SELECT genero, COUNT(*) AS libros FROM libros GROUP BY genero HAVING COUNT(*) > 2 ORDER BY libros DESC, genero ASC;' },
+                { titulo: 'Socios con mas de un prestamo', sql: 'SELECT socio_id, COUNT(*) AS prestamos FROM prestamos GROUP BY socio_id HAVING COUNT(*) > 1 ORDER BY prestamos DESC, socio_id ASC;' }
+            ]
+        },
+        join: {
+            titulo: 'JOIN (Relaciones entre tablas)',
+            ejemplos: [
+                { titulo: 'Libros con autor', sql: 'SELECT l.titulo, a.nombre AS autor FROM libros l JOIN autores a ON a.id = l.autor_id ORDER BY l.titulo ASC;' },
+                { titulo: 'Prestamos con libro y socio', sql: 'SELECT p.id, l.titulo, s.nombre AS socio, p.fecha_prestamo, p.fecha_devolucion FROM prestamos p JOIN libros l ON l.id = p.libro_id JOIN socios s ON s.id = p.socio_id ORDER BY p.id ASC;' },
+                { titulo: 'Libros por autor', sql: 'SELECT a.nombre, COUNT(l.id) AS libros FROM autores a LEFT JOIN libros l ON l.autor_id = a.id GROUP BY a.id, a.nombre ORDER BY libros DESC, a.nombre ASC;' },
+                { titulo: 'Prestamos por socio', sql: 'SELECT s.nombre, COUNT(p.id) AS prestamos FROM socios s LEFT JOIN prestamos p ON p.socio_id = s.id GROUP BY s.id, s.nombre ORDER BY prestamos DESC, s.nombre ASC;' }
+            ]
+        },
+        subconsultas: {
+            titulo: 'Subconsultas',
+            ejemplos: [
+                { titulo: 'Libros anteriores al promedio', sql: 'SELECT titulo, anio FROM libros WHERE anio < (SELECT AVG(anio) FROM libros) ORDER BY anio ASC;' },
+                { titulo: 'Libros del autor con mas libros', sql: 'SELECT titulo FROM libros WHERE autor_id = (SELECT autor_id FROM libros GROUP BY autor_id ORDER BY COUNT(*) DESC, autor_id ASC LIMIT 1) ORDER BY titulo ASC;' },
+                { titulo: 'Socio con mas prestamos', sql: 'SELECT socio_id, COUNT(*) AS prestamos FROM prestamos GROUP BY socio_id ORDER BY prestamos DESC, socio_id ASC LIMIT 1;' }
+            ]
+        },
+        operadores: {
+            titulo: 'Operadores Especiales',
+            ejemplos: [
+                { titulo: 'IN: Colombia o Argentina', sql: "SELECT nombre, pais FROM autores WHERE pais IN ('Colombia', 'Argentina') ORDER BY nombre ASC;" },
+                { titulo: 'NOT IN: Libros que no son Novela', sql: "SELECT titulo, genero FROM libros WHERE genero NOT IN ('Novela') ORDER BY titulo ASC;" },
+                { titulo: 'BETWEEN: Libros entre 1940 y 1970', sql: 'SELECT titulo, anio FROM libros WHERE anio BETWEEN 1940 AND 1970 ORDER BY anio ASC;' },
+                { titulo: 'LIKE: Titulos que contienen la', sql: "SELECT titulo FROM libros WHERE titulo LIKE '%la%' ORDER BY titulo ASC;" },
+                { titulo: 'DISTINCT: Generos unicos', sql: 'SELECT DISTINCT genero FROM libros ORDER BY genero ASC;' }
+            ]
+        },
+        avanzado: {
+            titulo: 'Consultas Avanzadas',
+            ejemplos: [
+                { titulo: 'Top 3 autores por libros', sql: 'SELECT a.nombre, COUNT(l.id) AS libros FROM autores a LEFT JOIN libros l ON l.autor_id = a.id GROUP BY a.id, a.nombre ORDER BY libros DESC, a.nombre ASC LIMIT 3;' },
+                { titulo: 'Socios con prestamos activos', sql: 'SELECT s.nombre, COUNT(p.id) AS activos FROM socios s JOIN prestamos p ON p.socio_id = s.id WHERE p.fecha_devolucion IS NULL GROUP BY s.id, s.nombre ORDER BY activos DESC, s.nombre ASC;' },
+                { titulo: 'Autores con libros disponibles', sql: 'SELECT a.nombre, COUNT(l.id) AS disponibles FROM autores a JOIN libros l ON l.autor_id = a.id WHERE l.disponible = 1 GROUP BY a.id, a.nombre ORDER BY disponibles DESC, a.nombre ASC;' }
+            ]
+        },
+        modificacion: {
+            titulo: 'Modificacion (INSERT, UPDATE, DELETE)',
+            ejemplos: [
+                { titulo: 'INSERT: Agregar autor', sql: "INSERT INTO autores (id, nombre, pais) VALUES (5, 'Julio Cortazar', 'Argentina');" },
+                { titulo: 'INSERT: Agregar libro', sql: "INSERT INTO libros (id, titulo, autor_id, anio, genero, disponible) VALUES (9, 'La fiesta del chivo', 4, 2000, 'Novela', 1);" },
+                { titulo: 'UPDATE: Marcar libro no disponible', sql: 'UPDATE libros SET disponible = 0 WHERE id = 1;' },
+                { titulo: 'DELETE: Eliminar libro', sql: 'DELETE FROM libros WHERE id = 9;' }
+            ]
+        }
+    }
+};
+
+function getExamplesByCategory(datasetName = preferences.dataset) {
+    if (datasetName === 'escuela') return getEscuelaExamplesByCategory();
+    return SQL_ADDITIONAL_EXAMPLE_CATALOGS[datasetName] || getEscuelaExamplesByCategory();
+}
+
+function renderCategorySelector() {
+    const selector = document.getElementById('categorySelector');
+    if (!selector) return;
+
+    const previous = selector.value;
+    const categories = getExamplesByCategory();
+    const keys = Object.keys(categories);
+    const options = keys.map(key => (
+        `<option value="${escapeHtml(key)}">${escapeHtml(categories[key].titulo)}</option>`
+    ));
+    options.push('<option value="aleatorio">Aleatorio</option>');
+    selector.innerHTML = options.join('');
+
+    if (keys.includes(previous)) {
+        selector.value = previous;
+    } else {
+        selector.value = keys[0] || 'aleatorio';
+    }
+}
+
 // MOSTRAR EJEMPLO POR CATEGORIA
 function showExampleByCategory() {
     const selector = document.getElementById('categorySelector');
@@ -2530,26 +2757,21 @@ function showExampleByCategory() {
         return;
     }
 
-    if (!getUserTables().includes('estudiantes')) {
-        showMessage(
-            'warning',
-            'Los ejemplos guiados usan el dataset Escuela',
-            'Cambia el dataset a “Escuela” para usar estos ejemplos, o escribe tus propias consultas sobre las tablas actuales.'
-        );
-        return;
-    }
-    
     const category = selector.value;
     const categories = getExamplesByCategory();
-    
+    const keys = Object.keys(categories);
+    if (!keys.length) {
+        showMessage('warning', 'No hay ejemplos para este dataset', 'Escribe una consulta directamente en el editor.');
+        return;
+    }
+
     let selectedCategory = category;
-    if (category === 'aleatorio') {
-        const keys = Object.keys(categories);
+    if (category === 'aleatorio' || !categories[selectedCategory]) {
         selectedCategory = keys[Math.floor(Math.random() * keys.length)];
     }
-    
+
     const categoryData = categories[selectedCategory];
-    if (!categoryData) return;
+    if (!categoryData || !Array.isArray(categoryData.ejemplos) || !categoryData.ejemplos.length) return;
     
     const ejemplos = categoryData.ejemplos;
     const ejemplo = ejemplos[Math.floor(Math.random() * ejemplos.length)];
@@ -3272,6 +3494,130 @@ const challengeCatalog = [
     }
 ];
 
+const challengeCatalogByDataset = {
+    escuela: challengeCatalog,
+    tienda: [
+        {
+            id: 'tienda-stock-01',
+            titulo: 'Productos con stock bajo',
+            nivel: 'basico',
+            descripcion: 'Muestra el nombre, la categoria y el stock de los productos con 10 unidades o menos. Ordena por stock ascendente y luego por nombre ascendente.',
+            pista: 'Usa WHERE stock <= 10 y ORDER BY stock ASC, nombre ASC.',
+            sqlEsperado: 'SELECT nombre, categoria, stock FROM productos WHERE stock <= 10 ORDER BY stock ASC, nombre ASC;',
+            ordenada: true
+        },
+        {
+            id: 'tienda-clientes-01',
+            titulo: 'Clientes de Lima y Arequipa',
+            nivel: 'basico',
+            descripcion: 'Muestra el nombre y la ciudad de los clientes de Lima o Arequipa. Ordena por ciudad ascendente y luego por nombre ascendente.',
+            pista: 'Usa el operador IN con las dos ciudades.',
+            sqlEsperado: "SELECT nombre, ciudad FROM clientes WHERE ciudad IN ('Lima', 'Arequipa') ORDER BY ciudad ASC, nombre ASC;",
+            ordenada: true
+        },
+        {
+            id: 'tienda-estados-01',
+            titulo: 'Pedidos por estado',
+            nivel: 'intermedio',
+            descripcion: 'Muestra cada estado de pedido y cuantos pedidos tiene. Ordena por cantidad descendente y luego por estado ascendente.',
+            pista: 'Agrupa con GROUP BY estado y cuenta con COUNT(*).',
+            sqlEsperado: 'SELECT estado, COUNT(*) AS pedidos FROM pedidos GROUP BY estado ORDER BY pedidos DESC, estado ASC;',
+            ordenada: true
+        },
+        {
+            id: 'tienda-detalle-01',
+            titulo: 'Detalle completo de pedidos',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el id del pedido, el cliente, el producto, la cantidad y el precio unitario de cada linea. Ordena por pedido y luego por producto.',
+            pista: 'Une pedidos, clientes, detalle_pedidos y productos.',
+            sqlEsperado: 'SELECT p.id AS pedido, c.nombre AS cliente, pr.nombre AS producto, d.cantidad, d.precio_unitario FROM pedidos p JOIN clientes c ON c.id = p.cliente_id JOIN detalle_pedidos d ON d.pedido_id = p.id JOIN productos pr ON pr.id = d.producto_id ORDER BY p.id ASC, pr.nombre ASC;',
+            ordenada: true
+        },
+        {
+            id: 'tienda-top-01',
+            titulo: 'Top 3 productos vendidos',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los 3 productos con mas unidades vendidas. Ordena por unidades descendente y, en empate, por nombre ascendente.',
+            pista: 'Une detalle_pedidos con productos, agrupa por producto y suma cantidad.',
+            sqlEsperado: 'SELECT pr.nombre, SUM(d.cantidad) AS unidades FROM detalle_pedidos d JOIN productos pr ON pr.id = d.producto_id GROUP BY pr.id, pr.nombre ORDER BY unidades DESC, pr.nombre ASC LIMIT 3;',
+            ordenada: true
+        },
+        {
+            id: 'tienda-having-01',
+            titulo: 'Clientes con mas de un pedido',
+            nivel: 'avanzado',
+            descripcion: 'Muestra el nombre de los clientes que tienen mas de un pedido y cuantos pedidos tienen. Ordena por cantidad descendente y luego por nombre ascendente.',
+            pista: 'Une clientes con pedidos, agrupa y filtra con HAVING COUNT(p.id) > 1.',
+            sqlEsperado: 'SELECT c.nombre, COUNT(p.id) AS pedidos FROM clientes c JOIN pedidos p ON p.cliente_id = c.id GROUP BY c.id, c.nombre HAVING COUNT(p.id) > 1 ORDER BY pedidos DESC, c.nombre ASC;',
+            ordenada: true
+        }
+    ],
+    biblioteca: [
+        {
+            id: 'biblioteca-disponibles-01',
+            titulo: 'Libros disponibles',
+            nivel: 'basico',
+            descripcion: 'Muestra el titulo, el genero y el anio de los libros disponibles. Ordena por titulo ascendente.',
+            pista: 'Filtra con disponible = 1.',
+            sqlEsperado: 'SELECT titulo, genero, anio FROM libros WHERE disponible = 1 ORDER BY titulo ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-activos-01',
+            titulo: 'Prestamos sin devolver',
+            nivel: 'basico',
+            descripcion: 'Muestra el id del prestamo, el titulo del libro, el socio y la fecha de prestamo de los prestamos sin devolver. Ordena por id ascendente.',
+            pista: 'Filtra con fecha_devolucion IS NULL y une libros y socios.',
+            sqlEsperado: 'SELECT p.id, l.titulo, s.nombre AS socio, p.fecha_prestamo FROM prestamos p JOIN libros l ON l.id = p.libro_id JOIN socios s ON s.id = p.socio_id WHERE p.fecha_devolucion IS NULL ORDER BY p.id ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-generos-01',
+            titulo: 'Libros por genero',
+            nivel: 'intermedio',
+            descripcion: 'Muestra cada genero y cuantos libros tiene. Ordena por cantidad descendente y luego por genero ascendente.',
+            pista: 'Agrupa con GROUP BY genero y cuenta con COUNT(*).',
+            sqlEsperado: 'SELECT genero, COUNT(*) AS libros FROM libros GROUP BY genero ORDER BY libros DESC, genero ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-autores-01',
+            titulo: 'Libros con autor',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el titulo del libro, el nombre del autor y su pais. Ordena por titulo ascendente.',
+            pista: 'Une libros con autores usando autor_id.',
+            sqlEsperado: 'SELECT l.titulo, a.nombre AS autor, a.pais FROM libros l JOIN autores a ON a.id = l.autor_id ORDER BY l.titulo ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-having-01',
+            titulo: 'Autores con dos o mas libros',
+            nivel: 'avanzado',
+            descripcion: 'Muestra el nombre de los autores que tienen dos o mas libros y cuantos libros tienen. Ordena por cantidad descendente y luego por nombre ascendente.',
+            pista: 'Une autores con libros, agrupa y filtra con HAVING COUNT(l.id) >= 2.',
+            sqlEsperado: 'SELECT a.nombre, COUNT(l.id) AS libros FROM autores a JOIN libros l ON l.autor_id = a.id GROUP BY a.id, a.nombre HAVING COUNT(l.id) >= 2 ORDER BY libros DESC, a.nombre ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-top-01',
+            titulo: 'Top 3 autores por libros',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los 3 autores con mas libros. Ordena por cantidad descendente y, en empate, por nombre ascendente.',
+            pista: 'Usa LEFT JOIN desde autores hacia libros, agrupa y limita a 3.',
+            sqlEsperado: 'SELECT a.nombre, COUNT(l.id) AS libros FROM autores a LEFT JOIN libros l ON l.autor_id = a.id GROUP BY a.id, a.nombre ORDER BY libros DESC, a.nombre ASC LIMIT 3;',
+            ordenada: true
+        }
+    ]
+};
+
+function getChallengeCatalog(datasetName = preferences.dataset) {
+    return challengeCatalogByDataset[datasetName] || challengeCatalog;
+}
+
+function getActiveChallengeCatalog() {
+    return getChallengeCatalog();
+}
+
 let currentChallengeId = null;
 let challengeAttempts = 0;
 let challengeProgress = {};
@@ -3286,16 +3632,16 @@ function saveChallengeProgress() {
 }
 
 function getChallengeById(id) {
-    return challengeCatalog.find(challenge => challenge.id === id) || null;
+    return getActiveChallengeCatalog().find(challenge => challenge.id === id) || null;
 }
 
 function getCompletedChallengeCount() {
-    return challengeCatalog.filter(challenge => challengeProgress[challenge.id]?.completed).length;
+    return getActiveChallengeCatalog().filter(challenge => challengeProgress[challenge.id]?.completed).length;
 }
 
 function renderChallengeProgress() {
     const completed = getCompletedChallengeCount();
-    const total = challengeCatalog.length;
+    const total = getActiveChallengeCatalog().length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     const text = document.getElementById('challengeProgressText');
@@ -3310,7 +3656,7 @@ function renderChallengeList() {
     const list = document.getElementById('challengeList');
     if (!list) return;
 
-    list.innerHTML = challengeCatalog.map(challenge => {
+    list.innerHTML = getActiveChallengeCatalog().map(challenge => {
         const completed = Boolean(challengeProgress[challenge.id]?.completed);
         const active = challenge.id === currentChallengeId;
         return `
@@ -3332,9 +3678,30 @@ function renderChallengeList() {
     renderChallengeProgress();
 }
 
+function renderChallengePlaceholder() {
+    const detail = document.getElementById('challengeDetail');
+    if (!detail) return;
+    detail.innerHTML = `
+        <div class="challenge-empty">
+            <i class="fas fa-trophy"></i>
+            <h3>Elige un reto para empezar</h3>
+            <p>Los retos validan el resultado de tu consulta, no el texto exacto. Puedes resolverlos de varias formas.</p>
+        </div>
+    `;
+}
+
 function initChallenges() {
     loadChallengeProgress();
     renderChallengeList();
+    renderChallengePlaceholder();
+}
+
+function refreshPracticeContentForDataset() {
+    renderCategorySelector();
+    currentChallengeId = null;
+    challengeAttempts = 0;
+    renderChallengeList();
+    renderChallengePlaceholder();
 }
 
 function openChallenge(id) {
@@ -3499,14 +3866,6 @@ function runChallenge() {
         return;
     }
 
-    if (!getUserTables().includes('estudiantes')) {
-        setChallengeResult(
-            'warning',
-            '<strong><i class="fas fa-triangle-exclamation"></i> Dataset incompatible</strong>Los retos están diseñados para el dataset Escuela. Cambia el dataset desde la sección Practicar para resolverlos.'
-        );
-        return;
-    }
-
     const editor = document.getElementById('challengeEditor');
     const query = editor ? editor.value.trim() : '';
     if (!query) {
@@ -3579,24 +3938,31 @@ function runChallenge() {
 }
 
 function nextChallenge() {
-    const currentIndex = challengeCatalog.findIndex(challenge => challenge.id === currentChallengeId);
-    const next = challengeCatalog[currentIndex + 1];
+    const activeCatalog = getActiveChallengeCatalog();
+    const currentIndex = activeCatalog.findIndex(challenge => challenge.id === currentChallengeId);
+    const next = activeCatalog[currentIndex + 1];
     if (next) {
         openChallenge(next.id);
     } else {
-        showToast('success', '¡Has llegado al final de los retos!');
+        showToast('success', '¡Has llegado al final de los retos de este dataset!');
     }
 }
 
 function resetChallengeProgress() {
-    if (!confirm('¿Reiniciar el progreso de todos los retos?')) return;
-    challengeProgress = {};
-    removeStoredItem(STORAGE_KEYS.challenges);
+    const datasetLabel = preferences.dataset === 'escuela'
+        ? 'Escuela'
+        : (window.SQL_ACADEMY_DATASETS?.[preferences.dataset]?.name || preferences.dataset);
+    if (!confirm(`¿Reiniciar el progreso de los retos de ${datasetLabel}?`)) return;
+
+    getActiveChallengeCatalog().forEach(challenge => {
+        delete challengeProgress[challenge.id];
+    });
+    saveChallengeProgress();
     renderChallengeList();
-    if (currentChallengeId) {
-        openChallenge(currentChallengeId);
-    }
-    showToast('info', 'Progreso de retos reiniciado.');
+    renderChallengePlaceholder();
+    currentChallengeId = null;
+    challengeAttempts = 0;
+    showToast('info', `Progreso de retos de ${datasetLabel} reiniciado.`);
 }
 
 // NAVEGACIÓN ENTRE SECCIONES
@@ -3633,6 +3999,7 @@ document.addEventListener('DOMContentLoaded', function() {
     applyPreferences();
     loadHistoryFromStorage();
     updateHistoryDisplay();
+    renderCategorySelector();
     initChallenges();
 
     // Inicializar base de datos (restaura la copia local si existe).

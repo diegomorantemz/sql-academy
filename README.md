@@ -12,7 +12,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Persistencia automática del archivo SQLite en IndexedDB y del historial/preferencias en `localStorage`.
 - Modo seguro activado por defecto para confirmar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, `UPDATE` sin `WHERE` y `ALTER TABLE ... DROP`.
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
-- Ocho retos con validación por resultados, pistas y progreso guardado.
+- Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
@@ -154,7 +154,7 @@ Las claves foráneas se aplican con `PRAGMA foreign_keys = ON`, por lo que no se
 - **Tienda:** `clientes`, `productos`, `pedidos` y `detalle_pedidos`.
 - **Biblioteca:** `autores`, `libros`, `socios` y `prestamos`.
 
-En SQL, los retos y los ejemplos guiados están diseñados para el dataset Escuela. Si cambias de dataset, la app lo avisa y puedes volver a Escuela desde la barra de herramientas.
+En SQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se cargan las categorías y los ejercicios correspondientes a Escuela, Tienda o Biblioteca.
 
 ## Funcionalidades
 
@@ -189,11 +189,11 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 
 ### Retos
 
-- Ocho ejercicios de nivel básico, intermedio y avanzado.
+- Ejercicios de nivel básico, intermedio y avanzado para cada dataset.
 - Validación comparando columnas, filas y valores, no el texto exacto de la consulta.
 - Solo se permiten consultas de lectura (`SELECT` o `WITH`).
 - Pistas, solución después de varios intentos y progreso guardado en `localStorage`.
-- Los retos usan el dataset Escuela para que el resultado esperado sea estable.
+- Escuela, Tienda y Biblioteca tienen retos propios; el progreso se guarda por reto y dataset.
 
 ### Asistente IA
 
@@ -321,9 +321,18 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - El editor visual asume que la tabla tiene una clave primaria. Para tablas sin clave primaria, usa consultas SQL.
 - `sql.js` implementa SQLite, por lo que algunas funciones específicas de PostgreSQL, MySQL u Oracle no están disponibles.
 - La PWA necesita HTTPS (Netlify lo proporciona). El asistente IA requiere conexión y la Netlify Function desplegada.
-- En NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
+- En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.5.2
+
+- **Práctica SQL por dataset:** los ejemplos guiados y los retos ahora se adaptan a Escuela, Tienda y Biblioteca.
+- **Tienda SQL:** ejemplos de consultas, filtros, orden, agregaciones, `GROUP BY`, `HAVING`, `JOIN`, subconsultas, operadores y CRUD.
+- **Biblioteca SQL:** ejemplos equivalentes sobre autores, libros, socios y préstamos.
+- **Retos nuevos:** seis retos para Tienda y seis para Biblioteca, con validación por resultados.
+- **Selector dinámico:** las categorías de ejemplos se actualizan al cambiar de dataset.
+- **Calidad:** pruebas de catálogos, ejecución de SQL con SQLite y cambio de dataset en la interfaz.
 
 ### v1.5.1
 
