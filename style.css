@@ -1491,3 +1491,142 @@ button {
 .concept-card .fa-share-nodes { color: #6c5ce7; }
 .concept-card .fa-bolt { color: #fdcb6e; }
 
+
+/* ===== LABORATORIO NOSQL ===== */
+.nosql-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+    height: calc(100vh - 180px);
+    min-height: 500px;
+}
+
+.nosql-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+}
+
+.nosql-collections-panel {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.nosql-collection-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    transition: background 0.2s, color 0.2s;
+    border: 1px solid transparent;
+}
+
+.nosql-collection-item:hover {
+    background: rgba(115, 190, 215, 0.12);
+    border-color: rgba(115, 190, 215, 0.3);
+}
+
+.nosql-collection-item.active {
+    background: rgba(51, 103, 145, 0.15);
+    border-color: #336791;
+    color: #336791;
+    font-weight: 600;
+}
+
+.nosql-collection-item i {
+    width: 18px;
+    text-align: center;
+    color: #73bed7;
+}
+
+.nosql-collection-item.active i {
+    color: #336791;
+}
+
+.nosql-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+}
+
+.nosql-query-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.nosql-query-area label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #73bed7;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.nosql-query-area textarea {
+    width: 100%;
+    min-height: 80px;
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.88rem;
+    color: var(--text-main);
+    resize: vertical;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.nosql-query-area textarea:focus {
+    outline: none;
+    border-color: #73bed7;
+}
+
+.nosql-result-area {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.nosql-result-area pre {
+    margin: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: var(--text-main);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.nosql-key   { color: #73bed7; }
+.nosql-str   { color: #2ecc71; }
+.nosql-num   { color: #f39c12; }
+.nosql-bool  { color: #e74c3c; }
+.nosql-null  { color: #95a5a6; }
+
+@media (max-width: 768px) {
+    .nosql-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    .nosql-sidebar {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+    .nosql-collections-panel {
+        min-width: 200px;
+    }
+}
