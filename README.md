@@ -194,6 +194,7 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - Solo se permiten consultas de lectura (`SELECT` o `WITH`).
 - Pistas, solución después de varios intentos y progreso guardado en `localStorage`.
 - Escuela, Tienda y Biblioteca tienen retos propios; el progreso se guarda por reto y dataset.
+- La página Retos incluye pestañas SQL y NoSQL. Los retos NoSQL se abren en el laboratorio documental y la solución se revela tras dos intentos fallidos.
 
 ### Asistente IA
 
@@ -237,7 +238,9 @@ El laboratorio NoSQL es un simulador documental educativo, no una instancia real
 - Actualizaciones con `$set`, `$unset`, `$inc`, `$push`, `$addToSet`, `$pull` y `$rename`.
 - Aggregation con `$match`, `$project`, `$group`, `$sort`, `$skip`, `$limit`, `$count`, `$unwind`, `$addFields` y `$unset`.
 - Datasets documentales de Escuela, Tienda y Biblioteca, con cursos, pedidos y préstamos embebidos.
-- Historial, ejemplos guiados y retos por dataset con validación y progreso persistente.
+- Historial y ejemplos guiados por dataset.
+- Retos NoSQL accesibles desde la página Retos, con pestañas SQL/NoSQL, validación por resultados y progreso persistente.
+- Plantillas de reto sin solución y botón «Ver solución» tras dos intentos fallidos.
 - Modo seguro para `deleteMany({})`, `updateMany({})` y `drop()`.
 - Persistencia en IndexedDB y ayuda opcional con IA para comandos NoSQL.
 
@@ -298,6 +301,8 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV y datasets.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
+- `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
+- `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL y la navegación al laboratorio.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
 - `_headers` añade `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS y cachés específicas.
@@ -324,6 +329,13 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.5.3
+
+- **Retos NoSQL más justos:** al abrir un reto se carga una plantilla mínima, no la solución.
+- **Solución progresiva:** el botón «Ver solución» aparece tras dos intentos fallidos y solo rellena el editor.
+- **Página Retos unificada:** pestañas SQL/NoSQL; los retos NoSQL se exploran desde Retos y se resuelven en el laboratorio.
+- **Calidad:** pruebas de plantillas, revelado de solución, pestañas y navegación al laboratorio.
 
 ### v1.5.2
 

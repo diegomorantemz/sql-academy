@@ -1310,6 +1310,91 @@ button {
     font-size: 13px;
 }
 
+.challenge-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dbe4ee;
+}
+
+.challenge-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #52606d;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.challenge-tab:hover {
+    background: #f1f5f9;
+}
+
+.challenge-tab.active {
+    background: var(--postgres-blue);
+    border-color: var(--postgres-blue);
+    color: white;
+}
+
+.challenge-tab-panel {
+    display: none;
+}
+
+.challenge-tab-panel.active {
+    display: block;
+}
+
+.nosql-hub-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    background: var(--postgres-bg);
+}
+
+.nosql-hub-head h3 {
+    color: var(--postgres-dark);
+    font-size: 1.05em;
+    margin-bottom: 3px;
+}
+
+.nosql-hub-head h3 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+.nosql-hub-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: right;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.nosql-hub-progress strong {
+    color: var(--postgres-dark);
+    font-size: 1.05em;
+}
+
+.nosql-challenges-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 @media (max-width: 992px) {
     .challenges-layout {
         grid-template-columns: 1fr;
@@ -2848,6 +2933,37 @@ button {
     color: #fca5a5;
 }
 
+[data-theme="dark"] .challenge-tabs {
+    border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .challenge-tab {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .challenge-tab:hover {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .challenge-tab.active {
+    background: var(--postgres-blue);
+    color: white;
+}
+
+[data-theme="dark"] .nosql-hub-head {
+    background: #111c2e;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .nosql-hub-head h3,
+[data-theme="dark"] .nosql-hub-progress strong {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .nosql-hub-progress {
+    color: #94a3b8;
+}
+
 [data-theme="dark"] .comparison-table td {
     color: #cbd5e1;
 }
@@ -3264,6 +3380,18 @@ button {
 
     .nosql-sidebar-actions select {
         flex: 1;
+    }
+
+    .nosql-hub-head {
+        flex-direction: column;
+    }
+
+    .nosql-hub-progress {
+        text-align: left;
+    }
+
+    .nosql-challenges-actions {
+        justify-content: flex-start;
     }
 }
 

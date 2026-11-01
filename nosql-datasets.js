@@ -629,7 +629,8 @@ const NOSQL_CHALLENGES = [
         level: 'Básico',
         description: 'Encuentra a los estudiantes con promedio mayor o igual a 17 y ordénalos de mayor a menor. Devuelve solo nombre, carrera y promedio.',
         hint: 'Usa find con el operador $gte y encadena sort({ promedio: -1 }).',
-        starter: "db.estudiantes.find({ promedio: { $gte: 17 } }, { nombre: 1, carrera: 1, promedio: 1 }).sort({ promedio: -1 })",
+        starter: 'db.estudiantes.find({})',
+        solution: "db.estudiantes.find({ promedio: { $gte: 17 } }, { nombre: 1, carrera: 1, promedio: 1 }).sort({ promedio: -1 })",
         expectedValues: ['est-005', 'est-001', 'est-003', 'est-007'],
         expectedField: '_id'
     },
@@ -640,7 +641,8 @@ const NOSQL_CHALLENGES = [
         level: 'Intermedio',
         description: 'Agrupa a los estudiantes por ciudad y cuenta cuántos hay en cada una. Ordena el resultado de mayor a menor por cantidad.',
         hint: 'Usa aggregate con $group, $sum y $sort.',
-        starter: "db.estudiantes.aggregate([{ $group: { _id: '$ciudad', total: { $sum: 1 } } }, { $sort: { total: -1, _id: 1 } }])",
+        starter: 'db.estudiantes.aggregate([{ $match: {} }])',
+        solution: "db.estudiantes.aggregate([{ $group: { _id: '$ciudad', total: { $sum: 1 } } }, { $sort: { total: -1, _id: 1 } }])",
         expectedValues: ['Lima', 'Arequipa', 'Trujillo', 'Cusco'],
         expectedField: '_id'
     },
@@ -651,7 +653,8 @@ const NOSQL_CHALLENGES = [
         level: 'Avanzado',
         description: 'Encuentra los estudiantes que tengan al menos un curso con nota mayor o igual a 18. Devuelve nombre y el arreglo de cursos.',
         hint: 'Puedes consultar un campo dentro de un arreglo con la ruta cursos.nota y el operador $gte.',
-        starter: "db.estudiantes.find({ 'cursos.nota': { $gte: 18 } }, { nombre: 1, cursos: 1 })",
+        starter: 'db.estudiantes.find({})',
+        solution: "db.estudiantes.find({ 'cursos.nota': { $gte: 18 } }, { nombre: 1, cursos: 1 })",
         expectedIds: ['est-001', 'est-003', 'est-005', 'est-007']
     },
     {
@@ -661,7 +664,8 @@ const NOSQL_CHALLENGES = [
         level: 'Básico',
         description: 'Encuentra los cursos que otorgan 5 créditos. Devuelve código, nombre y créditos.',
         hint: 'Filtra por el campo creditos con el valor 5.',
-        starter: 'db.cursos.find({ creditos: 5 }, { codigo: 1, nombre: 1, creditos: 1 })',
+        starter: 'db.cursos.find({})',
+        solution: 'db.cursos.find({ creditos: 5 }, { codigo: 1, nombre: 1, creditos: 1 })',
         expectedIds: ['cur-002', 'cur-003']
     },
     {
@@ -671,7 +675,8 @@ const NOSQL_CHALLENGES = [
         level: 'Avanzado',
         description: 'Agrupa a los estudiantes por carrera, cuenta cuántos hay y ordena de mayor a menor por cantidad. En empate, ordena por nombre de carrera.',
         hint: 'Usa aggregate con $group, $sum y $sort con dos campos.',
-        starter: "db.estudiantes.aggregate([{ $group: { _id: '$carrera', estudiantes: { $sum: 1 } } }, { $sort: { estudiantes: -1, _id: 1 } }])",
+        starter: 'db.estudiantes.aggregate([{ $match: {} }])',
+        solution: "db.estudiantes.aggregate([{ $group: { _id: '$carrera', estudiantes: { $sum: 1 } } }, { $sort: { estudiantes: -1, _id: 1 } }])",
         expectedRows: [
             { _id: 'Ingeniería de Sistemas', estudiantes: 5 },
             { _id: 'Administración', estudiantes: 3 }
@@ -684,7 +689,8 @@ const NOSQL_CHALLENGES = [
         level: 'Básico',
         description: 'Encuentra los productos con 10 unidades o menos. Devuelve nombre, categoría, precio y stock.',
         hint: 'Usa find con el operador $lte.',
-        starter: 'db.productos.find({ stock: { $lte: 10 } }, { nombre: 1, categoria: 1, precio: 1, stock: 1 })',
+        starter: 'db.productos.find({})',
+        solution: 'db.productos.find({ stock: { $lte: 10 } }, { nombre: 1, categoria: 1, precio: 1, stock: 1 })',
         expectedIds: ['prod-003', 'prod-005']
     },
     {
@@ -694,7 +700,8 @@ const NOSQL_CHALLENGES = [
         level: 'Básico',
         description: 'Encuentra los clientes del segmento premium. Devuelve nombre, ciudad y segmento.',
         hint: 'Filtra por el campo segmento.',
-        starter: "db.clientes.find({ segmento: 'premium' }, { nombre: 1, ciudad: 1, segmento: 1 })",
+        starter: 'db.clientes.find({})',
+        solution: "db.clientes.find({ segmento: 'premium' }, { nombre: 1, ciudad: 1, segmento: 1 })",
         expectedIds: ['cli-001', 'cli-003']
     },
     {
@@ -704,7 +711,8 @@ const NOSQL_CHALLENGES = [
         level: 'Intermedio',
         description: 'Agrupa los pedidos por estado, cuenta cuántos hay y suma el total. Ordena de mayor a menor por total.',
         hint: 'Usa $group con $sum y $sort.',
-        starter: "db.pedidos.aggregate([{ $group: { _id: '$estado', pedidos: { $sum: 1 }, total: { $sum: '$total' } } }, { $sort: { total: -1 } }])",
+        starter: 'db.pedidos.aggregate([{ $match: {} }])',
+        solution: "db.pedidos.aggregate([{ $group: { _id: '$estado', pedidos: { $sum: 1 }, total: { $sum: '$total' } } }, { $sort: { total: -1 } }])",
         expectedRows: [
             { _id: 'pagado', pedidos: 3, total: 654 },
             { _id: 'pendiente', pedidos: 1, total: 620 },
@@ -718,7 +726,8 @@ const NOSQL_CHALLENGES = [
         level: 'Avanzado',
         description: 'Descompón los items de los pedidos, suma las unidades vendidas por producto y muestra los 3 primeros. Ordena de mayor a menor por unidades y, en empate, por nombre.',
         hint: 'Usa $unwind sobre items, $group por items.producto_nombre, $sum de items.cantidad y $sort con dos campos.',
-        starter: "db.pedidos.aggregate([{ $unwind: '$items' }, { $group: { _id: '$items.producto_nombre', unidades: { $sum: '$items.cantidad' } } }, { $sort: { unidades: -1, _id: 1 } }, { $limit: 3 }])",
+        starter: 'db.pedidos.aggregate([{ $match: {} }])',
+        solution: "db.pedidos.aggregate([{ $unwind: '$items' }, { $group: { _id: '$items.producto_nombre', unidades: { $sum: '$items.cantidad' } } }, { $sort: { unidades: -1, _id: 1 } }, { $limit: 3 }])",
         expectedRows: [
             { _id: 'Cuaderno A4', unidades: 15 },
             { _id: 'Lámpara LED', unidades: 3 },
@@ -732,7 +741,8 @@ const NOSQL_CHALLENGES = [
         level: 'Básico',
         description: 'Encuentra los libros con al menos un ejemplar disponible. Devuelve título, autor y disponibles.',
         hint: 'Usa el campo disponibles con el operador $gt.',
-        starter: 'db.libros.find({ disponibles: { $gt: 0 } }, { titulo: 1, autor: 1, disponibles: 1 })',
+        starter: 'db.libros.find({})',
+        solution: 'db.libros.find({ disponibles: { $gt: 0 } }, { titulo: 1, autor: 1, disponibles: 1 })',
         expectedIds: ['lib-001', 'lib-003', 'lib-004', 'lib-005', 'lib-007', 'lib-008']
     },
     {
@@ -742,7 +752,8 @@ const NOSQL_CHALLENGES = [
         level: 'Básico',
         description: 'Encuentra los socios con membresía premium que estén activos. Devuelve nombre, ciudad y membresía.',
         hint: 'Combina dos condiciones en el filtro.',
-        starter: "db.socios.find({ membresia: 'premium', activo: true }, { nombre: 1, ciudad: 1, membresia: 1 })",
+        starter: 'db.socios.find({})',
+        solution: "db.socios.find({ membresia: 'premium', activo: true }, { nombre: 1, ciudad: 1, membresia: 1 })",
         expectedIds: ['soc-001', 'soc-003']
     },
     {
@@ -752,7 +763,8 @@ const NOSQL_CHALLENGES = [
         level: 'Intermedio',
         description: 'Agrupa los préstamos por estado, cuenta cuántos hay y suma las multas. Ordena de mayor a menor por cantidad de préstamos.',
         hint: 'Usa $group con $sum y $sort.',
-        starter: "db.prestamos.aggregate([{ $group: { _id: '$estado', prestamos: { $sum: 1 }, multas: { $sum: '$multa' } } }, { $sort: { prestamos: -1, _id: 1 } }])",
+        starter: 'db.prestamos.aggregate([{ $match: {} }])',
+        solution: "db.prestamos.aggregate([{ $group: { _id: '$estado', prestamos: { $sum: 1 }, multas: { $sum: '$multa' } } }, { $sort: { prestamos: -1, _id: 1 } }])",
         expectedRows: [
             { _id: 'devuelto', prestamos: 5, multas: 0 },
             { _id: 'activo', prestamos: 3, multas: 0 },
@@ -766,7 +778,8 @@ const NOSQL_CHALLENGES = [
         level: 'Avanzado',
         description: 'Agrupa los préstamos por título, cuenta cuántas veces se prestó cada libro y muestra los 3 primeros. Ordena de mayor a menor y, en empate, por título.',
         hint: 'Usa $group por libro_titulo, $sum, $sort con dos campos y $limit.',
-        starter: "db.prestamos.aggregate([{ $group: { _id: '$libro_titulo', prestamos: { $sum: 1 } } }, { $sort: { prestamos: -1, _id: 1 } }, { $limit: 3 }])",
+        starter: 'db.prestamos.aggregate([{ $match: {} }])',
+        solution: "db.prestamos.aggregate([{ $group: { _id: '$libro_titulo', prestamos: { $sum: 1 } } }, { $sort: { prestamos: -1, _id: 1 } }, { $limit: 3 }])",
         expectedRows: [
             { _id: 'Cien años de soledad', prestamos: 3 },
             { _id: 'Dune', prestamos: 2 },

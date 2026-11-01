@@ -45,6 +45,10 @@ function challengeCount() {
     return window.document.querySelectorAll('#nosqlChallengeList [data-challenge]').length;
 }
 
+function getChallenge(id) {
+    return window.NOSQL_CHALLENGES.find(challenge => challenge.id === id);
+}
+
 test('el laboratorio NoSQL filtra ejemplos y retos por dataset', () => {
     assert.equal(exampleCount(), 12);
     assert.equal(challengeCount(), 5);
@@ -70,26 +74,40 @@ test('los ejemplos y retos cargan el contenido del dataset activo', () => {
     window.loadNoSQLExample();
     assert.match(window.document.querySelector('#nosqlEditor').value, /^db\.productos\.find/);
 
-    window.loadNoSQLChallenge('nosql-tienda-stock');
+    const editor = window.document.querySelector('#nosqlEditor');
+    const challenge = getChallenge('nosql-tienda-stock');
+
+    window.loadNoSQLChallenge(challenge.id);
+    const feedback = window.document.querySelector('#nosqlChallengeFeedback');
+    assert.equal(editor.value, challenge.starter);
+    assert.notEqual(editor.value, challenge.solution);
+
     window.runNoSQLQuery();
-    assert.match(
-        window.document.querySelector('#nosqlChallengeFeedback').textContent,
-        /Reto completado/
-    );
+    assert.match(feedback.textContent, /Todavía no/);
+    assert.equal(feedback.querySelector('button'), null);
+
+    window.runNoSQLQuery();
+    assert.match(feedback.textContent, /Todavía no/);
+    assert.ok(feedback.querySelector('button'));
+
+    window.revealNoSQLSolution();
+    assert.equal(editor.value, challenge.solution);
+    window.runNoSQLQuery();
+    assert.match(feedback.textContent, /Reto completado/);
 
     window.changeNoSQLDataset('biblioteca', { silent: true });
-    window.loadNoSQLChallenge('nosql-biblioteca-disponibles');
+    const bibliotecaChallenge = getChallenge('nosql-biblioteca-disponibles');
+    window.loadNoSQLChallenge(bibliotecaChallenge.id);
+    const bibliotecaFeedback = window.document.querySelector('#nosqlChallengeFeedback');
+    editor.value = bibliotecaChallenge.solution;
     window.runNoSQLQuery();
-    assert.match(
-        window.document.querySelector('#nosqlChallengeFeedback').textContent,
-        /Reto completado/
-    );
+    assert.match(bibliotecaFeedback.textContent, /Reto completado/);
 
     window.changeNoSQLDataset('escuela', { silent: true });
-    window.loadNoSQLChallenge('nosql-promedios');
+    const escuelaChallenge = getChallenge('nosql-promedios');
+    window.loadNoSQLChallenge(escuelaChallenge.id);
+    const escuelaFeedback = window.document.querySelector('#nosqlChallengeFeedback');
+    editor.value = escuelaChallenge.solution;
     window.runNoSQLQuery();
-    assert.match(
-        window.document.querySelector('#nosqlChallengeFeedback').textContent,
-        /Reto completado/
-    );
+    assert.match(escuelaFeedback.textContent, /Reto completado/);
 });

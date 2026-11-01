@@ -25,6 +25,7 @@
     let history = [];
     let challengeProgress = {};
     let activeChallengeId = null;
+    let activeChallengeAttempts = 0;
     let persistTimer = null;
     let initialized = false;
     let persistenceDbPromise = null;
@@ -487,7 +488,24 @@
         if (!container) return;
         container.hidden = false;
         container.className = `challenge-result ${feedback.ok ? 'success' : 'error'}`;
-        container.innerHTML = `<strong>${feedback.ok ? 'Reto completado' : 'Todavía no'}</strong><p>${escapeHtml(feedback.message)}</p>`;
+        const canRevealSolution = !feedback.ok && activeChallengeId && activeChallengeAttempts >= 2;
+        const solutionButton = canRevealSolution
+            ? `<div class="challenge-result-actions">
+                    <button type="button" class="btn-secondary" onclick="revealNoSQLSolution()">
+                        <i class="fas fa-eye"></i> Ver solución
+                    </button>
+                </div>`
+            : '';
+        container.innerHTML = `<strong>${feedback.ok ? 'Reto completado' : 'Todavía no'}</strong><p>${escapeHtml(feedback.message)}</p>${solutionButton}`;
+    }
+
+    function revealSolution() {
+        const challenge = getActiveChallenges().find(item => item.id === activeChallengeId);
+        const editor = getElement('nosqlEditor');
+        if (!challenge || !editor) return;
+        editor.value = challenge.solution;
+        editor.focus();
+        showToast('info', 'Solución cargada. Ejecútala para comprobar el resultado.');
     }
 
     function runQuery() {
@@ -526,6 +544,7 @@
 
             const feedback = validateChallenge(result);
             if (feedback) {
+                if (!feedback.ok) activeChallengeAttempts += 1;
                 renderChallengeFeedback(feedback);
                 if (feedback.ok && !challengeProgress[activeChallengeId]) {
                     challengeProgress[activeChallengeId] = {
@@ -601,7 +620,7 @@
         });
     }
 
-    function openChallenge(id) {
+    function openChallenge(id, options) {
         const challenge = getActiveChallenges().find(item => item.id === id);
         const detail = getElement('nosqlChallengeDetail');
         const editor = getElement('nosqlEditor');
@@ -611,7 +630,9 @@
         }
         if (!detail) return;
 
+        const settings = options || {};
         activeChallengeId = id;
+        activeChallengeAttempts = 0;
         if (editor) editor.value = challenge.starter;
 
         detail.innerHTML = `
@@ -633,7 +654,7 @@
         `;
 
         renderChallenges();
-        if (editor) editor.focus();
+        if (editor && settings.focus !== false) editor.focus();
     }
 
     function renderChallengePlaceholder() {
@@ -643,7 +664,10 @@
             <div class="challenge-empty">
                 <i class="fas fa-trophy"></i>
                 <h3>Elige un reto NoSQL</h3>
-                <p>Selecciona un reto de la izquierda para cargar su plantilla y comprobar tu resultado.</p>
+                <p>Explora los retos desde la página Retos y ábrelos aquí para resolverlos con el editor NoSQL.</p>
+                <button type="button" class="btn-secondary" onclick="openNoSQLChallengesHub()">
+                    <i class="fas fa-list-check"></i> Ver todos los retos NoSQL
+                </button>
             </div>
         `;
     }
@@ -653,6 +677,7 @@
         challengeProgress = {};
         saveChallengeProgress();
         activeChallengeId = null;
+        activeChallengeAttempts = 0;
         renderChallenges();
         renderChallengePlaceholder();
         showToast('info', 'Progreso de retos NoSQL reiniciado.');
@@ -676,6 +701,7 @@
         renderCollections();
         clearResult();
         activeChallengeId = null;
+        activeChallengeAttempts = 0;
         if (hadActiveChallenge) {
             const editor = getElement('nosqlEditor');
             if (editor) editor.value = '';
@@ -756,7 +782,12 @@
     global.toggleNoSQLSafeMode = toggleSafeMode;
     global.openNoSQLAIHelp = openAIHelp;
     global.loadNoSQLChallenge = openChallenge;
+    global.revealNoSQLSolution = revealSolution;
     global.resetNoSQLChallengeProgress = resetChallengeProgress;
+    global.getNoSQLActiveDataset = () => datasetName;
+    global.getNoSQLActiveChallenges = getActiveChallenges;
+    global.getNoSQLChallengeProgress = () => ({ ...challengeProgress });
+    global.isNoSQLChallengeCompleted = id => Boolean(challengeProgress[id]);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

@@ -3621,6 +3621,7 @@ function getActiveChallengeCatalog() {
 let currentChallengeId = null;
 let challengeAttempts = 0;
 let challengeProgress = {};
+let selectedNoSQLChallengeId = null;
 
 function loadChallengeProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.challenges, {});
@@ -3965,6 +3966,222 @@ function resetChallengeProgress() {
     showToast('info', `Progreso de retos de ${datasetLabel} reiniciado.`);
 }
 
+// ============================================
+// RETOS NOSQL EN LA PAGINA DE RETOS
+// ============================================
+
+function getNoSQLActiveDatasetName() {
+    if (typeof window.getNoSQLActiveDataset === 'function') {
+        return window.getNoSQLActiveDataset();
+    }
+    const selector = document.getElementById('nosqlDatasetSelector');
+    return selector?.value || 'escuela';
+}
+
+function getNoSQLHubChallenges() {
+    const datasetName = getNoSQLActiveDatasetName();
+    if (typeof window.getNoSQLChallengesForDataset === 'function') {
+        return window.getNoSQLChallengesForDataset(datasetName);
+    }
+    return Array.isArray(window.NOSQL_CHALLENGES)
+        ? window.NOSQL_CHALLENGES.filter(challenge => challenge.dataset === datasetName)
+        : [];
+}
+
+function isNoSQLHubChallengeCompleted(id) {
+    if (typeof window.isNoSQLChallengeCompleted === 'function') {
+        return window.isNoSQLChallengeCompleted(id);
+    }
+    return false;
+}
+
+function getNoSQLChallengeLevelClass(level) {
+    if (level === 'Básico') return 'basico';
+    if (level === 'Intermedio') return 'intermedio';
+    return 'avanzado';
+}
+
+function renderNoSQLHubPlaceholder() {
+    const detail = document.getElementById('nosqlHubChallengeDetail');
+    if (!detail) return;
+    detail.innerHTML = `
+        <div class="challenge-empty">
+            <i class="fas fa-leaf"></i>
+            <h3>Elige un reto NoSQL</h3>
+            <p>Selecciona un reto de la lista para ver su descripción y abrirlo en el laboratorio.</p>
+        </div>
+    `;
+}
+
+function renderNoSQLHubDetail(challenge) {
+    const detail = document.getElementById('nosqlHubChallengeDetail');
+    if (!detail) return;
+    if (!challenge) {
+        renderNoSQLHubPlaceholder();
+        return;
+    }
+
+    const completed = isNoSQLHubChallengeCompleted(challenge.id);
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <h3>${escapeHtml(challenge.title)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${getNoSQLChallengeLevelClass(challenge.level)}">${escapeHtml(challenge.level)}</span>
+                    <span class="text-muted">${completed ? 'Completado' : 'Validación por resultado'}</span>
+                </div>
+            </div>
+        </div>
+        <div class="challenge-description">${escapeHtml(challenge.description)}</div>
+        <details class="nosql-hint">
+            <summary><i class="fas fa-lightbulb"></i> Ver pista</summary>
+            <p>${escapeHtml(challenge.hint)}</p>
+        </details>
+        <div class="challenge-actions">
+            <button type="button" onclick="solveNoSQLChallengeInLab('${escapeHtml(challenge.id)}')">
+                <i class="fas fa-flask"></i> Resolver en laboratorio NoSQL
+            </button>
+        </div>
+    `;
+}
+
+function renderNoSQLChallengeHub() {
+    const list = document.getElementById('nosqlHubChallengeList');
+    const datasetLabel = document.getElementById('nosqlHubDatasetLabel');
+    const progressText = document.getElementById('nosqlHubProgressText');
+    if (!list) return;
+
+    const datasetName = getNoSQLActiveDatasetName();
+    const dataset = window.NOSQL_DATASETS?.[datasetName];
+    if (datasetLabel) {
+        datasetLabel.textContent = `Dataset NoSQL: ${dataset?.name || datasetName}`;
+    }
+
+    const challenges = getNoSQLHubChallenges();
+    const completed = challenges.filter(challenge => isNoSQLHubChallengeCompleted(challenge.id)).length;
+    if (progressText) progressText.textContent = `${completed} de ${challenges.length}`;
+
+    if (!challenges.length) {
+        list.innerHTML = '<p class="text-muted">No hay retos NoSQL para este dataset.</p>';
+        renderNoSQLHubPlaceholder();
+        return;
+    }
+
+    const selectedChallenge = challenges.find(challenge => challenge.id === selectedNoSQLChallengeId);
+    if (!selectedChallenge) {
+        selectedNoSQLChallengeId = null;
+        renderNoSQLHubPlaceholder();
+    } else {
+        renderNoSQLHubDetail(selectedChallenge);
+    }
+
+    list.innerHTML = challenges.map(challenge => {
+        const isCompleted = isNoSQLHubChallengeCompleted(challenge.id);
+        const active = challenge.id === selectedNoSQLChallengeId;
+        return `
+            <button type="button" class="challenge-card${active ? ' active' : ''}" data-nosql-challenge="${escapeHtml(challenge.id)}" aria-pressed="${active}">
+                <span class="challenge-card-title">
+                    ${escapeHtml(challenge.title)}
+                    ${isCompleted ? '<i class="fas fa-circle-check" title="Completado"></i>' : ''}
+                </span>
+                <span class="challenge-card-meta">
+                    <span class="challenge-level ${getNoSQLChallengeLevelClass(challenge.level)}">${escapeHtml(challenge.level)}</span>
+                    ${isCompleted ? '<span>Completado</span>' : '<span>Pendiente</span>'}
+                </span>
+            </button>
+        `;
+    }).join('');
+
+    list.querySelectorAll('[data-nosql-challenge]').forEach(button => {
+        button.addEventListener('click', () => openNoSQLHubChallenge(button.dataset.nosqlChallenge));
+    });
+}
+
+function openNoSQLHubChallenge(id) {
+    const challenge = getNoSQLHubChallenges().find(item => item.id === id);
+    if (!challenge) return;
+    selectedNoSQLChallengeId = id;
+    renderNoSQLChallengeHub();
+}
+
+function solveNoSQLChallengeInLab(id) {
+    if (typeof window.loadNoSQLChallenge !== 'function') {
+        showToast('warning', 'El laboratorio NoSQL todavía no está disponible.');
+        return;
+    }
+    window.loadNoSQLChallenge(id, { focus: false });
+    activateSection('nosql');
+    const detail = document.getElementById('nosqlChallengeDetail');
+    if (detail && typeof detail.scrollIntoView === 'function') {
+        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const editor = document.getElementById('nosqlEditor');
+    if (editor) editor.focus();
+    showToast('info', 'Reto cargado en el laboratorio NoSQL.');
+}
+
+function openNoSQLLab() {
+    activateSection('nosql');
+}
+
+function activateChallengeTab(tabName) {
+    const tabs = Array.from(document.querySelectorAll('.challenge-tab'));
+    const panels = {
+        sql: document.getElementById('sqlChallengesPanel'),
+        nosql: document.getElementById('nosqlChallengesPanel')
+    };
+    const nextTab = tabName === 'nosql' ? 'nosql' : 'sql';
+
+    tabs.forEach(tab => {
+        const active = tab.dataset.challengeTab === nextTab;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+    });
+
+    Object.entries(panels).forEach(([name, panel]) => {
+        if (!panel) return;
+        const active = name === nextTab;
+        panel.hidden = !active;
+        panel.classList.toggle('active', active);
+    });
+
+    if (nextTab === 'nosql') {
+        renderNoSQLChallengeHub();
+    }
+}
+
+function openNoSQLChallengesHub() {
+    activateSection('challenges');
+    activateChallengeTab('nosql');
+}
+
+function activateSection(sectionName) {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        const active = btn.dataset.section === sectionName;
+        btn.classList.toggle('active', active);
+        if (active) {
+            btn.setAttribute('aria-current', 'page');
+        } else {
+            btn.removeAttribute('aria-current');
+        }
+    });
+
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+
+    const target = document.getElementById('section-' + sectionName);
+    if (target) {
+        target.classList.add('active');
+    }
+
+    if (sectionName === 'challenges') {
+        const activeTab = document.querySelector('.challenge-tab.active')?.dataset.challengeTab || 'sql';
+        activateChallengeTab(activeTab);
+    }
+}
+
 // NAVEGACIÓN ENTRE SECCIONES
 document.addEventListener('DOMContentLoaded', function() {
     // Navegación por pestañas del navbar
@@ -3974,26 +4191,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         btn.addEventListener('click', function() {
-            // Remover active de todos los botones
-            document.querySelectorAll('.nav-btn').forEach(b => {
-                b.classList.remove('active');
-                b.removeAttribute('aria-current');
-            });
-            this.classList.add('active');
-            this.setAttribute('aria-current', 'page');
-            
-            // Ocultar todas las secciones
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            
-            // Mostrar la sección correspondiente
-            const sectionId = 'section-' + this.dataset.section;
-            const targetSection = document.getElementById(sectionId);
-            if (targetSection) {
-                targetSection.classList.add('active');
-            }
+            activateSection(this.dataset.section);
         });
     });
-    
+
+    document.querySelectorAll('.challenge-tab').forEach(tab => {
+        tab.addEventListener('click', () => activateChallengeTab(tab.dataset.challengeTab));
+    });
+    activateChallengeTab('sql');
+
+    const nosqlDatasetSelector = document.getElementById('nosqlDatasetSelector');
+    if (nosqlDatasetSelector) {
+        nosqlDatasetSelector.addEventListener('change', () => {
+            if (document.getElementById('nosqlChallengesPanel')?.classList.contains('active')) {
+                selectedNoSQLChallengeId = null;
+                setTimeout(renderNoSQLChallengeHub, 0);
+            }
+        });
+    }
+
     // Preferencias e historial guardados en el navegador.
     loadPreferences();
     applyPreferences();
