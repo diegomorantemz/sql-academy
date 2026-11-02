@@ -282,6 +282,33 @@
                 <p>Escribe consultas SQL y ve los resultados en tiempo real</p>
             </div>
 
+            <div class="example-bar" aria-label="Ejemplos guiados SQL">
+                <div class="example-bar-copy">
+                    <span class="example-bar-eyebrow"><i class="fas fa-wand-magic-sparkles"></i> Ejemplos guiados</span>
+                    <p>Elige una categoría y la consulta se cargará y ejecutará al instante.</p>
+                </div>
+                <div class="example-bar-controls">
+                    <select id="categorySelector" onchange="showExampleByCategory()" aria-label="Categoría de ejemplos SQL del dataset activo">
+                        <option value="basicos">Básicos</option>
+                        <option value="filtros">Filtros</option>
+                        <option value="orden">Ordenamiento</option>
+                        <option value="agregacion">Agregaciones</option>
+                        <option value="groupby">Agrupaciones</option>
+                        <option value="having">HAVING</option>
+                        <option value="join" selected>JOIN</option>
+                        <option value="subconsultas">Subconsultas</option>
+                        <option value="operadores">Operadores</option>
+                        <option value="avanzado">Avanzadas</option>
+                        <option value="modificacion">Modificación</option>
+                        <option value="aleatorio">Aleatorio</option>
+                    </select>
+                    <button type="button" onclick="showExampleByCategory()" class="btn-primary">
+                        <i class="fas fa-bolt"></i> Siguiente ejemplo
+                    </button>
+                </div>
+                <span id="sqlExampleStatus" class="example-status" role="status" aria-live="polite">Elige una categoría para empezar</span>
+            </div>
+
             <div class="practice-layout">
                 <!-- Panel izquierdo: Info -->
                 <div class="practice-sidebar">
@@ -297,88 +324,81 @@
                 <div class="practice-main">
                     <div class="editor-wrapper">
                         <textarea id="sqlEditor" rows="6" aria-label="Editor de consultas SQL" spellcheck="false"
-                            placeholder='Escribe tu consulta sql o Selecciona un ejemplo del menú y presiona "▶"'></textarea>
+                            placeholder="Escribe una consulta o elige un ejemplo para empezar"></textarea>
 
                         <div class="editor-toolbar">
-                            <button id="executeBtn" onclick="runQuery()">
-                                <i class="fas fa-play"></i> Ejecutar (Ctrl+Enter)
-                            </button>
-                            <button onclick="formatEditorSql()" class="btn-secondary" title="Formatear SQL (Ctrl+Shift+F)">
-                                <i class="fas fa-align-left"></i> Formatear
-                            </button>
-                            <button onclick="clearEditor()" class="btn-secondary">
-                                <i class="fas fa-eraser"></i> Limpiar
-                            </button>
-                            <select id="datasetSelector" class="dataset-selector" onchange="loadDataset(this.value)" aria-label="Dataset de práctica">
-                                <option value="escuela" selected>Dataset: Escuela</option>
-                                <option value="tienda">Dataset: Tienda</option>
-                                <option value="biblioteca">Dataset: Biblioteca</option>
-                            </select>
-                            <button onclick="resetDatabase()" class="btn-secondary">
-                                <i class="fas fa-rotate"></i> Reiniciar BD
-                            </button>
-                            <button onclick="exportDatabase()" class="btn-secondary" title="Exportar BD" aria-label="Exportar base de datos">
-                                <i class="fas fa-download"></i>
-                            </button>
-                            <button onclick="importDatabase()" class="btn-secondary" title="Importar BD" aria-label="Importar base de datos">
-                                <i class="fas fa-upload"></i>
-                            </button>
-                            <button onclick="openSQLGuide()" class="btn-secondary" title="Guía de primeros pasos en SQL">
-                                <i class="fas fa-graduation-cap"></i> Guía SQL
-                            </button>
-                            <button id="aiHelpBtn" onclick="openAIHelp('manual')" class="btn-secondary btn-ai" title="Explicar tu consulta con IA">
-                                <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
-                            </button>
-
-                            <span id="persistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite" title="La base de datos se guarda en este navegador (IndexedDB)">
-                                <i class="fas fa-hard-drive"></i> Guardado local
-                            </span>
-
-                            <label class="safe-mode-toggle" title="Pide confirmación antes de ejecutar consultas destructivas">
-                                <input type="checkbox" id="safeModeToggle" checked onchange="toggleSafeMode(this.checked)">
-                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
-                            </label>
-
-                            <div class="example-selector">
-                                <select id="categorySelector" aria-label="Categoría de ejemplos SQL del dataset activo">
-                                    <option value="basicos">Basicos</option>
-                                    <option value="filtros">Filtros</option>
-                                    <option value="orden">Ordenamiento</option>
-                                    <option value="agregacion">Agregaciones</option>
-                                    <option value="groupby">Agrupaciones</option>
-                                    <option value="having">HAVING</option>
-                                    <option value="join" selected>JOIN</option>
-                                    <option value="subconsultas">Subconsultas</option>
-                                    <option value="operadores">Operadores</option>
-                                    <option value="avanzado">Avanzadas</option>
-                                    <option value="modificacion">Modificacion</option>
-                                    <option value="aleatorio">Aleatorio</option>
-                                </select>
-                                <button onclick="showExampleByCategory()" class="btn-secondary">
-                                    <i class="fas fa-play"></i>
+                            <div class="toolbar-group toolbar-group-primary">
+                                <button id="executeBtn" onclick="runQuery()">
+                                    <i class="fas fa-play"></i> Ejecutar
+                                    <span class="btn-shortcut">Ctrl+Enter</span>
+                                </button>
+                                <button onclick="formatEditorSql()" class="btn-secondary" title="Formatear SQL (Ctrl+Shift+F)">
+                                    <i class="fas fa-align-left"></i> Formatear
+                                </button>
+                                <button onclick="clearEditor()" class="btn-secondary">
+                                    <i class="fas fa-eraser"></i> Limpiar
                                 </button>
                             </div>
 
-                            <button onclick="clearHistory()" class="btn-secondary">
-                                <i class="fas fa-trash"></i> Limpiar historial
-                            </button>
+                            <div class="toolbar-group toolbar-group-secondary">
+                                <label class="toolbar-select-label" for="datasetSelector">Dataset</label>
+                                <select id="datasetSelector" class="dataset-selector" onchange="loadDataset(this.value)" aria-label="Dataset de práctica">
+                                    <option value="escuela" selected>Escuela</option>
+                                    <option value="tienda">Tienda</option>
+                                    <option value="biblioteca">Biblioteca</option>
+                                </select>
+                                <button onclick="resetDatabase()" class="btn-secondary">
+                                    <i class="fas fa-rotate"></i> Reiniciar
+                                </button>
+                                <button onclick="exportDatabase()" class="btn-secondary btn-icon" title="Exportar BD" aria-label="Exportar base de datos">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button onclick="importDatabase()" class="btn-secondary btn-icon" title="Importar BD" aria-label="Importar base de datos">
+                                    <i class="fas fa-upload"></i>
+                                </button>
+                                <button onclick="openSQLGuide()" class="btn-secondary" title="Guía de primeros pasos en SQL">
+                                    <i class="fas fa-graduation-cap"></i> Guía
+                                </button>
+                                <button id="aiHelpBtn" onclick="openAIHelp('manual')" class="btn-secondary btn-ai" title="Explicar tu consulta con IA">
+                                    <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
+                                </button>
+                            </div>
+
+                            <div class="toolbar-group toolbar-group-status">
+                                <span id="persistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite" title="La base de datos se guarda en este navegador (IndexedDB)">
+                                    <i class="fas fa-hard-drive"></i> Guardado local
+                                </span>
+
+                                <label class="safe-mode-toggle" title="Pide confirmación antes de ejecutar consultas destructivas">
+                                    <input type="checkbox" id="safeModeToggle" checked onchange="toggleSafeMode(this.checked)">
+                                    <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Historial -->
                     <div class="history-wrapper">
-                        <h4><i class="fas fa-clock-rotate-left"></i> Historial</h4>
+                        <div class="panel-heading">
+                            <h4><i class="fas fa-clock-rotate-left"></i> Historial</h4>
+                            <button type="button" onclick="clearHistory()" class="btn-ghost btn-sm">
+                                <i class="fas fa-trash"></i> Limpiar
+                            </button>
+                        </div>
                         <ul id="historyList">
-                            <li class="empty-history">No hay consultas aun</li>
+                            <li class="empty-history">No hay consultas todavía</li>
                         </ul>
                     </div>
 
                     <!-- Resultados -->
                     <div class="results-wrapper">
-                        <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
+                        <div class="panel-heading">
+                            <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
+                            <span class="panel-hint"><i class="fas fa-keyboard"></i> Ctrl+Enter para ejecutar</span>
+                        </div>
                         <div id="resultOutput" class="result-placeholder" aria-live="polite">
                             <i class="fas fa-lightbulb placeholder-icon"></i>
-                            <p>Escribe una consulta y presiona "Ejecutar"</p>
+                            <p>Ejecuta una consulta o elige un ejemplo para empezar</p>
                         </div>
                     </div>
                 </div>
@@ -448,51 +468,73 @@
                 </aside>
 
                 <div class="nosql-main">
+                    <div class="example-bar example-bar-nosql" aria-label="Ejemplos guiados NoSQL">
+                        <div class="example-bar-copy">
+                            <span class="example-bar-eyebrow"><i class="fas fa-lightbulb"></i> Ejemplos NoSQL</span>
+                            <p>Elige un ejemplo y el comando se cargará y ejecutará al instante.</p>
+                        </div>
+                        <div class="example-bar-controls">
+                            <select id="nosqlExampleSelector" onchange="loadNoSQLExample()" aria-label="Ejemplos NoSQL"></select>
+                            <button type="button" onclick="loadNextNoSQLExample()" class="btn-primary">
+                                <i class="fas fa-forward"></i> Siguiente ejemplo
+                            </button>
+                        </div>
+                        <span id="nosqlExampleStatus" class="example-status" role="status" aria-live="polite">Elige un ejemplo para empezar</span>
+                    </div>
+
                     <div class="editor-wrapper">
                         <textarea id="nosqlEditor" rows="6" aria-label="Editor de comandos NoSQL" spellcheck="false"
                             placeholder="Escribe un comando, por ejemplo: db.estudiantes.find({})"></textarea>
 
                         <div class="editor-toolbar nosql-toolbar">
-                            <button id="nosqlExecuteBtn" onclick="runNoSQLQuery()">
-                                <i class="fas fa-play"></i> Ejecutar (Ctrl+Enter)
-                            </button>
-                            <button type="button" onclick="clearNoSQLResult()" class="btn-secondary">
-                                <i class="fas fa-eraser"></i> Limpiar
-                            </button>
-                            <div class="example-selector">
-                                <select id="nosqlExampleSelector" aria-label="Ejemplos NoSQL"></select>
-                                <button type="button" onclick="loadNoSQLExample()" class="btn-secondary">
-                                    <i class="fas fa-lightbulb"></i> Ejemplo
+                            <div class="toolbar-group toolbar-group-primary">
+                                <button id="nosqlExecuteBtn" onclick="runNoSQLQuery()">
+                                    <i class="fas fa-play"></i> Ejecutar
+                                    <span class="btn-shortcut">Ctrl+Enter</span>
+                                </button>
+                                <button type="button" onclick="clearNoSQLResult()" class="btn-secondary">
+                                    <i class="fas fa-eraser"></i> Limpiar
                                 </button>
                             </div>
-                            <button type="button" onclick="openNoSQLAIHelp()" class="btn-secondary btn-ai" title="Explicar tu comando con IA">
-                                <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
-                            </button>
-                            <label class="safe-mode-toggle" title="Pide confirmación antes de operaciones destructivas">
-                                <input type="checkbox" id="nosqlSafeModeToggle" checked onchange="toggleNoSQLSafeMode(this.checked)">
-                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
-                            </label>
-                            <span id="nosqlPersistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite">
-                                <i class="fas fa-hard-drive"></i> Guardado local
-                            </span>
-                            <button type="button" onclick="clearNoSQLHistory()" class="btn-secondary">
-                                <i class="fas fa-trash"></i> Limpiar historial
-                            </button>
+
+                            <div class="toolbar-group toolbar-group-secondary">
+                                <button type="button" onclick="openNoSQLAIHelp()" class="btn-secondary btn-ai" title="Explicar tu comando con IA">
+                                    <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
+                                </button>
+                                <label class="safe-mode-toggle" title="Pide confirmación antes de operaciones destructivas">
+                                    <input type="checkbox" id="nosqlSafeModeToggle" checked onchange="toggleNoSQLSafeMode(this.checked)">
+                                    <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                                </label>
+                            </div>
+
+                            <div class="toolbar-group toolbar-group-status">
+                                <span id="nosqlPersistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite">
+                                    <i class="fas fa-hard-drive"></i> Guardado local
+                                </span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="history-wrapper">
-                        <h4><i class="fas fa-clock-rotate-left"></i> Historial NoSQL</h4>
+                        <div class="panel-heading">
+                            <h4><i class="fas fa-clock-rotate-left"></i> Historial NoSQL</h4>
+                            <button type="button" onclick="clearNoSQLHistory()" class="btn-ghost btn-sm">
+                                <i class="fas fa-trash"></i> Limpiar
+                            </button>
+                        </div>
                         <ul id="nosqlHistoryList">
                             <li class="empty-history">Todavía no hay comandos ejecutados</li>
                         </ul>
                     </div>
 
                     <div class="results-wrapper">
-                        <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
+                        <div class="panel-heading">
+                            <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
+                            <span class="panel-hint"><i class="fas fa-keyboard"></i> Ctrl+Enter para ejecutar</span>
+                        </div>
                         <div id="nosqlResultOutput" class="result-placeholder" aria-live="polite">
                             <i class="fas fa-lightbulb placeholder-icon"></i>
-                            <p>Ejecuta un comando para ver los documentos</p>
+                            <p>Ejecuta un comando o elige un ejemplo para ver los documentos</p>
                         </div>
                     </div>
                 </div>

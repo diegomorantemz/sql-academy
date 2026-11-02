@@ -1718,7 +1718,7 @@ function updateHistoryDisplay() {
     if (queryHistory.length === 0) {
         const empty = document.createElement('li');
         empty.className = 'empty-history';
-        empty.textContent = 'No hay consultas aun';
+        empty.textContent = 'No hay consultas todavía';
         list.appendChild(empty);
         return;
     }
@@ -2749,7 +2749,9 @@ function renderCategorySelector() {
     }
 }
 
-// MOSTRAR EJEMPLO POR CATEGORIA
+// MOSTRAR Y EJECUTAR EJEMPLO POR CATEGORIA
+let lastSqlExample = null;
+
 function showExampleByCategory() {
     const selector = document.getElementById('categorySelector');
     if (!selector) {
@@ -2772,33 +2774,34 @@ function showExampleByCategory() {
 
     const categoryData = categories[selectedCategory];
     if (!categoryData || !Array.isArray(categoryData.ejemplos) || !categoryData.ejemplos.length) return;
-    
+
     const ejemplos = categoryData.ejemplos;
-    const ejemplo = ejemplos[Math.floor(Math.random() * ejemplos.length)];
-    
+    let ejemplo = ejemplos[Math.floor(Math.random() * ejemplos.length)];
+    let exampleKey = `${selectedCategory}:${ejemplo.sql}`;
+
+    if (ejemplos.length > 1 && exampleKey === lastSqlExample) {
+        const alternatives = ejemplos.filter(item => `${selectedCategory}:${item.sql}` !== lastSqlExample);
+        if (alternatives.length) {
+            ejemplo = alternatives[Math.floor(Math.random() * alternatives.length)];
+            exampleKey = `${selectedCategory}:${ejemplo.sql}`;
+        }
+    }
+
+    lastSqlExample = exampleKey;
+
     const editor = document.getElementById('sqlEditor');
     if (editor) {
         editor.value = ejemplo.sql;
+        editor.selectionStart = editor.selectionEnd = editor.value.length;
         editor.focus();
     }
-    
-    document.getElementById('resultOutput').classList.remove('result-placeholder');
-    document.getElementById('resultOutput').innerHTML = `
-        <div style="padding: 15px; background: #f0f4ff; border-radius: 8px; border-left: 4px solid #336791;">
-            <div style="color: #336791; font-weight: 700; font-size: 16px; margin-bottom: 5px;">
-                <i class="fas fa-book"></i> ${escapeHtml(categoryData.titulo)}
-            </div>
-            <div style="color: #555; font-size: 14px; margin-bottom: 8px;">
-                <i class="fas fa-lightbulb"></i> ${escapeHtml(ejemplo.titulo)}
-            </div>
-            <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">
-                ${escapeHtml(ejemplo.sql)}
-            </div>
-            <div style="margin-top: 8px; font-size: 12px; color: #999;">
-                <i class="fas fa-clock"></i> Presiona <strong>"Ejecutar"</strong> o <strong>Ctrl+Enter</strong> para ver el resultado
-            </div>
-        </div>
-    `;
+
+    const status = document.getElementById('sqlExampleStatus');
+    if (status) {
+        status.textContent = `Ejemplo: ${ejemplo.titulo}`;
+    }
+
+    runQuery();
 }
 
 function showExamples() {
@@ -3699,6 +3702,13 @@ function initChallenges() {
 
 function refreshPracticeContentForDataset() {
     renderCategorySelector();
+    lastSqlExample = null;
+
+    const exampleStatus = document.getElementById('sqlExampleStatus');
+    if (exampleStatus) {
+        exampleStatus.textContent = 'Elige una categoría o pulsa «Siguiente ejemplo»';
+    }
+
     currentChallengeId = null;
     challengeAttempts = 0;
     renderChallengeList();

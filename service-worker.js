@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sql-academy-v6';
+const CACHE_VERSION = 'sql-academy-v7';
 const APP_SHELL = [
     './',
     './index.html',

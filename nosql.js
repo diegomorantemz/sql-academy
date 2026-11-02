@@ -301,9 +301,11 @@
         if (!select) return;
 
         const examples = getActiveExamples();
+        const status = getElement('nosqlExampleStatus');
         if (!examples.length) {
             select.innerHTML = '<option value="">No hay ejemplos para este dataset</option>';
             select.disabled = true;
+            if (status) status.textContent = 'No hay ejemplos para este dataset';
             return;
         }
 
@@ -311,6 +313,7 @@
         select.innerHTML = examples.map((example, index) => (
             `<option value="${index}">${escapeHtml(example.category)} · ${escapeHtml(example.title)}</option>`
         )).join('');
+        if (status) status.textContent = 'Elige un ejemplo para ejecutarlo al instante';
     }
 
     function loadExample() {
@@ -318,7 +321,8 @@
         const editor = getElement('nosqlEditor');
         if (!select || !editor) return;
 
-        const example = getActiveExamples()[Number(select.value)];
+        const examples = getActiveExamples();
+        const example = examples[Number(select.value)];
         if (!example) return;
 
         if (example.dataset && example.dataset !== datasetName) {
@@ -327,7 +331,26 @@
         }
 
         editor.value = example.query;
+        editor.selectionStart = editor.selectionEnd = editor.value.length;
         editor.focus();
+
+        const status = getElement('nosqlExampleStatus');
+        if (status) status.textContent = `Ejemplo: ${example.title}`;
+
+        runQuery();
+    }
+
+    function loadNextExample() {
+        const select = getElement('nosqlExampleSelector');
+        const examples = getActiveExamples();
+        if (!select || !examples.length) return;
+
+        const current = Number(select.value);
+        const next = Number.isFinite(current) && current >= 0
+            ? (current + 1) % examples.length
+            : 0;
+        select.value = String(next);
+        loadExample();
     }
 
     function toggleSafeMode(enabled) {
@@ -463,7 +486,7 @@
         output.className = 'result-placeholder';
         output.innerHTML = `
             <i class="fas fa-lightbulb placeholder-icon"></i>
-            <p>Ejecuta un comando para ver los documentos</p>
+            <p>Ejecuta un comando o elige un ejemplo para ver los documentos</p>
         `;
     }
 
@@ -776,6 +799,7 @@
     global.clearNoSQLHistory = clearHistory;
     global.clearNoSQLResult = clearResult;
     global.loadNoSQLExample = loadExample;
+    global.loadNextNoSQLExample = loadNextExample;
     global.loadNoSQLCollection = loadCollection;
     global.resetNoSQLDatabase = resetDatabase;
     global.changeNoSQLDataset = changeDataset;

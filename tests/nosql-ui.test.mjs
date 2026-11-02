@@ -11,6 +11,7 @@ const dom = new JSDOM(
             <option value="biblioteca">Biblioteca</option>
         </select>
         <select id="nosqlExampleSelector"></select>
+        <span id="nosqlExampleStatus"></span>
         <textarea id="nosqlEditor"></textarea>
         <div id="nosqlCollectionList"></div>
         <p id="nosqlCollectionSummary"></p>
@@ -72,9 +73,17 @@ test('el laboratorio NoSQL filtra ejemplos y retos por dataset', () => {
 test('los ejemplos y retos cargan el contenido del dataset activo', () => {
     window.changeNoSQLDataset('tienda', { silent: true });
     window.loadNoSQLExample();
-    assert.match(window.document.querySelector('#nosqlEditor').value, /^db\.productos\.find/);
 
     const editor = window.document.querySelector('#nosqlEditor');
+    const exampleStatus = window.document.querySelector('#nosqlExampleStatus');
+    assert.match(editor.value, /^db\.productos\.find/);
+    assert.match(exampleStatus.textContent, /^Ejemplo: /);
+    assert.match(window.document.querySelector('#nosqlResultOutput').textContent, /documentos/);
+
+    const firstExample = editor.value;
+    window.loadNextNoSQLExample();
+    assert.notEqual(editor.value, firstExample, 'Siguiente ejemplo debe cambiar el comando');
+    assert.match(exampleStatus.textContent, /^Ejemplo: /);
     const challenge = getChallenge('nosql-tienda-stock');
 
     window.loadNoSQLChallenge(challenge.id);

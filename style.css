@@ -17,43 +17,57 @@
 }
 
 :root {
-    --postgres-blue: #336791;
-    --postgres-light: #0064A5;
-    --postgres-dark: #1B2F4A;
-    --postgres-bg: #F5F5F5;
+    --postgres-blue: #2f6f9f;
+    --postgres-light: #3b82f6;
+    --postgres-dark: #132a43;
+    --postgres-bg: #f4f7fb;
     --postgres-white: #FFFFFF;
-    --postgres-border: #D4D4D4;
-    --postgres-shadow: rgba(51, 103, 145, 0.15);
-    --postgres-text: #2C3E50;
+    --postgres-border: #dbe4ee;
+    --postgres-shadow: rgba(47, 111, 159, 0.16);
+    --postgres-text: #1f2937;
+    --surface: #ffffff;
+    --surface-muted: #f7f9fc;
+    --surface-strong: #eef3f9;
+    --text-strong: #132a43;
+    --text-muted: #64748b;
+    --accent-soft: rgba(47, 111, 159, 0.1);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
+    --focus-ring: 0 0 0 3px rgba(47, 111, 159, 0.18);
 }
 
 body {
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--postgres-bg);
-    color: #2C3E50;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: linear-gradient(180deg, #eef4fb 0%, #f8fafc 280px, #f3f6fa 100%);
+    color: var(--postgres-text);
     min-height: 100vh;
+    line-height: 1.5;
 }
 
 /* ===== APP CONTAINER ===== */
 .app-container {
-    max-width: 1400px;
+    max-width: 1440px;
     margin: 0 auto;
-    background: var(--postgres-white);
+    background: #f8fafc;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 0 40px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-lg);
 }
 
 /* ===== HEADER ===== */
 .app-header {
-    background: var(--postgres-blue);
+    background: linear-gradient(135deg, #173a5e 0%, #2f6f9f 58%, #3b82f6 135%);
     color: white;
     padding: 0 30px;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.18);
 }
 
 .header-content {
@@ -62,59 +76,69 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 64px;
+    height: 68px;
+    gap: 18px;
 }
 
 .logo {
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: 1.3em;
+    font-size: 1.24em;
     font-weight: 700;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
 }
 
 .logo i {
-    font-size: 1.8em;
+    font-size: 1.7em;
     color: #FFD700;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.18));
 }
 
 .badge-postgres {
-    background: rgba(255,255,255,0.2);
-    padding: 2px 12px;
-    border-radius: 12px;
-    font-size: 0.6em;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 0.58em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .main-nav {
     display: flex;
     gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.07);
 }
 
 .nav-btn {
     background: transparent;
     border: none;
-    color: rgba(255,255,255,0.7);
-    padding: 8px 18px;
-    border-radius: 6px;
-    font-size: 0.9em;
-    font-weight: 500;
+    color: rgba(255,255,255,0.76);
+    padding: 9px 15px;
+    border-radius: 8px;
+    font-size: 0.86em;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
+    white-space: nowrap;
 }
 
 .nav-btn:hover {
     color: white;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.12);
 }
 
 .nav-btn.active {
     color: white;
-    background: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.17);
     box-shadow: inset 0 -2px 0 #FFD700;
 }
 
@@ -184,9 +208,12 @@ body {
 
 .section {
     display: none;
-    padding: 30px;
+    padding: 32px 36px 42px;
     animation: fadeIn 0.3s ease;
     flex: 1;
+    width: 100%;
+    max-width: 1320px;
+    margin: 0 auto;
 }
 
 .section.active {
@@ -199,25 +226,28 @@ body {
 }
 
 .section-header {
-    margin-bottom: 30px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid var(--postgres-border);
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--postgres-border);
 }
 
 .section-header h2 {
-    font-size: 1.8em;
+    font-size: 1.65em;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
     color: var(--postgres-dark);
 }
 
 .section-header h2 i {
     color: var(--postgres-blue);
-    margin-right: 12px;
+    margin-right: 10px;
 }
 
 .section-header p {
-    color: #666;
-    font-size: 1.05em;
-    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.98em;
+    margin-top: 5px;
+    max-width: 780px;
 }
 
 /* ===== LEARN SECTION ===== */
@@ -229,20 +259,20 @@ body {
 }
 
 .learn-card {
-    background: white;
-    border-radius: 12px;
+    background: var(--surface);
+    border-radius: var(--radius-md);
     padding: 20px 15px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s;
-    border: 2px solid var(--postgres-border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid var(--postgres-border);
+    box-shadow: var(--shadow-sm);
 }
 
 .learn-card:hover {
     transform: translateY(-4px);
-    border-color: var(--postgres-blue);
-    box-shadow: 0 8px 30px var(--postgres-shadow);
+    border-color: rgba(47, 111, 159, 0.5);
+    box-shadow: var(--shadow-md);
 }
 
 .learn-card-icon {
@@ -284,9 +314,11 @@ body {
 }
 
 .comparison-wrapper {
-    background: var(--postgres-bg);
-    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
     padding: 20px;
+    box-shadow: var(--shadow-sm);
 }
 
 .comparison-wrapper h3 {
@@ -335,11 +367,82 @@ body {
 }
 
 /* ===== PRACTICE SECTION ===== */
+.example-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 20px;
+    margin-bottom: 22px;
+    padding: 16px 18px;
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #ffffff 0%, #f3f8ff 100%);
+    box-shadow: var(--shadow-sm);
+}
+
+.example-bar-copy {
+    min-width: 0;
+}
+
+.example-bar-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.example-bar-eyebrow i {
+    color: #d99a00;
+}
+
+.example-bar-copy p {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.example-bar-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.example-bar-controls select {
+    min-width: 230px;
+}
+
+.example-status {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 18px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.example-status:not(:empty)::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--postgres-blue);
+    opacity: 0.65;
+    flex: 0 0 auto;
+}
+
 .practice-layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 290px minmax(0, 1fr);
     gap: 24px;
     margin-bottom: 30px;
+    align-items: start;
 }
 
 @media (max-width: 992px) {
@@ -349,38 +452,52 @@ body {
 }
 
 .practice-sidebar {
-    background: var(--postgres-bg);
-    border-radius: 12px;
-    padding: 16px;
-    max-height: 600px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    max-height: calc(100vh - 120px);
     overflow-y: auto;
+    box-shadow: none;
+    position: sticky;
+    top: 88px;
+}
+
+@media (max-width: 992px) {
+    .practice-sidebar {
+        position: static;
+        max-height: none;
+    }
 }
 
 .practice-main {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
+    min-width: 0;
 }
 
 .editor-wrapper {
-    background: var(--postgres-bg);
-    border-radius: 12px;
-    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
 }
 
 #sqlEditor {
     width: 100%;
     height: 160px;
-    padding: 12px 16px;
-    border: 2px solid var(--postgres-border);
-    border-radius: 8px;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.6;
+    padding: 13px 16px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 13.5px;
+    line-height: 1.65;
     resize: none;
-    background: white;
+    background: var(--surface-muted);
     color: var(--postgres-text);
-    transition: border-color 0.3s;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     overflow: auto !important;
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
@@ -389,49 +506,144 @@ body {
 #sqlEditor:focus {
     outline: none;
     border-color: var(--postgres-blue);
-    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
+    background: var(--surface);
+    box-shadow: var(--focus-ring);
 }
 
 .editor-toolbar {
     display: flex;
-    gap: 8px;
     flex-wrap: wrap;
-    margin-top: 12px;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--postgres-border);
+}
+
+.toolbar-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.toolbar-group-primary {
+    flex: 1 1 auto;
+}
+
+.toolbar-group-secondary {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+}
+
+.toolbar-group-status {
+    margin-left: auto;
+}
+
+.toolbar-select-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.editor-toolbar select {
+    min-height: 38px;
 }
 
 button {
-    padding: 8px 18px;
+    padding: 9px 16px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
+    font-family: inherit;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     font-size: 13px;
+    line-height: 1.2;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    gap: 7px;
 }
 
-#executeBtn {
-    background: var(--postgres-blue);
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+input:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+#executeBtn,
+#nosqlExecuteBtn,
+.btn-primary {
+    background: linear-gradient(135deg, var(--postgres-blue), var(--postgres-light));
     color: white;
+    box-shadow: 0 6px 16px rgba(47, 111, 159, 0.2);
 }
 
-#executeBtn:hover {
-    background: var(--postgres-light);
+#executeBtn:hover,
+#nosqlExecuteBtn:hover,
+.btn-primary:hover {
+    background: linear-gradient(135deg, #28618c, #2f7ae5);
     transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(51, 103, 145, 0.3);
+    box-shadow: 0 9px 22px rgba(47, 111, 159, 0.28);
+}
+
+.btn-shortcut {
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.18);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .btn-secondary {
-    background: white;
+    background: var(--surface);
     color: var(--postgres-text);
     border: 1px solid var(--postgres-border);
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-secondary:hover {
-    background: var(--postgres-bg);
+    background: var(--surface-muted);
+    border-color: rgba(47, 111, 159, 0.45);
+    color: var(--text-strong);
     transform: translateY(-1px);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    box-shadow: none;
+}
+
+.btn-ghost:hover {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.btn-icon {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
 }
 
 .btn-save {
@@ -602,77 +814,123 @@ button {
 }
 
 .example-selector select,
+.example-bar select,
 .dataset-selector {
-    padding: 6px 12px;
+    min-height: 38px;
+    padding: 8px 12px;
     border: 1px solid var(--postgres-border);
-    border-radius: 6px;
+    border-radius: 8px;
+    font-family: inherit;
     font-size: 13px;
-    background: white;
+    font-weight: 600;
+    background: var(--surface);
     color: var(--postgres-text);
     cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.example-selector select:hover,
+.example-bar select:hover,
+.dataset-selector:hover {
+    border-color: rgba(47, 111, 159, 0.45);
 }
 
 .dataset-selector:focus,
-.example-selector select:focus {
+.example-selector select:focus,
+.example-bar select:focus {
     outline: none;
     border-color: var(--postgres-blue);
-    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
+    box-shadow: var(--focus-ring);
 }
 
 /* ===== HISTORIAL ===== */
-.history-wrapper {
-    background: var(--postgres-bg);
-    border-radius: 12px;
-    padding: 12px 16px;
+.history-wrapper,
+.results-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
 }
 
-.history-wrapper h4 {
-    color: var(--postgres-dark);
-    font-size: 0.9em;
-    margin-bottom: 8px;
+.panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
 }
 
-.history-wrapper h4 i {
+.panel-heading h4,
+.history-wrapper h4,
+.results-wrapper h4 {
+    color: var(--text-strong);
+    font-size: 0.82em;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.panel-heading h4 i,
+.history-wrapper h4 i,
+.results-wrapper h4 i {
     color: var(--postgres-blue);
-    margin-right: 6px;
+    margin-right: 0;
+}
+
+.panel-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-muted);
+    font-size: 11px;
 }
 
 #historyList {
     list-style: none;
     padding: 0;
-    max-height: 120px;
+    max-height: 140px;
     overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 #historyList li {
-    padding: 6px 10px;
-    margin: 2px 0;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    transition: background 0.2s;
+    padding: 8px 10px;
+    margin: 0;
+    background: var(--surface-muted);
+    border: 1px solid transparent;
     border-left: 3px solid var(--postgres-blue);
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 12px;
+    transition: background 0.2s ease, border-color 0.2s ease;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 #historyList li:hover {
-    background: #e8f0f5;
+    background: var(--accent-soft);
 }
 
 #historyList li.empty-history {
-    color: #999;
-    border-left-color: #999;
+    color: var(--text-muted);
+    border-left-color: var(--postgres-border);
     cursor: default;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: inherit;
     font-style: italic;
 }
 
 #historyList li.empty-history:hover {
-    background: white;
+    background: var(--surface-muted);
 }
 
 /* ===== MENSAJES DEL PANEL DE RESULTADOS ===== */
@@ -747,44 +1005,39 @@ button {
 }
 
 /* ===== RESULTADOS ===== */
-.results-wrapper {
-    background: var(--postgres-bg);
-    border-radius: 12px;
-    padding: 12px 16px;
-}
-
-.results-wrapper h4 {
-    color: var(--postgres-dark);
-    font-size: 0.9em;
-    margin-bottom: 8px;
-}
-
-.results-wrapper h4 i {
-    color: var(--postgres-blue);
-    margin-right: 6px;
-}
-
 #resultOutput {
-    background: white;
-    border-radius: 8px;
-    padding: 12px;
-    min-height: 80px;
-    max-height: 400px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    padding: 14px;
+    min-height: 110px;
+    max-height: 420px;
     overflow: auto;
     font-size: 14px;
 }
 
 .result-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 110px;
+    padding: 24px;
+    color: var(--text-muted);
     text-align: center;
-    color: #999;
-    padding: 20px;
+}
+
+.result-placeholder p {
+    max-width: 460px;
 }
 
 .placeholder-icon {
-    font-size: 2em;
+    font-size: 1.8em;
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 2px;
     color: var(--postgres-blue);
+    opacity: 0.8;
 }
 
 .result-container {
@@ -930,20 +1183,25 @@ button {
 
 /* ===== TABLE EDITOR ===== */
 .table-editor {
-    background: var(--postgres-bg);
-    border-radius: 12px;
-    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
     margin-top: 16px;
+    box-shadow: var(--shadow-sm);
 }
 
 .table-editor h4 {
-    color: var(--postgres-dark);
+    color: var(--text-strong);
     margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
 }
 
 .table-editor h4 i {
     color: var(--postgres-blue);
-    margin-right: 6px;
+    margin-right: 0;
 }
 
 .table-editor-controls {
@@ -954,16 +1212,21 @@ button {
 }
 
 .table-editor select {
-    padding: 6px 12px;
+    min-height: 38px;
+    padding: 8px 12px;
     border: 1px solid var(--postgres-border);
-    border-radius: 6px;
-    background: white;
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
     font-size: 13px;
+    font-weight: 600;
 }
 
 #tableEditorContent {
-    background: white;
-    border-radius: 8px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
     padding: 10px;
     max-height: 300px;
     overflow: auto;
@@ -1031,17 +1294,19 @@ button {
 }
 
 .challenge-list-panel {
-    background: var(--postgres-bg);
-    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 14px;
+    box-shadow: var(--shadow-sm);
 }
 
 .challenge-progress {
-    background: white;
-    border: 1px solid #e5eaf0;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
     border-radius: 10px;
     padding: 12px;
 }
@@ -1053,17 +1318,17 @@ button {
     gap: 10px;
     margin-bottom: 8px;
     font-size: 12px;
-    color: #5b6775;
+    color: var(--text-muted);
 }
 
 .challenge-progress-head strong {
-    color: #336791;
+    color: var(--postgres-blue);
 }
 
 .challenge-progress-track {
     height: 8px;
     border-radius: 999px;
-    background: #edf1f5;
+    background: var(--surface-strong);
     overflow: hidden;
 }
 
@@ -1071,7 +1336,7 @@ button {
     height: 100%;
     width: 0%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #336791, #6c5ce7);
+    background: linear-gradient(90deg, var(--postgres-blue), #6c5ce7);
     transition: width 0.35s ease;
 }
 
@@ -1084,27 +1349,27 @@ button {
 .challenge-card {
     width: 100%;
     text-align: left;
-    background: white;
-    border: 1px solid #e5eaf0;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
     border-left: 4px solid #cbd5e1;
     border-radius: 9px;
     padding: 10px 12px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
 .challenge-card:hover {
-    border-color: #b9cfe3;
+    border-color: rgba(47, 111, 159, 0.45);
     transform: translateY(-1px);
-    box-shadow: 0 5px 14px rgba(51, 103, 145, 0.08);
+    box-shadow: var(--shadow-sm);
 }
 
 .challenge-card.active {
-    border-left-color: #336791;
-    background: #f4f8fc;
+    border-left-color: var(--postgres-blue);
+    background: var(--accent-soft);
 }
 
 .challenge-card.completed {
@@ -1115,7 +1380,7 @@ button {
 .challenge-card-title {
     font-size: 13px;
     font-weight: 700;
-    color: #334155;
+    color: var(--text-strong);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1131,7 +1396,7 @@ button {
     align-items: center;
     gap: 8px;
     font-size: 10px;
-    color: #7b8794;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -1163,15 +1428,17 @@ button {
 }
 
 .challenge-detail {
-    background: var(--postgres-bg);
-    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
     padding: 18px;
+    box-shadow: var(--shadow-sm);
 }
 
 .challenge-empty {
     text-align: center;
     padding: 46px 18px;
-    color: #7b8794;
+    color: var(--text-muted);
 }
 
 .challenge-empty > i {
@@ -1181,7 +1448,7 @@ button {
 }
 
 .challenge-empty h3 {
-    color: #334155;
+    color: var(--text-strong);
     margin-bottom: 8px;
 }
 
@@ -1408,9 +1675,11 @@ button {
 }
 
 .analyze-card {
-    background: var(--postgres-bg);
-    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
     padding: 20px;
+    box-shadow: var(--shadow-sm);
 }
 
 .analyze-card.full-width {
@@ -1691,13 +1960,21 @@ button {
 }
 
 /* ===== INFO PANEL ===== */
+.info-panel {
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
 .info-panel h3 {
-    color: var(--postgres-dark);
+    color: var(--text-strong);
     font-size: 0.95em;
     margin-bottom: 12px;
     position: sticky;
     top: 0;
-    background: var(--postgres-bg);
+    background: var(--surface);
     padding: 8px 0;
     z-index: 5;
 }
@@ -1708,11 +1985,11 @@ button {
 }
 
 .table-card {
-    background: white;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
     border-radius: 8px;
     padding: 10px;
     margin-bottom: 12px;
-    border: 1px solid var(--postgres-border);
 }
 
 .table-card:last-child {
@@ -1802,20 +2079,20 @@ button {
 }
 
 .concept-card {
-    background: white;
-    border-radius: 12px;
+    background: var(--surface);
+    border-radius: var(--radius-md);
     padding: 24px 20px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s;
-    border: 2px solid var(--postgres-border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid var(--postgres-border);
+    box-shadow: var(--shadow-sm);
 }
 
 .concept-card:hover {
     transform: translateY(-4px);
-    border-color: var(--postgres-blue);
-    box-shadow: 0 8px 30px var(--postgres-shadow);
+    border-color: rgba(47, 111, 159, 0.5);
+    box-shadow: var(--shadow-md);
 }
 
 .concept-icon {
@@ -2656,6 +2933,16 @@ button {
     --postgres-border: #334155;
     --postgres-text: #e2e8f0;
     --postgres-shadow: rgba(0, 0, 0, 0.4);
+    --surface: #111827;
+    --surface-muted: #0f172a;
+    --surface-strong: #1e293b;
+    --text-strong: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent-soft: rgba(59, 130, 246, 0.14);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 12px 34px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.45);
+    --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.22);
 }
 
 [data-theme="dark"] body {
@@ -2769,8 +3056,10 @@ button {
 [data-theme="dark"] .challenge-level.avanzado { background: #7f1d1d; color: #fecaca; }
 
 [data-theme="dark"] #sqlEditor,
+[data-theme="dark"] #nosqlEditor,
 [data-theme="dark"] #challengeEditor,
 [data-theme="dark"] .example-selector select,
+[data-theme="dark"] .example-bar select,
 [data-theme="dark"] .dataset-selector,
 [data-theme="dark"] .table-editor select,
 [data-theme="dark"] #tableEditorContent td input {
@@ -2787,6 +3076,77 @@ button {
 
 [data-theme="dark"] .btn-secondary:hover {
     background: #273449;
+}
+
+[data-theme="dark"] .example-bar {
+    background: linear-gradient(135deg, #111827 0%, #0f1b2d 100%);
+    border-color: #334155;
+}
+
+[data-theme="dark"] .example-bar-eyebrow {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .example-bar-copy p,
+[data-theme="dark"] .example-status,
+[data-theme="dark"] .panel-hint,
+[data-theme="dark"] .toolbar-select-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .editor-wrapper,
+[data-theme="dark"] .history-wrapper,
+[data-theme="dark"] .results-wrapper,
+[data-theme="dark"] .info-panel,
+[data-theme="dark"] .challenge-list-panel,
+[data-theme="dark"] .challenge-detail,
+[data-theme="dark"] .table-editor,
+[data-theme="dark"] .nosql-challenges-panel {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .panel-heading h4,
+[data-theme="dark"] .table-editor h4,
+[data-theme="dark"] .info-panel h3 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .info-panel h3 {
+    background: #111827;
+}
+
+[data-theme="dark"] .table-card,
+[data-theme="dark"] .challenge-progress,
+[data-theme="dark"] #nosqlHistoryList li {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] #resultOutput,
+[data-theme="dark"] .nosql-result-output {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .nosql-collection-btn {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .nosql-collection-btn:hover {
+    background: #172554;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .btn-ghost {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .btn-ghost:hover {
+    background: #1e293b;
+    color: #bfdbfe;
 }
 
 [data-theme="dark"] .persistence-status,
@@ -3007,7 +3367,7 @@ button {
 }
 
 .nosql-muted {
-    color: #6b7280;
+    color: var(--text-muted);
     font-size: 0.82em;
     line-height: 1.45;
 }
@@ -3025,24 +3385,26 @@ button {
     justify-content: space-between;
     gap: 8px;
     width: 100%;
-    padding: 8px 10px;
+    padding: 9px 11px;
     border: 1px solid var(--postgres-border);
-    border-radius: 7px;
-    background: white;
-    color: #2c3e50;
+    border-radius: 8px;
+    background: var(--surface-muted);
+    color: var(--postgres-text);
     font-size: 12px;
     font-weight: 600;
     text-align: left;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .nosql-collection-btn:hover {
-    border-color: var(--postgres-blue);
+    border-color: rgba(47, 111, 159, 0.45);
+    background: var(--accent-soft);
     color: var(--postgres-blue);
     transform: translateY(-1px);
 }
 
 .nosql-collection-btn small {
-    color: #6b7280;
+    color: var(--text-muted);
     font-size: 10px;
     font-weight: 500;
 }
@@ -3080,16 +3442,16 @@ button {
 #nosqlEditor {
     width: 100%;
     height: 180px;
-    padding: 12px 16px;
-    border: 2px solid var(--postgres-border);
-    border-radius: 8px;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.6;
+    padding: 13px 16px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 13.5px;
+    line-height: 1.65;
     resize: vertical;
-    background: white;
+    background: var(--surface-muted);
     color: var(--postgres-text);
-    transition: border-color 0.3s;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     white-space: pre-wrap;
     word-wrap: break-word;
 }
@@ -3097,7 +3459,8 @@ button {
 #nosqlEditor:focus {
     outline: none;
     border-color: var(--postgres-blue);
-    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
+    background: var(--surface);
+    box-shadow: var(--focus-ring);
 }
 
 .nosql-toolbar {
@@ -3107,22 +3470,27 @@ button {
 #nosqlHistoryList {
     list-style: none;
     padding: 0;
-    max-height: 120px;
+    max-height: 140px;
     overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 #nosqlHistoryList li {
-    padding: 5px 8px;
-    margin: 2px 0;
-    background: white;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
+    padding: 8px 10px;
+    margin: 0;
+    background: var(--surface-muted);
+    border: 1px solid transparent;
+    border-left: 3px solid var(--postgres-blue);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
     font-size: 12px;
-    transition: background 0.2s;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 #nosqlHistoryList li:hover {
-    background: #e9f0f7;
+    background: var(--accent-soft);
 }
 
 .nosql-history-query {
@@ -3131,7 +3499,7 @@ button {
     padding: 0;
     background: transparent;
     border: 0;
-    color: #2c3e50;
+    color: var(--postgres-text);
     font-family: inherit;
     font-size: inherit;
     font-weight: 400;
@@ -3142,10 +3510,11 @@ button {
 }
 
 .nosql-result-output {
-    background: white;
-    border-radius: 8px;
-    padding: 12px;
-    min-height: 80px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    padding: 14px;
+    min-height: 110px;
     max-height: 520px;
     overflow: auto;
     font-size: 14px;
@@ -3163,7 +3532,7 @@ button {
     border-radius: 7px;
     background: #0f172a;
     color: #dbeafe;
-    font-family: 'Courier New', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
     font-size: 12px;
     line-height: 1.5;
     overflow: auto;
@@ -3184,9 +3553,10 @@ button {
 .nosql-challenges-panel {
     margin-top: 8px;
     padding: 18px;
-    border: 2px solid var(--postgres-border);
-    border-radius: 12px;
-    background: var(--postgres-bg);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
 }
 
 .nosql-challenges-head {
@@ -3198,7 +3568,7 @@ button {
 }
 
 .nosql-challenges-head h3 {
-    color: var(--postgres-dark);
+    color: var(--text-strong);
     font-size: 1.05em;
     margin-bottom: 3px;
 }
@@ -3417,5 +3787,103 @@ button {
     .nosql-toolbar .example-selector {
         width: 100%;
         margin-left: 0;
+    }
+}
+
+/* ===== AJUSTES RESPONSIVE GLOBALES ===== */
+@media (max-width: 768px) {
+    .app-header {
+        padding: 0 16px;
+    }
+
+    .header-content {
+        height: auto;
+        min-height: 64px;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px 0;
+    }
+
+    .main-nav {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        justify-content: flex-start;
+    }
+
+    .main-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .section {
+        padding: 24px 18px 32px;
+    }
+
+    .example-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .example-bar-controls {
+        justify-content: flex-start;
+    }
+
+    .example-bar-controls select {
+        flex: 1 1 180px;
+        min-width: 0;
+    }
+
+    .editor-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toolbar-group {
+        width: 100%;
+    }
+
+    .toolbar-group-secondary {
+        justify-content: flex-start;
+    }
+
+    .toolbar-group-status {
+        margin-left: 0;
+    }
+
+    .panel-heading {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+    .section-header h2 {
+        font-size: 1.4em;
+    }
+
+    .example-bar-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .example-bar-controls select,
+    .example-bar-controls button {
+        width: 100%;
+    }
+
+    .toolbar-group-primary button,
+    .toolbar-group-secondary button {
+        flex: 1 1 auto;
+    }
+
+    .btn-shortcut {
+        display: none;
+    }
+
+    .panel-heading {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panel-hint {
+        display: none;
     }
 }

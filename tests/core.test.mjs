@@ -22,6 +22,7 @@ const dom = new JSDOM(
         <input id="safeModeToggle" type="checkbox">
         <select id="tableSelector"></select>
         <select id="categorySelector"></select>
+        <span id="sqlExampleStatus"></span>
     </body></html>`,
     {
         url: 'https://sql-academy.test/',
@@ -240,7 +241,21 @@ test('los ejemplos SQL cargan tablas del dataset activo', () => {
         window.refreshPracticeContentForDataset();
         window.document.getElementById('categorySelector').value = 'basicos';
         window.showExampleByCategory();
-        assert.match(window.document.getElementById('sqlEditor').value, tablePattern);
+
+        const editor = window.document.getElementById('sqlEditor');
+        assert.match(editor.value, tablePattern);
+        assert.match(
+            window.document.getElementById('sqlExampleStatus').textContent,
+            /^Ejemplo: /
+        );
+        assert.match(
+            window.document.getElementById('resultOutput').textContent,
+            /Esperando que la base de datos/
+        );
+
+        const firstExample = editor.value;
+        window.showExampleByCategory();
+        assert.notEqual(editor.value, firstExample, 'Siguiente ejemplo debe cambiar la consulta');
     }
 });
 
