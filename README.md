@@ -1,6 +1,6 @@
 # SQL Academy - Simulador de Base de Datos
 
-Simulador educativo de SQL y NoSQL que se ejecuta en el navegador. El laboratorio SQL usa una base de datos SQLite real mediante [sql.js](https://sql.js.org/); el laboratorio NoSQL incluye un motor documental propio inspirado en MongoDB. Incluye editores de consultas, ejemplos guiados, retos con validación automática, editor visual de tablas, diagrama de relaciones, gráficos, persistencia local, PWA y un asistente opcional que explica errores y propone ejercicios en español.
+Simulador educativo de SQL y NoSQL que se ejecuta en el navegador. El laboratorio SQL usa una base de datos SQLite real mediante [sql.js](https://sql.js.org/); el laboratorio NoSQL incluye un motor documental propio inspirado en MongoDB. Incluye editores de consultas, ejemplos guiados, retos con validación automática, editor visual de tablas, diagrama de relaciones, panel de análisis con explorador de tablas y calidad de datos, persistencia local, PWA y un asistente opcional que explica errores y propone ejercicios en español.
 
 **Demo:** [https://sql-academy.netlify.app](https://sql-academy.netlify.app)
 
@@ -15,6 +15,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga y ejecuta automáticamente.
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
+- Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
 - Aplicación instalable (PWA), modo oscuro y mejoras de accesibilidad.
@@ -25,7 +26,6 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - HTML5, CSS3 y JavaScript sin frameworks.
 - SQLite en el navegador con `sql.js`.
 - Motor documental propio para el laboratorio NoSQL, sin `eval`.
-- Chart.js para los gráficos.
 - Font Awesome para los iconos.
 - IndexedDB y `localStorage` para persistencia.
 - Service Worker y Web App Manifest para la PWA.
@@ -47,7 +47,7 @@ npx serve .
 
 Después abre `http://localhost:8000`.
 
-> Las librerías de sql.js, Chart.js y Font Awesome se cargan desde CDN con versiones fijas. La primera visita necesita conexión; después el service worker puede servir el app shell desde caché.
+> Las librerías de sql.js y Font Awesome se cargan desde CDN con versiones fijas. La primera visita necesita conexión; después el service worker puede servir el app shell desde caché.
 
 ### Con Netlify CLI (incluye el asistente IA)
 
@@ -188,6 +188,15 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - Exportación a CSV y JSON.
 - Soporte para varias sentencias `SELECT` en una misma ejecución.
 
+### Análisis de datos
+
+- **Resumen del dataset:** número de tablas, columnas, filas, relaciones y tablas vacías.
+- **Diagrama ERD:** tablas, columnas, claves primarias y foráneas del esquema activo.
+- **Explorador de tablas:** selecciona una tabla para ver sus columnas, tipos, claves, número de filas y una vista previa de sus registros.
+- **Acciones rápidas:** copia un `SELECT` de la tabla o cárgalo en el editor para practicar.
+- **Calidad de datos:** comprobaciones de tablas vacías, claves primarias, integridad referencial, valores nulos y columnas sin tipo declarado.
+- Funciona con los tres datasets SQL y con bases importadas por el usuario.
+
 ### Retos
 
 - Ejercicios de nivel básico, intermedio y avanzado para cada dataset.
@@ -300,7 +309,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 
 ## Tests, CI y seguridad
 
-- `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV y datasets.
+- `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
 - `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL y la navegación al laboratorio.
@@ -330,6 +339,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.5.5
+
+- **Pestaña Analizar renovada:** resumen del dataset, explorador de tablas y panel de calidad de datos.
+- **Sin gráficos dependientes del dataset:** se eliminó Chart.js y los gráficos que solo funcionaban con la tabla `estudiantes`.
+- **Explorador útil para cualquier base:** columnas, tipos, claves, filas y vista previa de cada tabla.
+- **Acciones rápidas:** copiar un `SELECT` o cargarlo en el editor para practicar.
+- **Calidad de datos:** detección de tablas vacías, tablas sin clave primaria, relaciones huérfanas, valores nulos y columnas sin tipo.
+- **Diseño:** nuevos estilos responsive y overrides de modo oscuro para el panel.
+- **Calidad:** pruebas del resumen, del explorador, de los checks y de la ausencia de Chart.js.
 
 ### v1.5.4
 

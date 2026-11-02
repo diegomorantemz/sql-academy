@@ -27,8 +27,6 @@
     <!-- Estilos -->
     <link rel="stylesheet" href="style.css">
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -656,13 +654,18 @@
         <section id="section-analyze" class="section">
             <div class="section-header">
                 <h2><i class="fas fa-chart-pie"></i> Analiza tus Datos</h2>
-                <p>Visualiza las relaciones y estadisticas de tu base de datos</p>
+                <p>Explora el esquema, revisa la calidad de los datos y entiende las relaciones de tu base de datos</p>
             </div>
 
-            <div class="analyze-grid">
-                <!-- Diagrama ERD -->
-                <div class="analyze-card full-width">
-                    <h3><i class="fas fa-project-diagram"></i> Diagrama de Relaciones (ERD)</h3>
+            <div id="analyzeSummary" class="analyze-summary" aria-live="polite"></div>
+
+            <!-- Diagrama ERD -->
+            <div class="analyze-card analyze-erd-card">
+                <div class="analyze-card-head">
+                    <div>
+                        <h3><i class="fas fa-project-diagram"></i> Diagrama de Relaciones (ERD)</h3>
+                        <p class="analyze-card-subtitle">Vista visual de tablas, columnas y claves foráneas del dataset activo.</p>
+                    </div>
                     <div class="diagram-controls">
                         <button onclick="generateDiagram()" class="btn-secondary">
                             <i class="fas fa-rotate"></i> Actualizar
@@ -671,24 +674,41 @@
                             <i class="fas fa-expand"></i> Vista completa
                         </button>
                     </div>
-                    <div id="diagramContainer">
-                        <div class="diagram-loading"><i class="fas fa-spinner fa-spin"></i> Generando diagrama...</div>
+                </div>
+                <div id="diagramContainer">
+                    <div class="diagram-loading"><i class="fas fa-spinner fa-spin"></i> Generando diagrama...</div>
+                </div>
+            </div>
+
+            <div class="analyze-grid analyze-grid-data">
+                <!-- Explorador de tablas -->
+                <div class="analyze-card analyze-explorer-card">
+                    <div class="analyze-card-head">
+                        <div>
+                            <h3><i class="fas fa-table-list"></i> Explorador de tablas</h3>
+                            <p class="analyze-card-subtitle">Consulta la estructura y una vista previa de cada tabla.</p>
+                        </div>
+                    </div>
+                    <div class="table-explorer">
+                        <div id="analyzeTableList" class="table-explorer-list" role="listbox" aria-label="Tablas del dataset"></div>
+                        <div id="analyzeTableDetail" class="table-explorer-detail">
+                            <div class="analyze-empty-state">
+                                <i class="fas fa-table"></i>
+                                <p>Selecciona una tabla para ver su estructura.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Graficos -->
-                <div class="analyze-card">
-                    <h3><i class="fas fa-users"></i> Estudiantes por Carrera</h3>
-                    <div class="chart-box">
-                        <canvas id="chartCarreras"></canvas>
+                <!-- Calidad de datos -->
+                <div class="analyze-card analyze-quality-card">
+                    <div class="analyze-card-head">
+                        <div>
+                            <h3><i class="fas fa-shield-halved"></i> Calidad de datos</h3>
+                            <p class="analyze-card-subtitle">Comprobaciones automáticas del dataset activo.</p>
+                        </div>
                     </div>
-                </div>
-
-                <div class="analyze-card">
-                    <h3><i class="fas fa-chart-line"></i> Promedio por Carrera</h3>
-                    <div class="chart-box">
-                        <canvas id="chartPromedios"></canvas>
-                    </div>
+                    <div id="analyzeQuality" class="quality-list" aria-live="polite"></div>
                 </div>
             </div>
         </section>

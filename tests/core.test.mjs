@@ -285,3 +285,118 @@ test('el cambio de dataset actualiza categorías y retos SQL', () => {
     assert.match(window.document.querySelector('#challengeList').textContent, /Libros disponibles/);
     assert.match(window.document.querySelector('#challengeDetail').textContent, /Elige un reto/);
 });
+
+function createAnalyzeFixture() {
+    const database = new DatabaseSync(':memory:');
+    database.exec('PRAGMA foreign_keys = OFF;');
+    database.exec(`
+        CREATE TABLE carreras (
+            id INTEGER PRIMARY KEY,
+            nombre TEXT NOT NULL
+        );
+        CREATE TABLE estudiantes (
+            id INTEGER PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            carrera_id INTEGER,
+            promedio REAL,
+            FOREIGN KEY (carrera_id) REFERENCES carreras(id)
+        );
+        CREATE TABLE inscripciones (
+            id INTEGER PRIMARY KEY,
+            estudiante_id INTEGER NOT NULL,
+            curso TEXT,
+            FOREIGN KEY (estudiante_id) REFERENCES estudiantes(id)
+        );
+        INSERT INTO carreras (id, nombre) VALUES (1, 'Sistemas'), (2, 'Diseño');
+        INSERT INTO estudiantes (id, nombre, carrera_id, promedio)
+            VALUES (1, 'Ana', 1, 18), (2, 'Luis', 2, NULL), (3, 'Eva', 99, 15);
+        INSERT INTO inscripciones (id, estudiante_id, curso)
+            VALUES (1, 1, 'SQL'), (2, 99, 'NoSQL');
+    `);
+
+    return {
+        database,
+        adapter: {
+            exec(sql) {
+                const statement = database.prepare(sql);
+                const rows = statement.all();
+                const columns = statement.columns().map(column => column.name);
+                return [{
+                    columns,
+                    values: rows.map(row => columns.map(column => row[column]))
+                }];
+            }
+        }
+    };
+}
+
+test('getAnalyzeSummary resume tablas, columnas, filas y relaciones', () => {
+    const { database, adapter } = createAnalyzeFixture();
+    try {
+        const summary = window.getAnalyzeSummary(adapter);
+        assert.equal(summary.tables.length, 3);
+        assert.equal(summary.columnCount, 9);
+        assert.equal(summary.rowCount, 7);
+        assert.equal(summary.relationCount, 2);
+        assert.deepEqual(summary.emptyTables, []);
+        assert.equal(summary.largestTable.name, 'estudiantes');
+        assert.equal(summary.tableStats.find(table => table.name === 'estudiantes').columns.length, 4);
+        assert.equal(summary.tableStats.find(table => table.name === 'estudiantes').foreignKeys.length, 1);
+    } finally {
+        database.close();
+    }
+});
+
+test('buildAnalyzeQualityChecks detecta huérfanos y valores nulos', () => {
+    const { database, adapter } = createAnalyzeFixture();
+    try {
+        const summary = window.getAnalyzeSummary(adapter);
+        const checks = window.buildAnalyzeQualityChecks(summary, adapter);
+        const byTitle = Object.fromEntries(checks.map(check => [check.title, check]));
+
+        assert.equal(byTitle['Tablas con datos'].status, 'ok');
+        assert.equal(byTitle['Claves primarias'].status, 'ok');
+        assert.equal(byTitle['Integridad referencial'].status, 'error');
+        assert.match(byTitle['Integridad referencial'].detail, /2 relación\(es\)/);
+        assert.equal(byTitle['Valores nulos'].status, 'info');
+        assert.match(byTitle['Valores nulos'].detail, /estudiantes\.promedio/);
+        assert.equal(byTitle['Tipos declarados'].status, 'ok');
+    } finally {
+        database.close();
+    }
+});
+
+test('renderAnalyzePanel pinta resumen, explorador y calidad', () => {
+    const { database, adapter } = createAnalyzeFixture();
+    const container = window.document.createElement('div');
+    container.innerHTML = `
+        <div id="analyzeSummary"></div>
+        <div id="analyzeTableList"></div>
+        <div id="analyzeTableDetail"></div>
+        <div id="analyzeQuality"></div>
+    `;
+    window.document.body.appendChild(container);
+
+    try {
+        window.renderAnalyzePanel(adapter);
+        assert.equal(container.querySelectorAll('#analyzeSummary .analyze-metric').length, 5);
+        assert.equal(container.querySelectorAll('#analyzeTableList .analyze-table-item').length, 3);
+        assert.match(container.querySelector('#analyzeTableDetail').textContent, /carreras/);
+        assert.match(container.querySelector('#analyzeTableDetail').textContent, /Sistemas/);
+        assert.equal(container.querySelectorAll('#analyzeQuality .quality-item').length, 5);
+        assert.match(container.querySelector('#analyzeQuality').textContent, /Integridad referencial/);
+    } finally {
+        container.remove();
+        database.close();
+    }
+});
+
+test('la pestaña Analizar no depende de Chart.js', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    assert.doesNotMatch(html, /chart\.js/i);
+    assert.doesNotMatch(html, /chartCarreras|chartPromedios/);
+    assert.match(html, /id="analyzeSummary"/);
+    assert.match(html, /id="analyzeTableList"/);
+    assert.match(html, /id="analyzeTableDetail"/);
+    assert.match(html, /id="analyzeQuality"/);
+});
