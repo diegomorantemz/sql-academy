@@ -537,33 +537,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="nosql-challenges-panel">
-                <div class="nosql-challenges-head">
-                    <div>
-                        <h3><i class="fas fa-trophy"></i> Reto NoSQL activo</h3>
-                        <p class="nosql-muted">Abre un reto desde la página Retos, pestaña NoSQL, y resuélvelo aquí con el editor.</p>
-                    </div>
-                    <div class="nosql-challenges-actions">
-                        <button type="button" onclick="openNoSQLChallengesHub()" class="btn-secondary">
-                            <i class="fas fa-list-check"></i> Ver todos los retos
-                        </button>
-                        <button type="button" onclick="resetNoSQLChallengeProgress()" class="btn-secondary">
-                            <i class="fas fa-rotate-left"></i> Reiniciar progreso
-                        </button>
-                    </div>
-                </div>
-                <div id="nosqlChallengeDetail" class="nosql-challenge-detail">
-                    <div class="challenge-empty">
-                        <i class="fas fa-trophy"></i>
-                        <h3>Elige un reto NoSQL</h3>
-                        <p>Explora los retos desde la página Retos y ábrelos aquí para resolverlos con el editor NoSQL.</p>
-                        <button type="button" class="btn-secondary" onclick="openNoSQLChallengesHub()">
-                            <i class="fas fa-list-check"></i> Ver todos los retos NoSQL
-                        </button>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <!-- ===== SECCIÓN: RETOS ===== -->
@@ -634,6 +607,9 @@
 
                         <button type="button" onclick="openNoSQLLab()" class="btn-secondary challenge-reset-btn">
                             <i class="fas fa-flask"></i> Abrir laboratorio NoSQL
+                        </button>
+                        <button type="button" onclick="resetNoSQLChallengeProgress()" class="btn-secondary challenge-reset-btn">
+                            <i class="fas fa-rotate-left"></i> Reiniciar progreso NoSQL
                         </button>
                     </aside>
 

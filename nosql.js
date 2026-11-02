@@ -645,39 +645,99 @@
 
     function openChallenge(id, options) {
         const challenge = getActiveChallenges().find(item => item.id === id);
-        const detail = getElement('nosqlChallengeDetail');
         const editor = getElement('nosqlEditor');
         if (!challenge) {
             showToast('warning', 'Ese reto pertenece a otro dataset.');
-            return;
+            return null;
         }
-        if (!detail) return;
 
         const settings = options || {};
         activeChallengeId = id;
         activeChallengeAttempts = 0;
         if (editor) editor.value = challenge.starter;
 
-        detail.innerHTML = `
-            <div class="challenge-detail-header">
-                <h3>${escapeHtml(challenge.title)}</h3>
-                <span class="challenge-level ${challenge.level === 'Básico' ? 'basico' : (challenge.level === 'Intermedio' ? 'intermedio' : 'avanzado')}">${escapeHtml(challenge.level)}</span>
-            </div>
-            <p class="challenge-description">${escapeHtml(challenge.description)}</p>
-            <details class="nosql-hint">
-                <summary><i class="fas fa-lightbulb"></i> Ver pista</summary>
-                <p>${escapeHtml(challenge.hint)}</p>
-            </details>
-            <div class="challenge-actions">
-                <button type="button" class="btn-secondary" onclick="runNoSQLQuery()">
-                    <i class="fas fa-play"></i> Ejecutar y comprobar
-                </button>
-            </div>
-            <div id="nosqlChallengeFeedback" class="challenge-result" hidden></div>
-        `;
+        const detail = getElement('nosqlChallengeDetail');
+        if (detail) {
+            detail.innerHTML = `
+                <div class="challenge-detail-header">
+                    <h3>${escapeHtml(challenge.title)}</h3>
+                    <span class="challenge-level ${challenge.level === 'Básico' ? 'basico' : (challenge.level === 'Intermedio' ? 'intermedio' : 'avanzado')}">${escapeHtml(challenge.level)}</span>
+                </div>
+                <p class="challenge-description">${escapeHtml(challenge.description)}</p>
+                <details class="nosql-hint">
+                    <summary><i class="fas fa-lightbulb"></i> Ver pista</summary>
+                    <p>${escapeHtml(challenge.hint)}</p>
+                </details>
+                <div class="challenge-actions">
+                    <button type="button" class="btn-secondary" onclick="runNoSQLQuery()">
+                        <i class="fas fa-play"></i> Ejecutar y comprobar
+                    </button>
+                </div>
+                <div id="nosqlChallengeFeedback" class="challenge-result" hidden></div>
+            `;
+        }
 
         renderChallenges();
         if (editor && settings.focus !== false) editor.focus();
+        return challenge;
+    }
+
+    // Ejecuta un comando NoSQL (escrito fuera del laboratorio) y lo valida contra el reto activo.
+    function runChallengeCommand(command) {
+        if (!global.NoSQL) return { ok: false, message: 'El motor NoSQL todavía no está disponible.' };
+        const query = String(command || '').trim();
+        if (!query) {
+            showToast('warning', 'Escribe un comando NoSQL antes de comprobar el reto.');
+            return { ok: false, message: 'Escribe un comando NoSQL antes de comprobar el reto.' };
+        }
+        if (!activeChallengeId) {
+            showToast('warning', 'Elige un reto NoSQL para comprobarlo.');
+            return { ok: false, message: 'Elige un reto NoSQL para comprobarlo.' };
+        }
+
+        const dangerous = global.NoSQL.getDangerousCommandReason(query);
+        if (safeMode && dangerous) {
+            const confirmed = global.confirm(
+                `Modo seguro NoSQL: vas a ${describeDangerousCommand(dangerous)} sin filtro.\n\n¿Quieres continuar?`
+            );
+            if (!confirmed) {
+                return { ok: false, message: 'Operación cancelada por el modo seguro.', cancelled: true };
+            }
+        }
+
+        const startedAt = Date.now();
+        try {
+            const result = global.NoSQL.executeCommand(state, query);
+            const duration = Date.now() - startedAt;
+            addHistory(query);
+            renderResult(result, duration);
+            if (result.type === 'write') {
+                schedulePersist();
+                renderCollections();
+            }
+
+            const feedback = validateChallenge(result);
+            if (feedback) {
+                if (!feedback.ok) activeChallengeAttempts += 1;
+                if (feedback.ok && !challengeProgress[activeChallengeId]) {
+                    challengeProgress[activeChallengeId] = {
+                        completedAt: new Date().toISOString()
+                    };
+                    saveChallengeProgress();
+                    renderChallenges();
+                }
+                feedback.canRevealSolution = !feedback.ok && activeChallengeAttempts >= 2;
+                feedback.challengeId = activeChallengeId;
+            }
+
+            showToast(result.type === 'write' ? 'success' : 'info', getResultSummary(result));
+            return feedback;
+        } catch (error) {
+            renderError(error.message, query);
+            addHistory(query);
+            showToast('error', error.message);
+            return { ok: false, message: error.message, challengeId: activeChallengeId, canRevealSolution: false };
+        }
     }
 
     function renderChallengePlaceholder() {
@@ -703,6 +763,9 @@
         activeChallengeAttempts = 0;
         renderChallenges();
         renderChallengePlaceholder();
+        if (typeof global.renderNoSQLChallengeHub === 'function') {
+            global.renderNoSQLChallengeHub();
+        }
         showToast('info', 'Progreso de retos NoSQL reiniciado.');
     }
 
@@ -806,6 +869,7 @@
     global.toggleNoSQLSafeMode = toggleSafeMode;
     global.openNoSQLAIHelp = openAIHelp;
     global.loadNoSQLChallenge = openChallenge;
+    global.runNoSQLChallengeCommand = runChallengeCommand;
     global.revealNoSQLSolution = revealSolution;
     global.resetNoSQLChallengeProgress = resetChallengeProgress;
     global.getNoSQLActiveDataset = () => datasetName;

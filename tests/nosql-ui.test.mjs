@@ -120,3 +120,18 @@ test('los ejemplos y retos cargan el contenido del dataset activo', () => {
     window.runNoSQLQuery();
     assert.match(escuelaFeedback.textContent, /Reto completado/);
 });
+
+test('runNoSQLChallengeCommand valida un reto sin el editor del laboratorio', () => {
+    window.changeNoSQLDataset('tienda', { silent: true });
+    const challenge = getChallenge('nosql-tienda-stock');
+    window.loadNoSQLChallenge(challenge.id);
+
+    const feedback = window.runNoSQLChallengeCommand(challenge.solution);
+    assert.equal(feedback.ok, true);
+    assert.match(feedback.message, /Correcto/);
+    assert.equal(feedback.challengeId, challenge.id);
+
+    const pending = window.runNoSQLChallengeCommand('db.productos.find({})');
+    assert.equal(pending.ok, false);
+    assert.match(pending.message, /Aún no coincide/);
+});

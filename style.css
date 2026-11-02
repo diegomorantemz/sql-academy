@@ -1513,6 +1513,27 @@ button:disabled {
     box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
 }
 
+#nosqlHubEditor {
+    width: 100%;
+    min-height: 130px;
+    padding: 12px 14px;
+    border: 2px solid var(--postgres-border);
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    background: white;
+    color: var(--postgres-text);
+    box-sizing: border-box;
+}
+
+#nosqlHubEditor:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
+}
+
 .challenge-actions {
     display: flex;
     gap: 8px;
@@ -3551,6 +3572,7 @@ button:disabled {
 [data-theme="dark"] #sqlEditor,
 [data-theme="dark"] #nosqlEditor,
 [data-theme="dark"] #challengeEditor,
+[data-theme="dark"] #nosqlHubEditor,
 [data-theme="dark"] .example-selector select,
 [data-theme="dark"] .example-bar select,
 [data-theme="dark"] .dataset-selector,

@@ -4402,15 +4402,27 @@ function renderNoSQLHubDetail(challenge) {
             <summary><i class="fas fa-lightbulb"></i> Ver pista</summary>
             <p>${escapeHtml(challenge.hint)}</p>
         </details>
+        <label for="nosqlHubEditor" class="sr-only">Comando NoSQL para el reto</label>
+        <textarea id="nosqlHubEditor" spellcheck="false" placeholder="Escribe un comando NoSQL, por ejemplo: db.productos.find({ stock: { $lte: 10 } })">${escapeHtml(challenge.starter || '')}</textarea>
         <div class="challenge-actions">
-            <button type="button" onclick="solveNoSQLChallengeInLab('${escapeHtml(challenge.id)}')">
-                <i class="fas fa-flask"></i> Resolver en laboratorio NoSQL
+            <button type="button" id="nosqlHubRunBtn" onclick="runNoSQLHubChallenge()">
+                <i class="fas fa-play"></i> Comprobar reto
             </button>
+            <button type="button" class="btn-secondary" onclick="clearNoSQLHubEditor()">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+            <button type="button" class="btn-secondary" onclick="solveNoSQLChallengeInLab('${escapeHtml(challenge.id)}')">
+                <i class="fas fa-flask"></i> Abrir en laboratorio
+            </button>
+        </div>
+        <div id="nosqlHubFeedback" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para intentarlo</strong>
+            Escribe un comando NoSQL y pulsa «Comprobar reto».
         </div>
     `;
 }
 
-function renderNoSQLChallengeHub() {
+function renderNoSQLHubList() {
     const list = document.getElementById('nosqlHubChallengeList');
     const datasetLabel = document.getElementById('nosqlHubDatasetLabel');
     const progressText = document.getElementById('nosqlHubProgressText');
@@ -4428,16 +4440,7 @@ function renderNoSQLChallengeHub() {
 
     if (!challenges.length) {
         list.innerHTML = '<p class="text-muted">No hay retos NoSQL para este dataset.</p>';
-        renderNoSQLHubPlaceholder();
         return;
-    }
-
-    const selectedChallenge = challenges.find(challenge => challenge.id === selectedNoSQLChallengeId);
-    if (!selectedChallenge) {
-        selectedNoSQLChallengeId = null;
-        renderNoSQLHubPlaceholder();
-    } else {
-        renderNoSQLHubDetail(selectedChallenge);
     }
 
     list.innerHTML = challenges.map(challenge => {
@@ -4462,11 +4465,73 @@ function renderNoSQLChallengeHub() {
     });
 }
 
+function renderNoSQLChallengeHub() {
+    renderNoSQLHubList();
+    const challenges = getNoSQLHubChallenges();
+    const selectedChallenge = challenges.find(challenge => challenge.id === selectedNoSQLChallengeId);
+    if (!selectedChallenge) {
+        selectedNoSQLChallengeId = null;
+        renderNoSQLHubPlaceholder();
+    } else {
+        renderNoSQLHubDetail(selectedChallenge);
+    }
+}
+
 function openNoSQLHubChallenge(id) {
     const challenge = getNoSQLHubChallenges().find(item => item.id === id);
     if (!challenge) return;
     selectedNoSQLChallengeId = id;
+    if (typeof window.loadNoSQLChallenge === 'function') {
+        window.loadNoSQLChallenge(id, { focus: false });
+    }
     renderNoSQLChallengeHub();
+}
+
+function runNoSQLHubChallenge() {
+    const editor = document.getElementById('nosqlHubEditor');
+    if (!editor) return;
+    if (typeof window.runNoSQLChallengeCommand !== 'function') {
+        showToast('warning', 'El motor NoSQL todavía no está disponible.');
+        return;
+    }
+
+    const feedback = window.runNoSQLChallengeCommand(editor.value);
+    if (!feedback) return;
+
+    const container = document.getElementById('nosqlHubFeedback');
+    if (container) {
+        container.className = `challenge-result ${feedback.ok ? 'success' : 'error'}`;
+        const solutionButton = feedback.canRevealSolution
+            ? `<div class="challenge-result-actions">
+                    <button type="button" class="btn-secondary" onclick="revealNoSQLHubSolution()">
+                        <i class="fas fa-eye"></i> Ver solución
+                    </button>
+                </div>`
+            : '';
+        container.innerHTML = `<strong>${feedback.ok ? 'Reto completado' : 'Todavía no'}</strong><p>${escapeHtml(feedback.message)}</p>${solutionButton}`;
+    }
+
+    if (feedback.ok) {
+        renderNoSQLHubList();
+        const meta = document.querySelector('#nosqlHubChallengeDetail .challenge-detail-meta .text-muted');
+        if (meta) meta.textContent = 'Completado';
+    }
+}
+
+function revealNoSQLHubSolution() {
+    const editor = document.getElementById('nosqlHubEditor');
+    const challenge = getNoSQLHubChallenges().find(item => item.id === selectedNoSQLChallengeId);
+    if (!editor || !challenge) return;
+    editor.value = challenge.solution;
+    editor.focus();
+    showToast('info', 'Solución cargada. Pulsa «Comprobar reto» para validarla.');
+}
+
+function clearNoSQLHubEditor() {
+    const editor = document.getElementById('nosqlHubEditor');
+    if (!editor) return;
+    editor.value = '';
+    editor.focus();
 }
 
 function solveNoSQLChallengeInLab(id) {
@@ -4476,10 +4541,6 @@ function solveNoSQLChallengeInLab(id) {
     }
     window.loadNoSQLChallenge(id, { focus: false });
     activateSection('nosql');
-    const detail = document.getElementById('nosqlChallengeDetail');
-    if (detail && typeof detail.scrollIntoView === 'function') {
-        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
     const editor = document.getElementById('nosqlEditor');
     if (editor) editor.focus();
     showToast('info', 'Reto cargado en el laboratorio NoSQL.');

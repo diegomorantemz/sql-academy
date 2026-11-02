@@ -249,7 +249,7 @@ El laboratorio NoSQL es un simulador documental educativo, no una instancia real
 - Aggregation con `$match`, `$project`, `$group`, `$sort`, `$skip`, `$limit`, `$count`, `$unwind`, `$addFields` y `$unset`.
 - Datasets documentales de Escuela, Tienda y Biblioteca, con cursos, pedidos y préstamos embebidos.
 - Historial y ejemplos guiados por dataset.
-- Retos NoSQL accesibles desde la página Retos, con pestañas SQL/NoSQL, validación por resultados y progreso persistente.
+- Retos NoSQL accesibles desde la página Retos, con pestañas SQL/NoSQL, editor propio, validación por resultados y progreso persistente.
 - Plantillas de reto sin solución y botón «Ver solución» tras dos intentos fallidos.
 - Modo seguro para `deleteMany({})`, `updateMany({})` y `drop()`.
 - Persistencia en IndexedDB y ayuda opcional con IA para comandos NoSQL.
@@ -339,6 +339,13 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.5.6
+
+- **Reto NoSQL en la página Retos:** el panel «Reto NoSQL activo» se quitó del laboratorio y ahora el reto se resuelve en la pestaña Retos, con editor propio, pista y validación por resultados.
+- **Flujo unificado:** los retos SQL y NoSQL se resuelven en el mismo lugar, con botones «Comprobar reto», «Limpiar» y «Ver solución».
+- **Botón para abrir en laboratorio:** se puede seguir llevando el reto al laboratorio NoSQL para practicar libremente.
+- **Calidad:** pruebas del editor NoSQL en Retos, de la validación sin el laboratorio y de la ausencia del panel antiguo.
 
 ### v1.5.5
 

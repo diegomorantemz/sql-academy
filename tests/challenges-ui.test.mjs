@@ -135,3 +135,19 @@ test('un reto NoSQL se abre en el laboratorio con la plantilla', () => {
     assert.equal(window.document.getElementById('nosqlEditor').value, challenge.starter);
     assert.notEqual(window.document.getElementById('nosqlEditor').value, challenge.solution);
 });
+
+test('el reto NoSQL se resuelve en la pestaña Retos con editor propio', () => {
+    window.document.getElementById('nosqlDatasetSelector').value = 'tienda';
+    window.openNoSQLHubChallenge('nosql-tienda-stock');
+
+    const detail = window.document.getElementById('nosqlHubChallengeDetail');
+    assert.ok(detail.querySelector('#nosqlHubEditor'), 'El hub debe incluir un editor NoSQL');
+    assert.match(detail.textContent, /Comprobar reto/);
+    assert.equal(detail.querySelector('#nosqlHubEditor').value, 'db.productos.find({})');
+});
+
+test('el laboratorio NoSQL ya no muestra el panel de reto activo', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    assert.doesNotMatch(html, /Reto NoSQL activo/);
+    assert.doesNotMatch(html, /id="nosqlChallengeDetail"/);
+});
