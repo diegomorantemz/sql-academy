@@ -16,7 +16,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Retos de depuración **Encuentra el error**: consulta rota, síntoma, pista, editor de corrección y validación por resultado en los tres datasets SQL.
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
-- Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
+- Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
 - Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
 - Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
@@ -206,6 +206,8 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Resumen del dataset:** número de tablas, columnas, filas, relaciones y tablas vacías.
 - **Diagrama ERD:** tablas, columnas, claves primarias y foráneas del esquema activo.
 - **Explorador de tablas:** selecciona una tabla para ver sus columnas, tipos, claves, número de filas y una vista previa de sus registros.
+- **Vista y edición:** cambia entre **Vista** y **Editar datos** sin salir del explorador. La edición permite actualizar celdas, agregar filas, eliminarlas y guardar los cambios.
+- **Edición protegida:** aviso de cambios sin guardar, límite de 100 filas por carga, bloqueo de tablas sin clave primaria y botón para restaurar los datos originales del dataset.
 - **Acciones rápidas:** copia un `SELECT` de la tabla o cárgalo en el editor para practicar.
 - **Calidad de datos:** comprobaciones de tablas vacías, claves primarias, integridad referencial, valores nulos y columnas sin tipo declarado.
 - Funciona con los tres datasets SQL y con bases importadas por el usuario.
@@ -367,7 +369,8 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
 - `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
-- `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL y la navegación al laboratorio.
+- `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL/Depuración y la navegación al laboratorio.
+- `tests/table-editor-ui.test.mjs` cubre los modos Vista/Editar del explorador, el aviso de cambios sin guardar, el bloqueo sin clave primaria y el límite de filas.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
 - `_headers` añade `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS y cachés específicas.
@@ -388,12 +391,22 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - La persistencia es local al navegador y al perfil. No se sincroniza entre dispositivos.
 - Si se borran los datos del sitio o se usa una ventana privada, se pierde la copia de IndexedDB.
 - El simulador ejecuta SQL real, incluidas sentencias destructivas. El modo seguro ayuda, pero no sustituye una copia de seguridad.
-- El editor visual asume que la tabla tiene una clave primaria. Para tablas sin clave primaria, usa consultas SQL.
+- El editor visual vive en **Analizar → Explorador de tablas → Editar datos**. Asume que la tabla tiene una clave primaria y carga como máximo 100 filas por vez. Para tablas sin clave primaria o para editar el resto de los registros, usa consultas SQL.
 - `sql.js` implementa SQLite, por lo que algunas funciones específicas de PostgreSQL, MySQL u Oracle no están disponibles.
 - La PWA necesita HTTPS (Netlify lo proporciona). El asistente IA requiere conexión y la Netlify Function desplegada.
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.7.7
+
+- **Editor de datos integrado en Analizar:** el explorador de tablas ahora tiene modos **Vista** y **Editar datos**.
+- **Practicar más limpio:** el bloque de edición dejó de ocupar el ancho completo al final de la sección de práctica.
+- **Edición más segura:** aviso de cambios sin guardar, confirmación al cambiar de tabla o de modo, bloqueo de tablas sin clave primaria y límite de 100 filas por carga.
+- **Restaurar datos:** botón para recuperar los datos originales del dataset activo sin salir del explorador.
+- **Mejor jerarquía:** la edición comparte el espacio con la estructura y la vista previa de la tabla seleccionada.
+- **Calidad:** pruebas de modos, cambios sin guardar, tablas sin clave primaria y límite de filas.
+- **Caché PWA:** actualizada para los nuevos estilos y controles.
 
 ### v1.7.6
 

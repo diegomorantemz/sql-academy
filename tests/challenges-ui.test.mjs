@@ -55,7 +55,6 @@ const dom = new JSDOM(
         <button id="themeToggle"></button>
         <select id="datasetSelector"></select>
         <input id="safeModeToggle" type="checkbox">
-        <select id="tableSelector"></select>
         <select id="categorySelector"></select>
     </body></html>`,
     {

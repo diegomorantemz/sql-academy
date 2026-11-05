@@ -4,6 +4,8 @@ let dbInitialized = false;
 let queryHistory = [];
 let diagramFullView = false;
 let analyzeSelectedTable = null;
+let analyzeExplorerMode = 'view';
+const TABLE_EDITOR_ROW_LIMIT = 100;
 
 // ============================================
 // PERSISTENCIA LOCAL
@@ -462,9 +464,7 @@ function refreshAll() {
     if (window.SQLAcademyAutocomplete?.invalidateSchema) {
         window.SQLAcademyAutocomplete.invalidateSchema();
     }
-    refreshTableSelector();
     showTablesInfo();
-    loadTableEditor();
     renderAnalyzePanel();
     generateDiagram();
 }
@@ -1839,64 +1839,159 @@ function importDatabase() {
     input.click();
 }
 
-// EDITOR DE TABLAS
-function refreshTableSelector() {
-    if (!db) return;
-    const selector = document.getElementById('tableSelector');
-    if (!selector) return;
+// EXPLORADOR DE TABLAS Y EDITOR DE DATOS
+function hasUnsavedTableEditorChanges() {
+    return Array.from(document.querySelectorAll('#tableEditorContent .cell-input'))
+        .some(input => input.value !== (input.dataset.original ?? ''));
+}
 
-    const previous = selector.value;
-    const tables = getUserTables();
+function updateTableEditorDirtyState() {
+    const status = document.getElementById('tableEditorStatus');
+    if (!status) return;
+    const dirty = hasUnsavedTableEditorChanges();
+    status.hidden = !dirty;
+    status.textContent = dirty ? 'Cambios sin guardar' : '';
+}
 
-    selector.innerHTML = '';
+function confirmDiscardTableEditorChanges(message) {
+    if (!hasUnsavedTableEditorChanges()) return true;
+    return confirm(`${message}\n\nTienes cambios sin guardar. Si continúas, se perderán.`);
+}
 
-    if (tables.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'Sin tablas';
-        option.disabled = true;
-        option.selected = true;
-        selector.appendChild(option);
+function setAnalyzeEditorControlsEnabled(enabled) {
+    document.querySelectorAll('#analyzeTableEditor [data-editor-action="add"], #analyzeTableEditor [data-editor-action="save"]')
+        .forEach(button => {
+            button.disabled = !enabled;
+        });
+}
+
+function updateAnalyzeExplorerModeUI() {
+    document.querySelectorAll('[data-analyze-mode]').forEach(button => {
+        const active = button.dataset.analyzeMode === analyzeExplorerMode;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+
+    const detail = document.getElementById('analyzeTableDetail');
+    const editor = document.getElementById('analyzeTableEditor');
+    if (detail) detail.hidden = analyzeExplorerMode === 'edit';
+    if (editor) editor.hidden = analyzeExplorerMode !== 'edit';
+}
+
+function setAnalyzeExplorerMode(mode, database = db) {
+    const nextMode = mode === 'edit' ? 'edit' : 'view';
+    if (nextMode === analyzeExplorerMode) return;
+    if (analyzeExplorerMode === 'edit' && nextMode === 'view'
+        && !confirmDiscardTableEditorChanges('Vas a cerrar el modo de edición.')) {
         return;
     }
 
-    tables.forEach(tableName => {
-        const option = document.createElement('option');
-        option.value = tableName;
-        option.textContent = tableName;
-        selector.appendChild(option);
-    });
-
-    selector.value = tables.includes(previous) ? previous : tables[0];
+    analyzeExplorerMode = nextMode;
+    updateAnalyzeExplorerModeUI();
+    if (nextMode === 'edit') {
+        loadTableEditor(analyzeSelectedTable, database);
+    }
 }
 
-function loadTableEditor() {
-    if (!db) return;
-    const tableName = document.getElementById('tableSelector').value;
+function initAnalyzeExplorerControls() {
+    document.querySelectorAll('[data-analyze-mode]').forEach(button => {
+        if (button.dataset.bound === 'true') return;
+        button.dataset.bound = 'true';
+        button.addEventListener('click', () => setAnalyzeExplorerMode(button.dataset.analyzeMode));
+    });
+}
+
+function refreshAnalyzeTableEditor() {
+    if (!confirmDiscardTableEditorChanges('Vas a recargar la tabla.')) return;
+    loadTableEditor(analyzeSelectedTable);
+}
+
+function renderAnalyzeTableEditor(table, database = db) {
+    const editor = document.getElementById('analyzeTableEditor');
+    if (!editor) return;
+
+    const tableNameEl = document.getElementById('analyzeEditorTableName');
+    if (tableNameEl) tableNameEl.textContent = table ? table.name : '—';
+
+    updateAnalyzeExplorerModeUI();
+
+    if (!table) {
+        const content = document.getElementById('tableEditorContent');
+        if (content) {
+            content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> Selecciona una tabla para editarla.</p>';
+        }
+        setAnalyzeEditorControlsEnabled(false);
+        return;
+    }
+
+    if (analyzeExplorerMode === 'edit') {
+        loadTableEditor(table.name, database);
+    }
+}
+
+function loadTableEditor(tableName = analyzeSelectedTable, database = db) {
     const content = document.getElementById('tableEditorContent');
+    if (!content) return;
+
+    const tableNameEl = document.getElementById('analyzeEditorTableName');
+    if (tableNameEl) tableNameEl.textContent = tableName || '—';
+
+    if (!database) {
+        content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-hourglass-half"></i> La base de datos todavía no está disponible.</p>';
+        setAnalyzeEditorControlsEnabled(false);
+        updateTableEditorDirtyState();
+        return;
+    }
 
     if (!tableName) {
-        content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> No hay tablas para editar</p>';
+        content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> No hay tablas para editar.</p>';
+        setAnalyzeEditorControlsEnabled(false);
+        updateTableEditorDirtyState();
         return;
     }
 
     try {
-        const columns = getTableColumns(tableName);
-        const result = db.exec(`SELECT * FROM ${quoteIdent(tableName)}`);
-        if (result.length === 0 || columns.length === 0) {
-            content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> Tabla vacia</p>';
+        const columns = getTableColumns(tableName, database);
+        const pkColumn = columns.find(col => col.pk > 0) || null;
+        const note = document.getElementById('tableEditorNote');
+
+        if (!pkColumn) {
+            content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-lock"></i> Esta tabla no tiene clave primaria. Usa el editor SQL para modificarla.</p>';
+            if (note) note.textContent = 'La edición visual requiere una clave primaria.';
+            setAnalyzeEditorControlsEnabled(false);
+            updateTableEditorDirtyState();
             return;
         }
 
-        const selectColumns = result[0].columns;
-        const rows = result[0].values;
-        const pkColumn = columns.find(col => col.pk > 0) || null;
-        const pkIndex = pkColumn ? selectColumns.indexOf(pkColumn.name) : -1;
+        const countResult = database.exec(`SELECT COUNT(*) AS total FROM ${quoteIdent(tableName)}`);
+        const totalRows = countResult.length > 0 ? Number(countResult[0].values[0][0]) || 0 : 0;
+        const result = database.exec(
+            `SELECT * FROM ${quoteIdent(tableName)} ORDER BY ${quoteIdent(pkColumn.name)} LIMIT ${TABLE_EDITOR_ROW_LIMIT}`
+        );
+        const selectColumns = result.length > 0 ? result[0].columns : [];
+        const rows = result.length > 0 ? result[0].values : [];
+        const pkIndex = selectColumns.indexOf(pkColumn.name);
+
+        if (selectColumns.length === 0 || pkIndex < 0) {
+            content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> Tabla vacía.</p>';
+            if (note) note.textContent = `${totalRows} fila(s) en la tabla.`;
+            setAnalyzeEditorControlsEnabled(true);
+            updateTableEditorDirtyState();
+            return;
+        }
+
+        if (note) {
+            note.textContent = totalRows > TABLE_EDITOR_ROW_LIMIT
+                ? `Mostrando las primeras ${TABLE_EDITOR_ROW_LIMIT} de ${totalRows} filas. Para editar el resto, usa el editor SQL.`
+                : `${totalRows} fila(s) disponibles para editar.`;
+        }
+
+        setAnalyzeEditorControlsEnabled(true);
 
         let html = '<table>';
         html += '<thead><tr>';
         selectColumns.forEach(col => {
-            const isPk = pkColumn && col === pkColumn.name;
+            const isPk = col === pkColumn.name;
             html += `<th>${isPk ? '<i class="fas fa-key" title="Clave primaria"></i> ' : ''}${escapeHtml(col)}</th>`;
         });
         html += '<th>Acciones</th></tr></thead>';
@@ -1908,7 +2003,7 @@ function loadTableEditor() {
             </td></tr>`;
         } else {
             rows.forEach((row, rowIndex) => {
-                const pkValue = pkIndex >= 0 ? row[pkIndex] : null;
+                const pkValue = row[pkIndex];
                 html += `<tr data-row="${rowIndex}" data-pk="${escapeHtml(pkValue)}">`;
                 row.forEach((value, colIdx) => {
                     const displayValue = value !== null && value !== undefined ? String(value) : '';
@@ -1919,9 +2014,7 @@ function loadTableEditor() {
                         class="cell-input${isPk ? ' pk-input' : ''}"
                         ${isPk ? 'readonly title="La clave primaria no se puede editar"' : ''} /></td>`;
                 });
-                html += pkColumn
-                    ? `<td><button type="button" class="delete-btn" data-pk="${escapeHtml(pkValue)}" title="Eliminar fila" aria-label="Eliminar fila"><i class="fas fa-trash"></i></button></td>`
-                    : '<td><span title="La tabla no tiene clave primaria">—</span></td>';
+                html += `<td><button type="button" class="delete-btn" data-pk="${escapeHtml(pkValue)}" title="Eliminar fila" aria-label="Eliminar fila"><i class="fas fa-trash"></i></button></td>`;
                 html += '</tr>';
             });
         }
@@ -1929,21 +2022,27 @@ function loadTableEditor() {
 
         content.innerHTML = html;
 
+        content.querySelectorAll('.cell-input').forEach(input => {
+            input.addEventListener('input', updateTableEditorDirtyState);
+        });
         content.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', () => deleteRow(tableName, button.dataset.pk));
         });
+        updateTableEditorDirtyState();
     } catch (e) {
         content.innerHTML = `<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Error: ${escapeHtml(e.message)}</p>`;
+        setAnalyzeEditorControlsEnabled(false);
+        updateTableEditorDirtyState();
     }
 }
 
-function saveTableChanges(tableName) {
+function saveTableChanges(tableName = analyzeSelectedTable) {
     if (!db) {
-        showMessage('error', 'La base de datos no está inicializada');
+        showToast('error', 'La base de datos no está inicializada.');
         return;
     }
     if (!tableName) {
-        showMessage('warning', 'No hay ninguna tabla seleccionada');
+        showToast('warning', 'No hay ninguna tabla seleccionada.');
         return;
     }
 
@@ -2015,13 +2114,13 @@ function saveTableChanges(tableName) {
 
         refreshAll();
         if (updatedCount === 0) {
-            showMessage('info', 'No había cambios que guardar');
+            showToast('info', 'No había cambios que guardar.');
         } else {
             schedulePersistDatabase();
-            showMessage('success', 'Cambios guardados correctamente', `${updatedCount} fila(s) actualizada(s) en ${escapeHtml(tableName)}`);
+            showToast('success', `${updatedCount} fila(s) actualizada(s) en ${tableName}.`);
         }
     } catch (e) {
-        showMessage('error', 'Error al guardar cambios', `<code>${escapeHtml(e.message)}</code>`);
+        showToast('error', `Error al guardar cambios: ${e.message}`);
         console.error(e);
     }
 }
@@ -2035,24 +2134,28 @@ function deleteRow(tableName, pkValue) {
             throw new Error('La tabla no tiene clave primaria; elimina el registro con una consulta SQL');
         }
 
-        if (!confirm(`¿Eliminar el registro con ${pkColumn.name} = ${pkValue}?`)) return;
+        const dirtyWarning = hasUnsavedTableEditorChanges()
+            ? '\n\nTienes cambios sin guardar en otras filas; se perderán.'
+            : '';
+        if (!confirm(`¿Eliminar el registro con ${pkColumn.name} = ${pkValue}?${dirtyWarning}`)) return;
 
         const value = parseColumnValue(pkValue, pkColumn);
         db.run(`DELETE FROM ${quoteIdent(tableName)} WHERE ${quoteIdent(pkColumn.name)} = ?`, [value]);
         refreshAll();
         schedulePersistDatabase();
-        showMessage('success', 'Registro eliminado correctamente');
+        showToast('success', 'Registro eliminado correctamente.');
     } catch (e) {
-        showMessage('error', 'Error al eliminar', `<code>${escapeHtml(e.message)}</code>`);
+        showToast('error', `Error al eliminar: ${e.message}`);
     }
 }
 
-function addRow(tableName) {
+function addRow(tableName = analyzeSelectedTable) {
     if (!db) return;
     if (!tableName) {
-        showMessage('warning', 'No hay ninguna tabla seleccionada');
+        showToast('warning', 'No hay ninguna tabla seleccionada.');
         return;
     }
+    if (!confirmDiscardTableEditorChanges('Agregar una fila recargará la tabla.')) return;
 
     try {
         const columns = getTableColumns(tableName);
@@ -2088,9 +2191,9 @@ function addRow(tableName) {
 
         refreshAll();
         schedulePersistDatabase();
-        showMessage('success', `Nueva fila agregada a ${tableName}`);
+        showToast('success', `Nueva fila agregada a ${tableName}.`);
     } catch (e) {
-        showMessage('error', 'Error al agregar fila', `<code>${escapeHtml(e.message)}</code>`);
+        showToast('error', `Error al agregar fila: ${e.message}`);
     }
 }
 
@@ -2461,6 +2564,9 @@ function renderAnalyzeTableDetail(table, database = db) {
                 <button type="button" class="btn-secondary btn-sm" data-analyze-action="copy" data-table="${escapeHtml(table.name)}">
                     <i class="fas fa-copy"></i> Copiar SELECT
                 </button>
+                <button type="button" class="btn-secondary btn-sm" data-analyze-action="edit" data-table="${escapeHtml(table.name)}">
+                    <i class="fas fa-pen"></i> Editar datos
+                </button>
                 <button type="button" class="btn-primary btn-sm" data-analyze-action="practice" data-table="${escapeHtml(table.name)}">
                     <i class="fas fa-play"></i> Practicar
                 </button>
@@ -2490,6 +2596,8 @@ function renderAnalyzeTableDetail(table, database = db) {
         button.addEventListener('click', () => {
             if (button.dataset.analyzeAction === 'copy') {
                 copyAnalyzeSelect(button.dataset.table);
+            } else if (button.dataset.analyzeAction === 'edit') {
+                setAnalyzeExplorerMode('edit', database);
             } else if (button.dataset.analyzeAction === 'practice') {
                 practiceAnalyzeTable(button.dataset.table);
             }
@@ -2498,10 +2606,18 @@ function renderAnalyzeTableDetail(table, database = db) {
 }
 
 function selectAnalyzeTable(tableName, database = db) {
+    if (tableName === analyzeSelectedTable && analyzeExplorerMode === 'edit') return;
+    if (tableName !== analyzeSelectedTable && analyzeExplorerMode === 'edit'
+        && !confirmDiscardTableEditorChanges('Vas a cambiar de tabla.')) {
+        return;
+    }
+
     analyzeSelectedTable = tableName;
     const summary = getAnalyzeSummary(database);
+    const selectedTable = summary.tableStats.find(table => table.name === tableName) || null;
     renderAnalyzeTableList(summary);
-    renderAnalyzeTableDetail(summary.tableStats.find(table => table.name === tableName), database);
+    renderAnalyzeTableDetail(selectedTable, database);
+    renderAnalyzeTableEditor(selectedTable, database);
 }
 
 function getAnalyzeOrphanIssues(summary, database = db) {
@@ -2667,11 +2783,16 @@ function renderAnalyzeQuality(summary, database = db) {
 }
 
 function renderAnalyzePanel(database = db) {
+    initAnalyzeExplorerControls();
+    updateAnalyzeExplorerModeUI();
+
     const summary = getAnalyzeSummary(database);
     renderAnalyzeSummary(summary);
     renderAnalyzeTableList(summary);
     const selectedTable = summary.tableStats.find(table => table.name === analyzeSelectedTable) || summary.tableStats[0] || null;
+    analyzeSelectedTable = selectedTable ? selectedTable.name : null;
     renderAnalyzeTableDetail(selectedTable, database);
+    renderAnalyzeTableEditor(selectedTable, database);
     renderAnalyzeQuality(summary, database);
 }
 
@@ -2767,18 +2888,63 @@ async function loadDataset(name) {
 }
 
 // REINICIAR BASE DE DATOS
-async function resetDatabase() {
-    if (confirm('¿Seguro que quieres reiniciar la base de datos a su estado original? Se borrará la copia guardada en este navegador.')) {
-        dbInitialized = false;
+async function resetDatabase(skipConfirm = false) {
+    if (!skipConfirm && !confirm('¿Seguro que quieres reiniciar la base de datos a su estado original? Se borrará la copia guardada en este navegador.')) return;
+
+    dbInitialized = false;
+    lastQueryError = null;
+    aiCooldownUntil = 0;
+    preferences.dataset = 'escuela';
+    savePreferences();
+    syncDatasetSelector();
+    refreshPracticeContentForDataset();
+    showMessage('warning', 'Reiniciando base de datos...');
+    await clearSavedDatabase();
+    initDatabase({ restore: false });
+}
+
+async function restoreAnalyzeDatasetData() {
+    const datasetName = preferences.dataset;
+    const dataset = datasetName === 'escuela' ? null : window.SQL_ACADEMY_DATASETS?.[datasetName];
+    const label = datasetName === 'escuela' ? 'Escuela' : dataset?.name || datasetName;
+
+    if (datasetName !== 'escuela' && !dataset) {
+        showToast('error', 'El dataset activo no está disponible.');
+        return;
+    }
+    if (!SQLModule) {
+        showToast('warning', 'Espera a que la base de datos termine de inicializarse.');
+        return;
+    }
+    if (!confirm(`¿Restaurar los datos originales de ${label}? Se perderán los cambios guardados en este navegador.`)) return;
+
+    if (datasetName === 'escuela') {
+        await resetDatabase(true);
+        showToast('info', 'Restaurando los datos originales de Escuela.');
+        return;
+    }
+
+    try {
+        const nextDb = new SQLModule.Database();
+        nextDb.run('PRAGMA foreign_keys = ON;');
+        nextDb.run(dataset.sql);
+
+        if (db) {
+            try { db.close(); } catch (error) { /* ignorar */ }
+        }
+        db = nextDb;
+        dbInitialized = true;
         lastQueryError = null;
         aiCooldownUntil = 0;
-        preferences.dataset = 'escuela';
-        savePreferences();
-        syncDatasetSelector();
-        refreshPracticeContentForDataset();
-        showMessage('warning', 'Reiniciando base de datos...');
+        aiResponseCache.clear();
+
         await clearSavedDatabase();
-        initDatabase({ restore: false });
+        refreshAll();
+        schedulePersistDatabase();
+        showToast('success', `Datos originales de ${dataset.name} restaurados.`);
+    } catch (error) {
+        console.error('No se pudieron restaurar los datos del dataset:', error);
+        showToast('error', `No se pudieron restaurar los datos: ${error.message}`);
     }
 }
 
@@ -5066,6 +5232,9 @@ function refreshPracticeContentForDataset() {
     renderDebugChallengeList();
     renderDebugChallengePlaceholder();
 
+    analyzeSelectedTable = null;
+    analyzeExplorerMode = 'view';
+
     refreshLearningPath({ selectFirst: true });
 }
 
@@ -7091,6 +7260,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initLearnLibrary();
     initChallenges();
     initLearningPath();
+    initAnalyzeExplorerControls();
+    updateAnalyzeExplorerModeUI();
 
     // Inicializar base de datos (restaura la copia local si existe).
     initDatabase();
@@ -7623,6 +7794,10 @@ window.importDatabase = importDatabase;
 window.loadTableEditor = loadTableEditor;
 window.deleteRow = deleteRow;
 window.addRow = addRow;
+window.setAnalyzeExplorerMode = setAnalyzeExplorerMode;
+window.refreshAnalyzeTableEditor = refreshAnalyzeTableEditor;
+window.restoreAnalyzeDatasetData = restoreAnalyzeDatasetData;
+window.hasUnsavedTableEditorChanges = hasUnsavedTableEditorChanges;
 window.renderAnalyzePanel = renderAnalyzePanel;
 window.selectAnalyzeTable = selectAnalyzeTable;
 window.getAnalyzeSummary = getAnalyzeSummary;

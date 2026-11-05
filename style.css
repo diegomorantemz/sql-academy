@@ -1284,6 +1284,142 @@ button:disabled {
     cursor: pointer;
 }
 
+/* ===== EXPLORADOR: VISTA Y EDICIÓN ===== */
+.analyze-mode-toggle {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+}
+
+.analyze-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.analyze-mode-btn:hover {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.analyze-mode-btn.active {
+    background: var(--postgres-blue);
+    border-color: var(--postgres-blue);
+    color: white;
+}
+
+#analyzeTableDetail[hidden],
+#analyzeTableEditor[hidden] {
+    display: none;
+}
+
+.analyze-table-editor {
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.analyze-editor-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.analyze-editor-head h4 {
+    margin: 0;
+    color: var(--text-strong);
+}
+
+.analyze-editor-head h4 i {
+    color: var(--postgres-blue);
+}
+
+.analyze-editor-table {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.analyze-editor-table strong {
+    color: var(--postgres-blue);
+}
+
+.table-editor-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #fff5e5;
+    color: #9a6100;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.table-editor-status[hidden] {
+    display: none;
+}
+
+.table-editor-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 9px 11px;
+    border: 1px solid #f0dfb0;
+    border-left: 4px solid #e0a800;
+    border-radius: 8px;
+    background: #fff9e8;
+    color: #7a5a00;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.table-editor-warning i {
+    margin-top: 2px;
+    flex: 0 0 auto;
+}
+
+.table-editor-note {
+    min-height: 18px;
+    margin: 8px 0;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.analyze-table-editor #tableEditorContent {
+    max-height: 420px;
+}
+
+.analyze-restore-btn {
+    color: #b42318;
+    border-color: rgba(180, 35, 24, 0.35);
+}
+
+.analyze-restore-btn:hover {
+    background: #fff5f5;
+    border-color: #dc3545;
+    color: #8b1e1e;
+}
+
 /* ===== ANALYZE SECTION ===== */
 /* ===== RETOS ===== */
 .challenges-layout {
@@ -3734,6 +3870,52 @@ button:disabled {
 [data-theme="dark"] .nosql-challenges-panel {
     background: #111827;
     border-color: #334155;
+}
+
+[data-theme="dark"] .analyze-table-editor {
+    background: transparent;
+    border-color: transparent;
+}
+
+[data-theme="dark"] .analyze-mode-toggle {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .analyze-mode-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .analyze-mode-btn:hover {
+    background: #172554;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .analyze-mode-btn.active {
+    background: var(--postgres-blue);
+    color: white;
+}
+
+[data-theme="dark"] .table-editor-status {
+    background: #78350f;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .table-editor-warning {
+    background: #3b2f14;
+    border-color: #a16207;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .analyze-restore-btn {
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.35);
+}
+
+[data-theme="dark"] .analyze-restore-btn:hover {
+    background: #3f1d1d;
+    border-color: #f87171;
+    color: #fecaca;
 }
 
 [data-theme="dark"] .panel-heading h4,

@@ -834,31 +834,6 @@
                 </div>
             </div>
 
-            <!-- Editor de tablas -->
-            <div class="table-editor">
-                <h4><i class="fas fa-pen-to-square"></i> Editor de Tablas</h4>
-                <div class="table-editor-controls">
-                    <select id="tableSelector" onchange="loadTableEditor()" aria-label="Tabla para editar">
-                        <option value="estudiantes">Estudiantes</option>
-                        <option value="cursos">Cursos</option>
-                        <option value="inscripciones">Inscripciones</option>
-                    </select>
-                    <button onclick="loadTableEditor()" class="btn-secondary">
-                        <i class="fas fa-rotate"></i> Refrescar
-                    </button>
-                    <button onclick="addRow(document.getElementById('tableSelector').value)" class="btn-secondary">
-                        <i class="fas fa-plus"></i> Agregar fila
-                    </button>
-                    <button onclick="saveTableChanges(document.getElementById('tableSelector').value)" class="btn-save">
-                        <i class="fas fa-save"></i> Guardar cambios
-                    </button>
-                </div>
-                <div id="tableEditorContent">
-                    <p class="text-muted" style="text-align:center;padding:20px;">
-                        <i class="fas fa-spinner fa-spin"></i> Cargando...
-                    </p>
-                </div>
-            </div>
         </section>
 
         <!-- ===== SECCIÓN: NOSQL ===== -->
@@ -1136,15 +1111,61 @@
                     <div class="analyze-card-head">
                         <div>
                             <h3><i class="fas fa-table-list"></i> Explorador de tablas</h3>
-                            <p class="analyze-card-subtitle">Consulta la estructura y una vista previa de cada tabla.</p>
+                            <p class="analyze-card-subtitle">Consulta la estructura, revisa la vista previa y edita los datos cuando lo necesites.</p>
+                        </div>
+                        <div class="analyze-mode-toggle" role="group" aria-label="Modo del explorador de tablas">
+                            <button type="button" class="analyze-mode-btn active" data-analyze-mode="view" aria-pressed="true">
+                                <i class="fas fa-eye"></i> Vista
+                            </button>
+                            <button type="button" class="analyze-mode-btn" data-analyze-mode="edit" aria-pressed="false">
+                                <i class="fas fa-pen"></i> Editar datos
+                            </button>
                         </div>
                     </div>
                     <div class="table-explorer">
                         <div id="analyzeTableList" class="table-explorer-list" role="listbox" aria-label="Tablas del dataset"></div>
-                        <div id="analyzeTableDetail" class="table-explorer-detail">
-                            <div class="analyze-empty-state">
-                                <i class="fas fa-table"></i>
-                                <p>Selecciona una tabla para ver su estructura.</p>
+                        <div class="table-explorer-detail">
+                            <div id="analyzeTableDetail">
+                                <div class="analyze-empty-state">
+                                    <i class="fas fa-table"></i>
+                                    <p>Selecciona una tabla para ver su estructura.</p>
+                                </div>
+                            </div>
+
+                            <div id="analyzeTableEditor" class="table-editor analyze-table-editor" hidden>
+                                <div class="analyze-editor-head">
+                                    <div>
+                                        <h4><i class="fas fa-pen-to-square"></i> Editar datos</h4>
+                                        <p class="analyze-editor-table">Tabla: <strong id="analyzeEditorTableName">—</strong></p>
+                                    </div>
+                                    <span id="tableEditorStatus" class="table-editor-status" aria-live="polite" hidden>Cambios sin guardar</span>
+                                </div>
+
+                                <div class="table-editor-warning">
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                    Los cambios que guardes afectan a la base de datos activa y pueden afectar a ejemplos, retos y lecciones.
+                                </div>
+
+                                <div class="table-editor-controls">
+                                    <button type="button" onclick="refreshAnalyzeTableEditor()" class="btn-secondary">
+                                        <i class="fas fa-rotate"></i> Refrescar
+                                    </button>
+                                    <button type="button" onclick="addRow()" class="btn-secondary" data-editor-action="add">
+                                        <i class="fas fa-plus"></i> Agregar fila
+                                    </button>
+                                    <button type="button" onclick="saveTableChanges()" class="btn-save" data-editor-action="save">
+                                        <i class="fas fa-save"></i> Guardar cambios
+                                    </button>
+                                    <button type="button" onclick="restoreAnalyzeDatasetData()" class="btn-secondary analyze-restore-btn" data-editor-action="restore">
+                                        <i class="fas fa-rotate-left"></i> Restaurar datos
+                                    </button>
+                                </div>
+                                <p id="tableEditorNote" class="table-editor-note"></p>
+                                <div id="tableEditorContent">
+                                    <p class="text-muted" style="text-align:center;padding:20px;">
+                                        <i class="fas fa-spinner fa-spin"></i> Cargando...
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
