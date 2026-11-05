@@ -394,6 +394,12 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Release Notes
 
+### v1.7.2
+
+- **Logos en modo oscuro:** se eliminaron los rellenos blancos internos de la Q de MySQL y de la Q/e de SQLite.
+- **Transparencia completa:** los huecos de las letras ahora muestran el fondo de la tarjeta.
+- **Caché PWA:** actualizada para servir las imágenes corregidas.
+
 ### v1.7.1
 
 - **Modo oscuro:** los logos de MySQL y SQLite ya no muestran el fondo blanco.
