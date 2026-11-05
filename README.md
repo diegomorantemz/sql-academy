@@ -1,6 +1,6 @@
 # SQL Academy - Simulador de Base de Datos
 
-Simulador educativo de SQL y NoSQL que se ejecuta en el navegador. El laboratorio SQL usa una base de datos SQLite real mediante [sql.js](https://sql.js.org/); el laboratorio NoSQL incluye un motor documental propio inspirado en MongoDB. Incluye editores de consultas, ejemplos guiados, retos con validación automática, editor visual de tablas, diagrama de relaciones, gráficos, persistencia local, PWA y un asistente opcional que explica errores y propone ejercicios en español.
+Simulador educativo de SQL y NoSQL que se ejecuta en el navegador. El laboratorio SQL usa una base de datos SQLite real mediante [sql.js](https://sql.js.org/); el laboratorio NoSQL incluye un motor documental propio inspirado en MongoDB. Incluye editores de consultas, ejemplos guiados, retos con validación automática, editor visual de tablas, diagrama de relaciones, panel de análisis con explorador de tablas y calidad de datos, persistencia local, PWA y un asistente opcional que explica errores y propone ejercicios en español.
 
 **Demo:** [https://sql-academy.netlify.app](https://sql-academy.netlify.app)
 
@@ -9,14 +9,23 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 ## Puntos destacados
 
 - Base de datos SQLite real en el navegador, sin backend para las consultas.
-- Persistencia automática del archivo SQLite en IndexedDB y del historial/preferencias en `localStorage`.
+- Persistencia automática del archivo SQLite en IndexedDB y del historial, preferencias y progreso de retos, ruta y conceptos en `localStorage`.
 - Modo seguro activado por defecto para confirmar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, `UPDATE` sin `WHERE` y `ALTER TABLE ... DROP`.
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
-- Ocho retos con validación por resultados, pistas y progreso guardado.
+- Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
+- Retos de depuración **Encuentra el error**: consulta rota, síntoma, pista, editor de corrección y validación por resultado en los tres datasets SQL.
+- Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
+- Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
+- Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
+- Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
+- Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
+- **Torre de Datos:** minijuego deckbuilder con 6 pisos, cartas SQL, recompensas y soporte para teclado, ratón y mando.
+- Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
 - Aplicación instalable (PWA), modo oscuro y mejoras de accesibilidad.
+- Donaciones voluntarias con Yape y Plin desde S/1, sin montos obligatorios ni funciones bloqueadas.
 - Tests automatizados, CI y escaneo de secretos con Gitleaks.
 
 ## Tecnologías
@@ -24,8 +33,8 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - HTML5, CSS3 y JavaScript sin frameworks.
 - SQLite en el navegador con `sql.js`.
 - Motor documental propio para el laboratorio NoSQL, sin `eval`.
-- Chart.js para los gráficos.
 - Font Awesome para los iconos.
+- Gamepad API para el control del minijuego con mando.
 - IndexedDB y `localStorage` para persistencia.
 - Service Worker y Web App Manifest para la PWA.
 - Netlify Functions como proxy seguro para el asistente IA.
@@ -46,7 +55,7 @@ npx serve .
 
 Después abre `http://localhost:8000`.
 
-> Las librerías de sql.js, Chart.js y Font Awesome se cargan desde CDN con versiones fijas. La primera visita necesita conexión; después el service worker puede servir el app shell desde caché.
+> Las librerías de sql.js y Font Awesome se cargan desde CDN con versiones fijas. La primera visita necesita conexión; después el service worker puede servir el app shell desde caché.
 
 ### Con Netlify CLI (incluye el asistente IA)
 
@@ -79,13 +88,18 @@ sql-academy/
 ├── index.html                  # Interfaz, secciones, modales y metadatos PWA
 ├── style.css                   # Estilos responsive, componentes y modo oscuro
 ├── script.js                   # Lógica de la app, persistencia, retos, IA y editor
+├── autocomplete.js             # Sugerencias contextuales para los editores SQL y NoSQL
+├── deckbuilder.js              # Minijuego Torre de Datos y soporte de mando
 ├── nosql-engine.js             # Motor documental seguro inspirado en MongoDB
 ├── nosql-datasets.js           # Documentos, ejemplos y retos NoSQL
 ├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
 ├── datasets.js                 # Datasets Tienda y Biblioteca
 ├── service-worker.js           # Caché PWA y estrategia de red
 ├── manifest.webmanifest        # Configuración de la aplicación instalable
-├── icons/                      # Iconos PWA
+├── assets/
+│   ├── icons/                  # Iconos PWA
+│   ├── images/                 # QR de donaciones Yape y Plin
+│   └── logos/                  # Logos de gestores SQL y NoSQL
 ├── netlify.toml                # Publicación, función, redirect e ignore de builds
 ├── _headers                    # Cabeceras de seguridad de Netlify
 ├── netlify/
@@ -93,7 +107,16 @@ sql-academy/
 │       └── explain.mjs         # Proxy seguro hacia Gemini
 ├── tests/
 │   ├── core.test.mjs           # Utilidades del frontend con jsdom
+│   ├── autocomplete.test.mjs   # Sugerencias contextuales SQL y NoSQL
+│   ├── path.test.mjs           # Lecciones, progreso y validación de la ruta
+│   ├── learn-ui.test.mjs       # Biblioteca, filtros, asistente y mini-quizzes
+│   ├── deckbuilder.test.mjs    # Torre de Datos, cartas y validación de pisos
 │   ├── nosql.test.mjs          # Motor documental, filtros, CRUD y agregaciones
+│   ├── nosql-ui.test.mjs       # Interfaz y revelado progresivo NoSQL
+│   ├── challenges-ui.test.mjs  # Pestañas SQL, NoSQL y Depuración
+│   ├── table-editor-ui.test.mjs # Vista y edición de tablas
+│   ├── donation-ui.test.mjs    # Modal de donaciones
+│   ├── license.test.mjs        # Licencia y rutas de assets
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
 ├── .gitleaks.toml              # Configuración del escaneo de secretos
@@ -101,9 +124,6 @@ sql-academy/
 ├── package.json
 ├── package-lock.json
 ├── LICENSE
-├── images/
-│   └── qr-yape.png             # QR de donaciones
-├── logos/                      # Logos de gestores SQL y NoSQL
 └── README.md
 ```
 
@@ -154,7 +174,7 @@ Las claves foráneas se aplican con `PRAGMA foreign_keys = ON`, por lo que no se
 - **Tienda:** `clientes`, `productos`, `pedidos` y `detalle_pedidos`.
 - **Biblioteca:** `autores`, `libros`, `socios` y `prestamos`.
 
-En SQL, los retos y los ejemplos guiados están diseñados para el dataset Escuela. Si cambias de dataset, la app lo avisa y puedes volver a Escuela desde la barra de herramientas.
+En SQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se cargan las categorías y los ejercicios correspondientes a Escuela, Tienda o Biblioteca.
 
 ## Funcionalidades
 
@@ -187,13 +207,57 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - Exportación a CSV y JSON.
 - Soporte para varias sentencias `SELECT` en una misma ejecución.
 
+### Análisis de datos
+
+- **Resumen del dataset:** número de tablas, columnas, filas, relaciones y tablas vacías.
+- **Diagrama ERD:** tablas, columnas, claves primarias y foráneas del esquema activo.
+- **Explorador de tablas:** selecciona una tabla para ver sus columnas, tipos, claves, número de filas y una vista previa de sus registros.
+- **Vista y edición:** cambia entre **Vista** y **Editar datos** sin salir del explorador. La edición permite actualizar celdas, agregar filas, eliminarlas y guardar los cambios.
+- **Edición protegida:** aviso de cambios sin guardar, límite de 100 filas por carga, bloqueo de tablas sin clave primaria y botón para restaurar los datos originales del dataset.
+- **Acciones rápidas:** copia un `SELECT` de la tabla o cárgalo en el editor para practicar.
+- **Calidad de datos:** comprobaciones de tablas vacías, claves primarias, integridad referencial, valores nulos y columnas sin tipo declarado.
+- Funciona con los tres datasets SQL y con bases importadas por el usuario.
+
+### Biblioteca de aprendizaje
+
+- **Guías y conceptos en un solo lugar:** pestañas para consultar motores SQL/NoSQL y fichas conceptuales.
+- **Buscador y filtros:** por tecnología, tipo de base de datos, licencia, nivel o tema.
+- **Asistente “¿Qué motor me conviene?”:** cuatro preguntas para recomendar PostgreSQL, MySQL, MongoDB, Redis, Neo4j, Cassandra, Firebase o Elasticsearch.
+- **Fichas de concepto:** diagramas, ideas clave, errores comunes, ejemplo copiable y conceptos relacionados.
+- **Práctica conectada:** cada ficha enlaza con la ruta, el editor SQL, el ERD o el laboratorio NoSQL cuando tiene sentido.
+- **Mini-quiz de 2 preguntas:** al superarlo, el concepto se marca como dominado.
+- **Progreso persistente:** el avance de los conceptos se guarda en `localStorage` y aparece en Mi progreso.
+
+### Ruta de aprendizaje
+
+- **8 lecciones progresivas:** `SELECT`, `WHERE`, `ORDER BY`, `LIMIT`, `JOIN`, `GROUP BY`, `HAVING` y subconsultas.
+- **Contenido adaptado al dataset activo:** las tablas, columnas y ejercicios cambian para Escuela, Tienda y Biblioteca.
+- **Editor propio por lección:** cada ejercicio se resuelve sin salir de la ruta.
+- **Ayudas:** objetivo, explicación, ejemplo de referencia y pista.
+- **Validación por resultado:** se compara la consulta con el resultado esperado y se indica si faltan filas, columnas o valores.
+- **Progreso persistente:** cada lección completada se guarda por dataset en `localStorage`.
+- **Navegación guiada:** botón para pasar a la siguiente lección y opción de reiniciar la ruta.
+- **Panel Mi progreso:** dominio por concepto, avance por dataset, actividad reciente y siguiente paso recomendado.
+- **Recomendaciones accionables:** el panel propone continuar una lección, practicar un reto o cambiar de dataset.
+
+### Torre de Datos (minijuego)
+
+- **Deckbuilder SQL:** construye consultas seleccionando cartas de cláusulas, tablas, columnas, valores y funciones.
+- **6 pisos progresivos:** `SELECT`, `WHERE`, orden y límite, `JOIN`, agrupaciones y un jefe final con `HAVING`.
+- **Validación real:** cada consulta se ejecuta contra una base SQLite propia del juego y se compara con el resultado objetivo.
+- **Recompensas:** al superar un piso eliges una carta nueva para tu mazo (`DISTINCT`, `LEFT JOIN`, `AVG`, etc.).
+- **Puntuación y progreso:** puntos por piso, penalización suave por pistas o intentos y guardado en `localStorage`.
+- **Controles:** ratón, teclado y mando mediante Gamepad API. El juego muestra el estado del mando y resalta el elemento enfocado.
+- **Base independiente:** la torre usa su propio esquema y datos, sin modificar la base de práctica del usuario.
+
 ### Retos
 
-- Ocho ejercicios de nivel básico, intermedio y avanzado.
+- Ejercicios de nivel básico, intermedio y avanzado para cada dataset.
 - Validación comparando columnas, filas y valores, no el texto exacto de la consulta.
 - Solo se permiten consultas de lectura (`SELECT` o `WITH`).
 - Pistas, solución después de varios intentos y progreso guardado en `localStorage`.
-- Los retos usan el dataset Escuela para que el resultado esperado sea estable.
+- Escuela, Tienda y Biblioteca tienen retos propios; el progreso se guarda por reto y dataset.
+- La página Retos incluye pestañas SQL y NoSQL. Los retos NoSQL se resuelven en la propia pestaña con editor y validación por resultados.
 
 ### Asistente IA
 
@@ -215,6 +279,8 @@ El modo se valida en el backend con una allowlist. El frontend envía la consult
 - Ejecución con `Ctrl+Enter`.
 - Si hay texto seleccionado, se ejecuta solo esa selección.
 - **Formatear** consulta con el botón o con `Ctrl+Shift+F`; también formatea solo la selección.
+- **Autocompletado contextual:** sugiere tablas después de `FROM`/`JOIN`, columnas después de un alias o en cláusulas como `SELECT`, `WHERE` y `ORDER BY`, además de palabras clave y funciones. Funciona en práctica, retos SQL, ruta de aprendizaje y editores NoSQL.
+- Navegación con `↑`/`↓`, `Enter` o `Tab` para aceptar y `Esc` para cerrar.
 - Historial persistente con recarga de consultas.
 - Ejemplos guiados por categoría.
 - Editor visual de tablas con alta, baja y edición de filas.
@@ -228,6 +294,7 @@ Selector con tres bases de práctica. Al cambiar de dataset se reemplaza la base
 El laboratorio NoSQL es un simulador documental educativo, no una instancia real de MongoDB. Los documentos se guardan como JSON y se ejecutan en el navegador con un motor propio que no usa `eval`.
 
 - Colecciones y documentos con `_id` de texto.
+- Autocompletado de colecciones, métodos, campos y operadores al escribir comandos.
 - Consola simplificada de Mongo shell:
   ```js
   db.estudiantes.find({ edad: { $gt: 18 } }).sort({ promedio: -1 }).limit(5)
@@ -237,7 +304,9 @@ El laboratorio NoSQL es un simulador documental educativo, no una instancia real
 - Actualizaciones con `$set`, `$unset`, `$inc`, `$push`, `$addToSet`, `$pull` y `$rename`.
 - Aggregation con `$match`, `$project`, `$group`, `$sort`, `$skip`, `$limit`, `$count`, `$unwind`, `$addFields` y `$unset`.
 - Datasets documentales de Escuela, Tienda y Biblioteca, con cursos, pedidos y préstamos embebidos.
-- Historial, ejemplos guiados y retos por dataset con validación y progreso persistente.
+- Historial y ejemplos guiados por dataset.
+- Retos NoSQL accesibles desde la página Retos, con pestañas SQL/NoSQL, editor propio, validación por resultados y progreso persistente.
+- Plantillas de reto sin solución y botón «Ver solución» tras dos intentos fallidos.
 - Modo seguro para `deleteMany({})`, `updateMany({})` y `drop()`.
 - Persistencia en IndexedDB y ayuda opcional con IA para comandos NoSQL.
 
@@ -266,6 +335,9 @@ La sintaxis está limitada a un subconjunto seguro: no se aceptan funciones, lla
 | `Ctrl + L` | Limpiar el editor |
 | `Ctrl + E` | Mostrar un ejemplo aleatorio |
 | `Ctrl + Shift + R` | Reiniciar la base de datos |
+| `↑` / `↓` | Navegar por las sugerencias de autocompletado |
+| `Enter` / `Tab` | Aceptar la sugerencia seleccionada |
+| `Esc` | Cerrar las sugerencias |
 
 ## Asistente IA (opcional)
 
@@ -296,8 +368,17 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 
 ## Tests, CI y seguridad
 
-- `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV y datasets.
+- `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
+- `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
+- `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor y el mini-quiz de conceptos.
+- `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
+- `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
+- `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
+- `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL/Depuración y la navegación al laboratorio.
+- `tests/table-editor-ui.test.mjs` cubre los modos Vista/Editar del explorador, el aviso de cambios sin guardar, el bloqueo sin clave primaria y el límite de filas.
+- `tests/donation-ui.test.mjs` cubre el modal de donaciones, el cambio Yape/Plin, la ausencia de números y la presencia de los QR.
+- `tests/license.test.mjs` cubre la licencia noncommercial, la nota de copyright y las rutas de los assets de la PWA.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
 - `_headers` añade `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS y cachés específicas.
@@ -318,12 +399,188 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - La persistencia es local al navegador y al perfil. No se sincroniza entre dispositivos.
 - Si se borran los datos del sitio o se usa una ventana privada, se pierde la copia de IndexedDB.
 - El simulador ejecuta SQL real, incluidas sentencias destructivas. El modo seguro ayuda, pero no sustituye una copia de seguridad.
-- El editor visual asume que la tabla tiene una clave primaria. Para tablas sin clave primaria, usa consultas SQL.
+- El editor visual vive en **Analizar → Explorador de tablas → Editar datos**. Asume que la tabla tiene una clave primaria y carga como máximo 100 filas por vez. Para tablas sin clave primaria o para editar el resto de los registros, usa consultas SQL.
 - `sql.js` implementa SQLite, por lo que algunas funciones específicas de PostgreSQL, MySQL u Oracle no están disponibles.
 - La PWA necesita HTTPS (Netlify lo proporciona). El asistente IA requiere conexión y la Netlify Function desplegada.
-- En NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
+- En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.8.0
+
+- **Licencia noncommercial:** el proyecto pasa a PolyForm Noncommercial 1.0.0; el uso comercial requiere permiso escrito.
+- **Licencia comercial:** se añade la vía de contacto para empresas, academias y bootcamps.
+- **Marca:** se aclara que MNTWARE y SQL Academy no pueden usarse para promocionar derivados sin permiso.
+- **Assets ordenados:** iconos PWA, QR de donaciones y logos quedan dentro de `assets/`.
+- **Repositorio más limpio:** se eliminaron dos logos sin uso y archivos `.gitkeep` innecesarios.
+- **Caché PWA:** actualizada para las nuevas rutas de assets.
+
+### v1.7.10
+
+- **QR centrado:** el modal de donaciones usa una columna centrada, sin el espacio vacío lateral.
+- **Interfaz más compacta:** el QR, las instrucciones y el monto libre comparten el mismo eje visual.
+- **Sin emojis:** se retiraron los emojis de las frases y el icono de corazón de la donación.
+- **Caché PWA:** actualizada para el nuevo layout.
+
+### v1.7.9
+
+- **Donación más directa:** el modal reduce el texto a una frase de introducción, el QR y una línea de monto libre.
+- **Menos pasos:** se eliminaron las listas de instrucciones y transparencia; el QR y las pestañas Yape/Plin concentran la acción.
+- **Mismo enfoque voluntario:** se mantiene “desde S/1”, la frase de humor y el aviso de que no bloquea funciones.
+- **Caché PWA:** actualizada para el modal simplificado.
+
+### v1.7.8
+
+- **Donaciones voluntarias:** nuevo modal **Apoyar SQL Academy** con Yape y Plin, sin exponer números de teléfono.
+- **Monto libre:** se puede donar desde S/1 sin montos fijos ni obligación.
+- **Más confianza:** explicación del destino del apoyo, QR ampliable y mensaje de agradecimiento.
+- **Enfoque transparente:** se aclara que la donación no desbloquea funciones ni certificados.
+- **Preparado para crecer:** PayPal y Ko-fi quedan definidos en el código, ocultos hasta que se activen.
+- **Calidad:** pruebas del modal, cambio de método, ausencia de números y presencia de ambos QR.
+- **Caché PWA:** actualizada para los nuevos estilos y el QR de Plin.
+
+### v1.7.7
+
+- **Editor de datos integrado en Analizar:** el explorador de tablas ahora tiene modos **Vista** y **Editar datos**.
+- **Practicar más limpio:** el bloque de edición dejó de ocupar el ancho completo al final de la sección de práctica.
+- **Edición más segura:** aviso de cambios sin guardar, confirmación al cambiar de tabla o de modo, bloqueo de tablas sin clave primaria y límite de 100 filas por carga.
+- **Restaurar datos:** botón para recuperar los datos originales del dataset activo sin salir del explorador.
+- **Mejor jerarquía:** la edición comparte el espacio con la estructura y la vista previa de la tabla seleccionada.
+- **Calidad:** pruebas de modos, cambios sin guardar, tablas sin clave primaria y límite de filas.
+- **Caché PWA:** actualizada para los nuevos estilos y controles.
+
+### v1.7.6
+
+- **Retos de depuración:** nueva pestaña **Depuración** en Retos con 4 ejercicios **Encuentra el error** por dataset.
+- **Aprendizaje aplicado:** cada reto muestra una consulta rota, el síntoma, una pista y un editor para corregirla.
+- **Validación por resultado:** la corrección se compara con la solución esperada; no importa el texto exacto.
+- **Progreso propio:** avance, reinicio y solución después de dos intentos fallidos, sin afectar a los retos SQL.
+- **Tres datasets:** Escuela, Tienda y Biblioteca, con errores de `JOIN`, `GROUP BY`, `HAVING` y subconsultas.
+- **Autocompletado:** el editor de depuración sugiere tablas, columnas y palabras clave.
+- **Calidad:** pruebas de catálogo, ejecución de soluciones, consultas rotas y flujo de la pestaña.
+- **Caché PWA:** actualizada para el nuevo contenido.
+
+### v1.7.5
+
+- **Distribución de Práctica SQL:** la barra de ejemplos ahora vive en la columna del editor, igual que en el laboratorio NoSQL.
+- **Mejor jerarquía:** ejemplos, editor, historial y resultados comparten la misma columna; las tablas quedan en la barra lateral.
+- **Responsive:** en pantallas estrechas se mantiene el orden de NoSQL: barra lateral y después editor con ejemplos.
+- **Caché PWA:** actualizada para el nuevo layout.
+
+### v1.7.4
+
+- **Limpiar en NoSQL:** el botón «Limpiar» del editor ahora vacía el comando, igual que en SQL.
+- **Limpiar resultados:** se añadió una acción independiente en el panel de resultados.
+- **Historial intacto:** limpiar el editor ya no afecta al historial ni a los resultados.
+- **Calidad:** pruebas de limpieza de editor y de resultados NoSQL.
+
+### v1.7.3
+
+- **Ejemplos sin auto-ejecución:** al elegir un ejemplo SQL o NoSQL, la consulta se carga en el editor pero no se ejecuta.
+- **Botón Ejecutar útil:** ahora puedes revisar, editar o formatear el ejemplo antes de lanzarlo.
+- **Resultados claros:** el panel muestra «Ejemplo cargado. Pulsa Ejecutar» en lugar de dejar resultados antiguos.
+- **Textos actualizados:** las barras de ejemplos explican el nuevo flujo.
+
+### v1.7.2
+
+- **Logos en modo oscuro:** se eliminaron los rellenos blancos internos de la Q de MySQL y de la Q/e de SQLite.
+- **Transparencia completa:** los huecos de las letras ahora muestran el fondo de la tarjeta.
+- **Caché PWA:** actualizada para servir las imágenes corregidas.
+
+### v1.7.1
+
+- **Modo oscuro:** los logos de MySQL y SQLite ya no muestran el fondo blanco.
+- **Variantes de logo:** se añadieron versiones transparentes y variantes con texto claro para fondos oscuros.
+- **Biblioteca y fichas:** el cambio se aplica tanto a las tarjetas de Aprender como al modal de cada motor.
+- **Caché PWA:** actualizada para servir los nuevos recursos.
+
+### v1.7.0
+
+- **Biblioteca de aprendizaje:** Aprender y Conceptos se unifican en una sola sección con pestañas.
+- **Buscador y filtros:** encuentra motores y conceptos por texto, tecnología, nivel o tema.
+- **Asistente de motor:** un cuestionario de cuatro preguntas recomienda el motor más adecuado y explica cuándo evitarlo.
+- **Fichas de concepto mejoradas:** diagramas, errores comunes, ejemplos copiables, conceptos relacionados y acciones de práctica.
+- **Mini-quizzes:** dos preguntas por concepto, respuestas rotadas y progreso persistente.
+- **Mi progreso:** nueva sección de biblioteca de conceptos con avance y acceso directo.
+- **Contenido ampliado:** nuevas fichas de Tipos de JOIN y Teorema CAP, además de textos y tildes revisados.
+- **Calidad:** pruebas de pestañas, filtros, asistente, quiz y progreso.
+
+### v1.6.0
+
+- **Torre de Datos:** nuevo minijuego deckbuilder con 6 pisos, cartas SQL y una base de datos propia.
+- **Construcción de consultas con cartas:** cláusulas, tablas, columnas, valores, funciones y operadores.
+- **Deckbuilding:** después de cada piso eliges una recompensa que se añade a tu mazo para los siguientes niveles.
+- **Controles para todos:** ratón, teclado y mando con Gamepad API (stick/D-pad, A, B, X, Y).
+- **Progreso de juego:** puntuación, pistas, intentos, pisos completados y recompensas guardadas en `localStorage`.
+- **Validación real:** cada piso se comprueba ejecutando la consulta contra SQLite y comparando el resultado.
+- **Calidad:** pruebas de la base del juego, las soluciones de los pisos, las recompensas y el flujo de juego.
+
+### v1.5.9
+
+- **Panel Mi progreso:** nueva pestaña dentro de la Ruta con resumen global de lecciones y retos.
+- **Dominio por concepto:** barras y porcentajes para `SELECT`, filtros, ordenación, `LIMIT`, `JOIN`, agrupaciones, `HAVING` y subconsultas.
+- **Progreso por dataset:** avance independiente de Escuela, Tienda y Biblioteca.
+- **Siguiente paso recomendado:** botones para continuar una lección, practicar un reto o cambiar de dataset.
+- **Actividad reciente:** últimas lecciones y retos completados con su fecha.
+- **Calidad:** pruebas del dashboard, métricas, recomendaciones y actividad reciente.
+
+### v1.5.8
+
+- **Ruta de aprendizaje SQL:** 8 lecciones progresivas con editor propio, objetivo, explicación, ejemplo y pista.
+- **Contenido adaptado:** las lecciones cambian según el dataset activo (Escuela, Tienda o Biblioteca).
+- **Validación por resultado:** se comparan columnas, filas y valores de la consulta del usuario con la solución esperada.
+- **Progreso persistente:** cada lección completada se guarda por dataset y se puede reiniciar desde la propia ruta.
+- **Navegación guiada:** botón para continuar con la siguiente lección y acceso directo desde la barra principal.
+- **Calidad:** pruebas de las 8 lecciones en los tres datasets, del progreso y de la validación de ejercicios.
+
+### v1.5.7
+
+- **Autocompletado contextual:** sugerencias de tablas, columnas, palabras clave y funciones en SQL; colecciones, métodos, campos y operadores en NoSQL.
+- **Sugerencias inteligentes:** resuelve alias de tablas, califica columnas cuando hay varias tablas y evita activarse dentro de cadenas o comentarios.
+- **Navegación por teclado:** `↑`/`↓` para moverse, `Enter` o `Tab` para aceptar y `Esc` para cerrar.
+- **Integrado en todos los editores:** práctica SQL, retos SQL, laboratorio NoSQL y retos NoSQL de la página Retos.
+- **Calidad:** pruebas de sugerencias SQL/NoSQL, alias, cadenas y aplicación con teclado.
+
+### v1.5.6
+
+- **Reto NoSQL en la página Retos:** el panel «Reto NoSQL activo» se quitó del laboratorio y ahora el reto se resuelve en la pestaña Retos, con editor propio, pista y validación por resultados.
+- **Flujo unificado:** los retos SQL y NoSQL se resuelven en el mismo lugar, con botones «Comprobar reto», «Limpiar» y «Ver solución».
+- **Botón para abrir en laboratorio:** se puede seguir llevando el reto al laboratorio NoSQL para practicar libremente.
+- **Calidad:** pruebas del editor NoSQL en Retos, de la validación sin el laboratorio y de la ausencia del panel antiguo.
+
+### v1.5.5
+
+- **Pestaña Analizar renovada:** resumen del dataset, explorador de tablas y panel de calidad de datos.
+- **Sin gráficos dependientes del dataset:** se eliminó Chart.js y los gráficos que solo funcionaban con la tabla `estudiantes`.
+- **Explorador útil para cualquier base:** columnas, tipos, claves, filas y vista previa de cada tabla.
+- **Acciones rápidas:** copiar un `SELECT` o cargarlo en el editor para practicar.
+- **Calidad de datos:** detección de tablas vacías, tablas sin clave primaria, relaciones huérfanas, valores nulos y columnas sin tipo.
+- **Diseño:** nuevos estilos responsive y overrides de modo oscuro para el panel.
+- **Calidad:** pruebas del resumen, del explorador, de los checks y de la ausencia de Chart.js.
+
+### v1.5.4
+
+- **Ejemplos en un clic:** los ejemplos SQL se ejecutan al cambiar de categoría o pulsar «Siguiente ejemplo»; los ejemplos NoSQL se ejecutan al seleccionarlos.
+- **Menos fricción:** barras de ejemplo dedicadas, estado del ejemplo cargado y botón «Siguiente ejemplo» en SQL y NoSQL.
+- **Interfaz más clara:** toolbars agrupadas por acción, historial con limpieza en su cabecera y placeholders de resultados más útiles.
+- **Diseño refinado:** superficies, bordes, sombras y espaciados consistentes; mejoras de modo oscuro y responsive.
+- **Calidad:** pruebas de auto-ejecución, estado de ejemplos y cambio al siguiente ejemplo.
+
+### v1.5.3
+
+- **Retos NoSQL más justos:** al abrir un reto se carga una plantilla mínima, no la solución.
+- **Solución progresiva:** el botón «Ver solución» aparece tras dos intentos fallidos y solo rellena el editor.
+- **Página Retos unificada:** pestañas SQL/NoSQL; los retos NoSQL se exploran desde Retos y se resuelven en el laboratorio.
+- **Calidad:** pruebas de plantillas, revelado de solución, pestañas y navegación al laboratorio.
+
+### v1.5.2
+
+- **Práctica SQL por dataset:** los ejemplos guiados y los retos ahora se adaptan a Escuela, Tienda y Biblioteca.
+- **Tienda SQL:** ejemplos de consultas, filtros, orden, agregaciones, `GROUP BY`, `HAVING`, `JOIN`, subconsultas, operadores y CRUD.
+- **Biblioteca SQL:** ejemplos equivalentes sobre autores, libros, socios y préstamos.
+- **Retos nuevos:** seis retos para Tienda y seis para Biblioteca, con validación por resultados.
+- **Selector dinámico:** las categorías de ejemplos se actualizan al cambiar de dataset.
+- **Calidad:** pruebas de catálogos, ejecución de SQL con SQLite y cambio de dataset en la interfaz.
 
 ### v1.5.1
 
@@ -401,4 +658,15 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Licencia
 
-MIT. Consulta el archivo `LICENSE`.
+Este proyecto usa la **PolyForm Noncommercial License 1.0.0**. Consulta el archivo `LICENSE`.
+
+- **Permitido:** uso personal, educativo, investigación y proyectos no comerciales.
+- **No permitido sin permiso escrito:** vender el proyecto, revenderlo, ofrecerlo como servicio de pago o incluirlo en un producto comercial.
+- **Licencia comercial:** si necesitas usar SQL Academy con fines comerciales, contacta con MNTWARE a través de [GitHub](https://github.com/diegomorantemz).
+- La licencia cubre el código y el contenido original del proyecto.
+- Las versiones publicadas antes de la v1.8.0 se distribuyeron bajo licencia MIT.
+- Las dependencias y recursos de terceros conservan sus propias licencias.
+
+## Marca
+
+MNTWARE y SQL Academy son nombres del autor. No se permite usar sus nombres o logos para promocionar productos derivados sin permiso previo.

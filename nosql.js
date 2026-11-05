@@ -25,12 +25,30 @@
     let history = [];
     let challengeProgress = {};
     let activeChallengeId = null;
+    let activeChallengeAttempts = 0;
     let persistTimer = null;
     let initialized = false;
     let persistenceDbPromise = null;
 
     function getElement(id) {
         return document.getElementById(id);
+    }
+
+    function getAutocompleteSchema() {
+        if (!state || !state.collections) return [];
+        return Object.entries(state.collections).map(([name, documents]) => {
+            const fields = new Set();
+            (documents || []).slice(0, 50).forEach(document => {
+                Object.keys(document || {}).forEach(field => fields.add(field));
+            });
+            return { name, fields: Array.from(fields).slice(0, 50) };
+        });
+    }
+
+    function invalidateAutocompleteSchema() {
+        if (global.SQLAcademyAutocomplete?.invalidateSchema) {
+            global.SQLAcademyAutocomplete.invalidateSchema();
+        }
     }
 
     function escapeHtml(value) {
@@ -224,6 +242,7 @@
         const summary = getElement('nosqlCollectionSummary');
         if (!container || !state) return;
 
+        invalidateAutocompleteSchema();
         const collections = global.NoSQL.getCollectionSummary(state);
         if (summary) {
             summary.textContent = `${state.name} · ${collections.length} colecciones`;
@@ -300,9 +319,11 @@
         if (!select) return;
 
         const examples = getActiveExamples();
+        const status = getElement('nosqlExampleStatus');
         if (!examples.length) {
             select.innerHTML = '<option value="">No hay ejemplos para este dataset</option>';
             select.disabled = true;
+            if (status) status.textContent = 'No hay ejemplos para este dataset';
             return;
         }
 
@@ -310,6 +331,7 @@
         select.innerHTML = examples.map((example, index) => (
             `<option value="${index}">${escapeHtml(example.category)} · ${escapeHtml(example.title)}</option>`
         )).join('');
+        if (status) status.textContent = 'Elige un ejemplo para cargarlo en el editor';
     }
 
     function loadExample() {
@@ -317,7 +339,8 @@
         const editor = getElement('nosqlEditor');
         if (!select || !editor) return;
 
-        const example = getActiveExamples()[Number(select.value)];
+        const examples = getActiveExamples();
+        const example = examples[Number(select.value)];
         if (!example) return;
 
         if (example.dataset && example.dataset !== datasetName) {
@@ -326,7 +349,27 @@
         }
 
         editor.value = example.query;
+        editor.selectionStart = editor.selectionEnd = editor.value.length;
         editor.focus();
+
+        const status = getElement('nosqlExampleStatus');
+        if (status) status.textContent = `Ejemplo cargado: ${example.title}`;
+
+        clearResult('Ejemplo cargado. Pulsa «Ejecutar» para ver los documentos.');
+        editor.focus();
+    }
+
+    function loadNextExample() {
+        const select = getElement('nosqlExampleSelector');
+        const examples = getActiveExamples();
+        if (!select || !examples.length) return;
+
+        const current = Number(select.value);
+        const next = Number.isFinite(current) && current >= 0
+            ? (current + 1) % examples.length
+            : 0;
+        select.value = String(next);
+        loadExample();
     }
 
     function toggleSafeMode(enabled) {
@@ -456,14 +499,24 @@
         `;
     }
 
-    function clearResult() {
+    function clearResult(message = 'Ejecuta un comando para ver los documentos') {
         const output = getElement('nosqlResultOutput');
         if (!output) return;
         output.className = 'result-placeholder';
         output.innerHTML = `
-            <i class="fas fa-lightbulb placeholder-icon"></i>
-            <p>Ejecuta un comando para ver los documentos</p>
+            <i class="fas fa-play placeholder-icon"></i>
+            <p>${escapeHtml(message)}</p>
         `;
+    }
+
+    function clearQuery() {
+        const editor = getElement('nosqlEditor');
+        if (!editor) return;
+        if (editor.value.trim() === '') return;
+        editor.value = '';
+        editor.selectionStart = editor.selectionEnd = 0;
+        editor.focus();
+        showToast('warning', 'Editor NoSQL limpiado.');
     }
 
     function validateChallenge(result) {
@@ -487,7 +540,24 @@
         if (!container) return;
         container.hidden = false;
         container.className = `challenge-result ${feedback.ok ? 'success' : 'error'}`;
-        container.innerHTML = `<strong>${feedback.ok ? 'Reto completado' : 'Todavía no'}</strong><p>${escapeHtml(feedback.message)}</p>`;
+        const canRevealSolution = !feedback.ok && activeChallengeId && activeChallengeAttempts >= 2;
+        const solutionButton = canRevealSolution
+            ? `<div class="challenge-result-actions">
+                    <button type="button" class="btn-secondary" onclick="revealNoSQLSolution()">
+                        <i class="fas fa-eye"></i> Ver solución
+                    </button>
+                </div>`
+            : '';
+        container.innerHTML = `<strong>${feedback.ok ? 'Reto completado' : 'Todavía no'}</strong><p>${escapeHtml(feedback.message)}</p>${solutionButton}`;
+    }
+
+    function revealSolution() {
+        const challenge = getActiveChallenges().find(item => item.id === activeChallengeId);
+        const editor = getElement('nosqlEditor');
+        if (!challenge || !editor) return;
+        editor.value = challenge.solution;
+        editor.focus();
+        showToast('info', 'Solución cargada. Ejecútala para comprobar el resultado.');
     }
 
     function runQuery() {
@@ -526,6 +596,7 @@
 
             const feedback = validateChallenge(result);
             if (feedback) {
+                if (!feedback.ok) activeChallengeAttempts += 1;
                 renderChallengeFeedback(feedback);
                 if (feedback.ok && !challengeProgress[activeChallengeId]) {
                     challengeProgress[activeChallengeId] = {
@@ -601,39 +672,101 @@
         });
     }
 
-    function openChallenge(id) {
+    function openChallenge(id, options) {
         const challenge = getActiveChallenges().find(item => item.id === id);
-        const detail = getElement('nosqlChallengeDetail');
         const editor = getElement('nosqlEditor');
         if (!challenge) {
             showToast('warning', 'Ese reto pertenece a otro dataset.');
-            return;
+            return null;
         }
-        if (!detail) return;
 
+        const settings = options || {};
         activeChallengeId = id;
+        activeChallengeAttempts = 0;
         if (editor) editor.value = challenge.starter;
 
-        detail.innerHTML = `
-            <div class="challenge-detail-header">
-                <h3>${escapeHtml(challenge.title)}</h3>
-                <span class="challenge-level ${challenge.level === 'Básico' ? 'basico' : (challenge.level === 'Intermedio' ? 'intermedio' : 'avanzado')}">${escapeHtml(challenge.level)}</span>
-            </div>
-            <p class="challenge-description">${escapeHtml(challenge.description)}</p>
-            <details class="nosql-hint">
-                <summary><i class="fas fa-lightbulb"></i> Ver pista</summary>
-                <p>${escapeHtml(challenge.hint)}</p>
-            </details>
-            <div class="challenge-actions">
-                <button type="button" class="btn-secondary" onclick="runNoSQLQuery()">
-                    <i class="fas fa-play"></i> Ejecutar y comprobar
-                </button>
-            </div>
-            <div id="nosqlChallengeFeedback" class="challenge-result" hidden></div>
-        `;
+        const detail = getElement('nosqlChallengeDetail');
+        if (detail) {
+            detail.innerHTML = `
+                <div class="challenge-detail-header">
+                    <h3>${escapeHtml(challenge.title)}</h3>
+                    <span class="challenge-level ${challenge.level === 'Básico' ? 'basico' : (challenge.level === 'Intermedio' ? 'intermedio' : 'avanzado')}">${escapeHtml(challenge.level)}</span>
+                </div>
+                <p class="challenge-description">${escapeHtml(challenge.description)}</p>
+                <details class="nosql-hint">
+                    <summary><i class="fas fa-lightbulb"></i> Ver pista</summary>
+                    <p>${escapeHtml(challenge.hint)}</p>
+                </details>
+                <div class="challenge-actions">
+                    <button type="button" class="btn-secondary" onclick="runNoSQLQuery()">
+                        <i class="fas fa-play"></i> Ejecutar y comprobar
+                    </button>
+                </div>
+                <div id="nosqlChallengeFeedback" class="challenge-result" hidden></div>
+            `;
+        }
 
         renderChallenges();
-        if (editor) editor.focus();
+        if (editor && settings.focus !== false) editor.focus();
+        return challenge;
+    }
+
+    // Ejecuta un comando NoSQL (escrito fuera del laboratorio) y lo valida contra el reto activo.
+    function runChallengeCommand(command) {
+        if (!global.NoSQL) return { ok: false, message: 'El motor NoSQL todavía no está disponible.' };
+        const query = String(command || '').trim();
+        if (!query) {
+            showToast('warning', 'Escribe un comando NoSQL antes de comprobar el reto.');
+            return { ok: false, message: 'Escribe un comando NoSQL antes de comprobar el reto.' };
+        }
+        if (!activeChallengeId) {
+            showToast('warning', 'Elige un reto NoSQL para comprobarlo.');
+            return { ok: false, message: 'Elige un reto NoSQL para comprobarlo.' };
+        }
+
+        const dangerous = global.NoSQL.getDangerousCommandReason(query);
+        if (safeMode && dangerous) {
+            const confirmed = global.confirm(
+                `Modo seguro NoSQL: vas a ${describeDangerousCommand(dangerous)} sin filtro.\n\n¿Quieres continuar?`
+            );
+            if (!confirmed) {
+                return { ok: false, message: 'Operación cancelada por el modo seguro.', cancelled: true };
+            }
+        }
+
+        const startedAt = Date.now();
+        try {
+            const result = global.NoSQL.executeCommand(state, query);
+            const duration = Date.now() - startedAt;
+            addHistory(query);
+            renderResult(result, duration);
+            if (result.type === 'write') {
+                schedulePersist();
+                renderCollections();
+            }
+
+            const feedback = validateChallenge(result);
+            if (feedback) {
+                if (!feedback.ok) activeChallengeAttempts += 1;
+                if (feedback.ok && !challengeProgress[activeChallengeId]) {
+                    challengeProgress[activeChallengeId] = {
+                        completedAt: new Date().toISOString()
+                    };
+                    saveChallengeProgress();
+                    renderChallenges();
+                }
+                feedback.canRevealSolution = !feedback.ok && activeChallengeAttempts >= 2;
+                feedback.challengeId = activeChallengeId;
+            }
+
+            showToast(result.type === 'write' ? 'success' : 'info', getResultSummary(result));
+            return feedback;
+        } catch (error) {
+            renderError(error.message, query);
+            addHistory(query);
+            showToast('error', error.message);
+            return { ok: false, message: error.message, challengeId: activeChallengeId, canRevealSolution: false };
+        }
     }
 
     function renderChallengePlaceholder() {
@@ -643,7 +776,10 @@
             <div class="challenge-empty">
                 <i class="fas fa-trophy"></i>
                 <h3>Elige un reto NoSQL</h3>
-                <p>Selecciona un reto de la izquierda para cargar su plantilla y comprobar tu resultado.</p>
+                <p>Explora los retos desde la página Retos y ábrelos aquí para resolverlos con el editor NoSQL.</p>
+                <button type="button" class="btn-secondary" onclick="openNoSQLChallengesHub()">
+                    <i class="fas fa-list-check"></i> Ver todos los retos NoSQL
+                </button>
             </div>
         `;
     }
@@ -653,8 +789,12 @@
         challengeProgress = {};
         saveChallengeProgress();
         activeChallengeId = null;
+        activeChallengeAttempts = 0;
         renderChallenges();
         renderChallengePlaceholder();
+        if (typeof global.renderNoSQLChallengeHub === 'function') {
+            global.renderNoSQLChallengeHub();
+        }
         showToast('info', 'Progreso de retos NoSQL reiniciado.');
     }
 
@@ -676,6 +816,7 @@
         renderCollections();
         clearResult();
         activeChallengeId = null;
+        activeChallengeAttempts = 0;
         if (hadActiveChallenge) {
             const editor = getElement('nosqlEditor');
             if (editor) editor.value = '';
@@ -749,14 +890,23 @@
     global.runNoSQLQuery = runQuery;
     global.clearNoSQLHistory = clearHistory;
     global.clearNoSQLResult = clearResult;
+    global.clearNoSQLQuery = clearQuery;
     global.loadNoSQLExample = loadExample;
+    global.loadNextNoSQLExample = loadNextExample;
     global.loadNoSQLCollection = loadCollection;
     global.resetNoSQLDatabase = resetDatabase;
     global.changeNoSQLDataset = changeDataset;
     global.toggleNoSQLSafeMode = toggleSafeMode;
     global.openNoSQLAIHelp = openAIHelp;
     global.loadNoSQLChallenge = openChallenge;
+    global.runNoSQLChallengeCommand = runChallengeCommand;
+    global.revealNoSQLSolution = revealSolution;
     global.resetNoSQLChallengeProgress = resetChallengeProgress;
+    global.getNoSQLActiveDataset = () => datasetName;
+    global.getNoSQLAutocompleteSchema = getAutocompleteSchema;
+    global.getNoSQLActiveChallenges = getActiveChallenges;
+    global.getNoSQLChallengeProgress = () => ({ ...challengeProgress });
+    global.isNoSQLChallengeCompleted = id => Boolean(challengeProgress[id]);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

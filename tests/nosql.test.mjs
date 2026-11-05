@@ -268,11 +268,15 @@ test('los ejemplos y retos pertenecen a datasets y colecciones existentes', () =
 
     for (const challenge of runtime.NOSQL_CHALLENGES) {
         assert.ok(datasetNames.includes(challenge.dataset), `Dataset inválido en reto: ${challenge.id}`);
-        const command = NoSQL.parseCommand(challenge.starter);
-        assert.ok(
-            datasets[challenge.dataset].collections[command.collection],
-            `Colección inexistente: ${challenge.dataset}.${command.collection}`
-        );
+        assert.ok(challenge.starter, `Falta la plantilla del reto: ${challenge.id}`);
+        assert.ok(challenge.solution, `Falta la solución del reto: ${challenge.id}`);
+        for (const commandText of [challenge.starter, challenge.solution]) {
+            const command = NoSQL.parseCommand(commandText);
+            assert.ok(
+                datasets[challenge.dataset].collections[command.collection],
+                `Colección inexistente: ${challenge.dataset}.${command.collection}`
+            );
+        }
     }
 
     for (const datasetName of datasetNames) {
@@ -281,12 +285,22 @@ test('los ejemplos y retos pertenecen a datasets y colecciones existentes', () =
     }
 });
 
-test('las plantillas de los retos cumplen sus validadores', () => {
+test('las soluciones de los retos cumplen sus validadores', () => {
     for (const challenge of runtime.NOSQL_CHALLENGES) {
+        const db = NoSQL.createDatabase(datasets[challenge.dataset]);
+        const result = NoSQL.executeCommand(db, challenge.solution);
+        const feedback = runtime.validateNoSQLChallenge(challenge, result);
+        assert.equal(feedback.ok, true, `${challenge.id}: ${feedback.message}`);
+    }
+});
+
+test('las plantillas de los retos no revelan la solución', () => {
+    for (const challenge of runtime.NOSQL_CHALLENGES) {
+        assert.notEqual(challenge.starter, challenge.solution, `${challenge.id} usa la solución como plantilla`);
         const db = NoSQL.createDatabase(datasets[challenge.dataset]);
         const result = NoSQL.executeCommand(db, challenge.starter);
         const feedback = runtime.validateNoSQLChallenge(challenge, result);
-        assert.equal(feedback.ok, true, `${challenge.id}: ${feedback.message}`);
+        assert.equal(feedback.ok, false, `${challenge.id} se resuelve con la plantilla`);
     }
 });
 

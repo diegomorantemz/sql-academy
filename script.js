@@ -1,9 +1,11 @@
 let db;
 let SQLModule = null;
 let dbInitialized = false;
-let chartCarreras, chartPromedios;
 let queryHistory = [];
 let diagramFullView = false;
+let analyzeSelectedTable = null;
+let analyzeExplorerMode = 'view';
+const TABLE_EDITOR_ROW_LIMIT = 100;
 
 // ============================================
 // PERSISTENCIA LOCAL
@@ -12,7 +14,8 @@ let diagramFullView = false;
 const STORAGE_KEYS = {
     history: 'sql-academy-history-v1',
     preferences: 'sql-academy-preferences-v1',
-    challenges: 'sql-academy-challenges-v1'
+    challenges: 'sql-academy-challenges-v1',
+    learningPath: 'sql-academy-path-v1'
 };
 const PERSIST_DB_NAME = 'sql-academy';
 const PERSIST_DB_VERSION = 1;
@@ -288,10 +291,10 @@ function isWriteQuery(sql) {
 }
 
 /** Devuelve las tablas de usuario de la base de datos actual. */
-function getUserTables() {
-    if (!db) return [];
+function getUserTables(database = db) {
+    if (!database) return [];
     try {
-        const result = db.exec(
+        const result = database.exec(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
         );
         return result.length > 0 ? result[0].values.map(row => String(row[0])) : [];
@@ -302,10 +305,10 @@ function getUserTables() {
 }
 
 /** Devuelve la estructura de una tabla usando PRAGMA table_info. */
-function getTableColumns(tableName) {
-    if (!db) return [];
+function getTableColumns(tableName, database = db) {
+    if (!database) return [];
     try {
-        const result = db.exec(`PRAGMA table_info(${quoteIdent(tableName)})`);
+        const result = database.exec(`PRAGMA table_info(${quoteIdent(tableName)})`);
         if (result.length === 0) return [];
         return result[0].values.map(row => ({
             cid: row[0],
@@ -354,6 +357,23 @@ function parseColumnValue(rawValue, column) {
     }
 
     return raw;
+}
+
+/** Deja el panel de resultados listo para ejecutar una consulta. */
+function resetSqlResultPanel(message = 'Ejemplo cargado. Pulsa «Ejecutar» para ver los resultados.') {
+    lastResultSets = [];
+    lastQueryMeta = { durationMs: 0, executedAt: null };
+    resultRowLimits = [];
+    resultSortState = [];
+    lastQueryError = null;
+
+    const output = document.getElementById('resultOutput');
+    if (!output) return;
+    output.className = 'result-placeholder';
+    output.innerHTML = `
+        <i class="fas fa-play placeholder-icon"></i>
+        <p>${escapeHtml(message)}</p>
+    `;
 }
 
 /** Muestra un mensaje estandarizado en el panel de resultados. */
@@ -441,10 +461,11 @@ function closeModal(modal) {
 
 /** Refresca todos los paneles que dependen de la base de datos. */
 function refreshAll() {
-    refreshTableSelector();
+    if (window.SQLAcademyAutocomplete?.invalidateSchema) {
+        window.SQLAcademyAutocomplete.invalidateSchema();
+    }
     showTablesInfo();
-    loadTableEditor();
-    updateCharts();
+    renderAnalyzePanel();
     generateDiagram();
 }
 
@@ -1621,7 +1642,6 @@ function toggleTheme() {
     preferences.theme = preferences.theme === 'dark' ? 'light' : 'dark';
     savePreferences();
     applyPreferences();
-    if (dbInitialized) updateCharts();
     showToast('info', preferences.theme === 'dark' ? 'Modo oscuro activado.' : 'Modo claro activado.');
 }
 
@@ -1718,7 +1738,7 @@ function updateHistoryDisplay() {
     if (queryHistory.length === 0) {
         const empty = document.createElement('li');
         empty.className = 'empty-history';
-        empty.textContent = 'No hay consultas aun';
+        empty.textContent = 'No hay consultas todavía';
         list.appendChild(empty);
         return;
     }
@@ -1819,64 +1839,159 @@ function importDatabase() {
     input.click();
 }
 
-// EDITOR DE TABLAS
-function refreshTableSelector() {
-    if (!db) return;
-    const selector = document.getElementById('tableSelector');
-    if (!selector) return;
+// EXPLORADOR DE TABLAS Y EDITOR DE DATOS
+function hasUnsavedTableEditorChanges() {
+    return Array.from(document.querySelectorAll('#tableEditorContent .cell-input'))
+        .some(input => input.value !== (input.dataset.original ?? ''));
+}
 
-    const previous = selector.value;
-    const tables = getUserTables();
+function updateTableEditorDirtyState() {
+    const status = document.getElementById('tableEditorStatus');
+    if (!status) return;
+    const dirty = hasUnsavedTableEditorChanges();
+    status.hidden = !dirty;
+    status.textContent = dirty ? 'Cambios sin guardar' : '';
+}
 
-    selector.innerHTML = '';
+function confirmDiscardTableEditorChanges(message) {
+    if (!hasUnsavedTableEditorChanges()) return true;
+    return confirm(`${message}\n\nTienes cambios sin guardar. Si continúas, se perderán.`);
+}
 
-    if (tables.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'Sin tablas';
-        option.disabled = true;
-        option.selected = true;
-        selector.appendChild(option);
+function setAnalyzeEditorControlsEnabled(enabled) {
+    document.querySelectorAll('#analyzeTableEditor [data-editor-action="add"], #analyzeTableEditor [data-editor-action="save"]')
+        .forEach(button => {
+            button.disabled = !enabled;
+        });
+}
+
+function updateAnalyzeExplorerModeUI() {
+    document.querySelectorAll('[data-analyze-mode]').forEach(button => {
+        const active = button.dataset.analyzeMode === analyzeExplorerMode;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+
+    const detail = document.getElementById('analyzeTableDetail');
+    const editor = document.getElementById('analyzeTableEditor');
+    if (detail) detail.hidden = analyzeExplorerMode === 'edit';
+    if (editor) editor.hidden = analyzeExplorerMode !== 'edit';
+}
+
+function setAnalyzeExplorerMode(mode, database = db) {
+    const nextMode = mode === 'edit' ? 'edit' : 'view';
+    if (nextMode === analyzeExplorerMode) return;
+    if (analyzeExplorerMode === 'edit' && nextMode === 'view'
+        && !confirmDiscardTableEditorChanges('Vas a cerrar el modo de edición.')) {
         return;
     }
 
-    tables.forEach(tableName => {
-        const option = document.createElement('option');
-        option.value = tableName;
-        option.textContent = tableName;
-        selector.appendChild(option);
-    });
-
-    selector.value = tables.includes(previous) ? previous : tables[0];
+    analyzeExplorerMode = nextMode;
+    updateAnalyzeExplorerModeUI();
+    if (nextMode === 'edit') {
+        loadTableEditor(analyzeSelectedTable, database);
+    }
 }
 
-function loadTableEditor() {
-    if (!db) return;
-    const tableName = document.getElementById('tableSelector').value;
+function initAnalyzeExplorerControls() {
+    document.querySelectorAll('[data-analyze-mode]').forEach(button => {
+        if (button.dataset.bound === 'true') return;
+        button.dataset.bound = 'true';
+        button.addEventListener('click', () => setAnalyzeExplorerMode(button.dataset.analyzeMode));
+    });
+}
+
+function refreshAnalyzeTableEditor() {
+    if (!confirmDiscardTableEditorChanges('Vas a recargar la tabla.')) return;
+    loadTableEditor(analyzeSelectedTable);
+}
+
+function renderAnalyzeTableEditor(table, database = db) {
+    const editor = document.getElementById('analyzeTableEditor');
+    if (!editor) return;
+
+    const tableNameEl = document.getElementById('analyzeEditorTableName');
+    if (tableNameEl) tableNameEl.textContent = table ? table.name : '—';
+
+    updateAnalyzeExplorerModeUI();
+
+    if (!table) {
+        const content = document.getElementById('tableEditorContent');
+        if (content) {
+            content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> Selecciona una tabla para editarla.</p>';
+        }
+        setAnalyzeEditorControlsEnabled(false);
+        return;
+    }
+
+    if (analyzeExplorerMode === 'edit') {
+        loadTableEditor(table.name, database);
+    }
+}
+
+function loadTableEditor(tableName = analyzeSelectedTable, database = db) {
     const content = document.getElementById('tableEditorContent');
+    if (!content) return;
+
+    const tableNameEl = document.getElementById('analyzeEditorTableName');
+    if (tableNameEl) tableNameEl.textContent = tableName || '—';
+
+    if (!database) {
+        content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-hourglass-half"></i> La base de datos todavía no está disponible.</p>';
+        setAnalyzeEditorControlsEnabled(false);
+        updateTableEditorDirtyState();
+        return;
+    }
 
     if (!tableName) {
-        content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> No hay tablas para editar</p>';
+        content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> No hay tablas para editar.</p>';
+        setAnalyzeEditorControlsEnabled(false);
+        updateTableEditorDirtyState();
         return;
     }
 
     try {
-        const columns = getTableColumns(tableName);
-        const result = db.exec(`SELECT * FROM ${quoteIdent(tableName)}`);
-        if (result.length === 0 || columns.length === 0) {
-            content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> Tabla vacia</p>';
+        const columns = getTableColumns(tableName, database);
+        const pkColumn = columns.find(col => col.pk > 0) || null;
+        const note = document.getElementById('tableEditorNote');
+
+        if (!pkColumn) {
+            content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-lock"></i> Esta tabla no tiene clave primaria. Usa el editor SQL para modificarla.</p>';
+            if (note) note.textContent = 'La edición visual requiere una clave primaria.';
+            setAnalyzeEditorControlsEnabled(false);
+            updateTableEditorDirtyState();
             return;
         }
 
-        const selectColumns = result[0].columns;
-        const rows = result[0].values;
-        const pkColumn = columns.find(col => col.pk > 0) || null;
-        const pkIndex = pkColumn ? selectColumns.indexOf(pkColumn.name) : -1;
+        const countResult = database.exec(`SELECT COUNT(*) AS total FROM ${quoteIdent(tableName)}`);
+        const totalRows = countResult.length > 0 ? Number(countResult[0].values[0][0]) || 0 : 0;
+        const result = database.exec(
+            `SELECT * FROM ${quoteIdent(tableName)} ORDER BY ${quoteIdent(pkColumn.name)} LIMIT ${TABLE_EDITOR_ROW_LIMIT}`
+        );
+        const selectColumns = result.length > 0 ? result[0].columns : [];
+        const rows = result.length > 0 ? result[0].values : [];
+        const pkIndex = selectColumns.indexOf(pkColumn.name);
+
+        if (selectColumns.length === 0 || pkIndex < 0) {
+            content.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;"><i class="fas fa-inbox"></i> Tabla vacía.</p>';
+            if (note) note.textContent = `${totalRows} fila(s) en la tabla.`;
+            setAnalyzeEditorControlsEnabled(true);
+            updateTableEditorDirtyState();
+            return;
+        }
+
+        if (note) {
+            note.textContent = totalRows > TABLE_EDITOR_ROW_LIMIT
+                ? `Mostrando las primeras ${TABLE_EDITOR_ROW_LIMIT} de ${totalRows} filas. Para editar el resto, usa el editor SQL.`
+                : `${totalRows} fila(s) disponibles para editar.`;
+        }
+
+        setAnalyzeEditorControlsEnabled(true);
 
         let html = '<table>';
         html += '<thead><tr>';
         selectColumns.forEach(col => {
-            const isPk = pkColumn && col === pkColumn.name;
+            const isPk = col === pkColumn.name;
             html += `<th>${isPk ? '<i class="fas fa-key" title="Clave primaria"></i> ' : ''}${escapeHtml(col)}</th>`;
         });
         html += '<th>Acciones</th></tr></thead>';
@@ -1888,7 +2003,7 @@ function loadTableEditor() {
             </td></tr>`;
         } else {
             rows.forEach((row, rowIndex) => {
-                const pkValue = pkIndex >= 0 ? row[pkIndex] : null;
+                const pkValue = row[pkIndex];
                 html += `<tr data-row="${rowIndex}" data-pk="${escapeHtml(pkValue)}">`;
                 row.forEach((value, colIdx) => {
                     const displayValue = value !== null && value !== undefined ? String(value) : '';
@@ -1899,9 +2014,7 @@ function loadTableEditor() {
                         class="cell-input${isPk ? ' pk-input' : ''}"
                         ${isPk ? 'readonly title="La clave primaria no se puede editar"' : ''} /></td>`;
                 });
-                html += pkColumn
-                    ? `<td><button type="button" class="delete-btn" data-pk="${escapeHtml(pkValue)}" title="Eliminar fila" aria-label="Eliminar fila"><i class="fas fa-trash"></i></button></td>`
-                    : '<td><span title="La tabla no tiene clave primaria">—</span></td>';
+                html += `<td><button type="button" class="delete-btn" data-pk="${escapeHtml(pkValue)}" title="Eliminar fila" aria-label="Eliminar fila"><i class="fas fa-trash"></i></button></td>`;
                 html += '</tr>';
             });
         }
@@ -1909,21 +2022,27 @@ function loadTableEditor() {
 
         content.innerHTML = html;
 
+        content.querySelectorAll('.cell-input').forEach(input => {
+            input.addEventListener('input', updateTableEditorDirtyState);
+        });
         content.querySelectorAll('.delete-btn').forEach(button => {
             button.addEventListener('click', () => deleteRow(tableName, button.dataset.pk));
         });
+        updateTableEditorDirtyState();
     } catch (e) {
         content.innerHTML = `<p style="color:#dc3545;"><i class="fas fa-circle-exclamation"></i> Error: ${escapeHtml(e.message)}</p>`;
+        setAnalyzeEditorControlsEnabled(false);
+        updateTableEditorDirtyState();
     }
 }
 
-function saveTableChanges(tableName) {
+function saveTableChanges(tableName = analyzeSelectedTable) {
     if (!db) {
-        showMessage('error', 'La base de datos no está inicializada');
+        showToast('error', 'La base de datos no está inicializada.');
         return;
     }
     if (!tableName) {
-        showMessage('warning', 'No hay ninguna tabla seleccionada');
+        showToast('warning', 'No hay ninguna tabla seleccionada.');
         return;
     }
 
@@ -1995,13 +2114,13 @@ function saveTableChanges(tableName) {
 
         refreshAll();
         if (updatedCount === 0) {
-            showMessage('info', 'No había cambios que guardar');
+            showToast('info', 'No había cambios que guardar.');
         } else {
             schedulePersistDatabase();
-            showMessage('success', 'Cambios guardados correctamente', `${updatedCount} fila(s) actualizada(s) en ${escapeHtml(tableName)}`);
+            showToast('success', `${updatedCount} fila(s) actualizada(s) en ${tableName}.`);
         }
     } catch (e) {
-        showMessage('error', 'Error al guardar cambios', `<code>${escapeHtml(e.message)}</code>`);
+        showToast('error', `Error al guardar cambios: ${e.message}`);
         console.error(e);
     }
 }
@@ -2015,24 +2134,28 @@ function deleteRow(tableName, pkValue) {
             throw new Error('La tabla no tiene clave primaria; elimina el registro con una consulta SQL');
         }
 
-        if (!confirm(`¿Eliminar el registro con ${pkColumn.name} = ${pkValue}?`)) return;
+        const dirtyWarning = hasUnsavedTableEditorChanges()
+            ? '\n\nTienes cambios sin guardar en otras filas; se perderán.'
+            : '';
+        if (!confirm(`¿Eliminar el registro con ${pkColumn.name} = ${pkValue}?${dirtyWarning}`)) return;
 
         const value = parseColumnValue(pkValue, pkColumn);
         db.run(`DELETE FROM ${quoteIdent(tableName)} WHERE ${quoteIdent(pkColumn.name)} = ?`, [value]);
         refreshAll();
         schedulePersistDatabase();
-        showMessage('success', 'Registro eliminado correctamente');
+        showToast('success', 'Registro eliminado correctamente.');
     } catch (e) {
-        showMessage('error', 'Error al eliminar', `<code>${escapeHtml(e.message)}</code>`);
+        showToast('error', `Error al eliminar: ${e.message}`);
     }
 }
 
-function addRow(tableName) {
+function addRow(tableName = analyzeSelectedTable) {
     if (!db) return;
     if (!tableName) {
-        showMessage('warning', 'No hay ninguna tabla seleccionada');
+        showToast('warning', 'No hay ninguna tabla seleccionada.');
         return;
     }
+    if (!confirmDiscardTableEditorChanges('Agregar una fila recargará la tabla.')) return;
 
     try {
         const columns = getTableColumns(tableName);
@@ -2068,9 +2191,9 @@ function addRow(tableName) {
 
         refreshAll();
         schedulePersistDatabase();
-        showMessage('success', `Nueva fila agregada a ${tableName}`);
+        showToast('success', `Nueva fila agregada a ${tableName}.`);
     } catch (e) {
-        showMessage('error', 'Error al agregar fila', `<code>${escapeHtml(e.message)}</code>`);
+        showToast('error', `Error al agregar fila: ${e.message}`);
     }
 }
 
@@ -2205,120 +2328,494 @@ function createCloseButton() {
     return btn;
 }
 
-// GRAFICOS
-function updateCharts() {
-    if (!db) return;
-    if (typeof Chart === 'undefined') {
-        console.warn('Chart.js no está disponible; se omiten los gráficos.');
+// ANALISIS DE DATOS
+function getTableForeignKeys(tableName, database = db) {
+    if (!database) return [];
+    try {
+        const result = database.exec(`PRAGMA foreign_key_list(${quoteIdent(tableName)})`);
+        if (result.length === 0) return [];
+        return result[0].values.map(row => ({
+            table: String(row[2]),
+            from: String(row[3]),
+            to: row[4] === null || row[4] === undefined ? '' : String(row[4]),
+            onDelete: String(row[6] || 'NO ACTION')
+        }));
+    } catch (e) {
+        console.error(`No se pudieron leer las claves foráneas de ${tableName}:`, e);
+        return [];
+    }
+}
+
+function getTableRowCount(tableName, database = db) {
+    if (!database) return 0;
+    try {
+        const result = database.exec(`SELECT COUNT(*) FROM ${quoteIdent(tableName)}`);
+        return result.length > 0 ? Number(result[0].values[0][0]) || 0 : 0;
+    } catch (e) {
+        console.error(`No se pudo contar las filas de ${tableName}:`, e);
+        return 0;
+    }
+}
+
+function getTablePreview(tableName, limit = 5, database = db) {
+    if (!database) return { columns: [], values: [] };
+    const safeLimit = Math.max(1, Math.min(50, Number(limit) || 5));
+    try {
+        const result = database.exec(`SELECT * FROM ${quoteIdent(tableName)} LIMIT ${safeLimit}`);
+        if (result.length === 0) return { columns: [], values: [] };
+        return {
+            columns: result[0].columns.map(String),
+            values: result[0].values
+        };
+    } catch (e) {
+        console.error(`No se pudo leer una vista previa de ${tableName}:`, e);
+        return { columns: [], values: [] };
+    }
+}
+
+function getAnalyzeSummary(database = db) {
+    const emptySummary = {
+        tables: [],
+        tableStats: [],
+        columnCount: 0,
+        rowCount: 0,
+        relationCount: 0,
+        emptyTables: [],
+        largestTable: null
+    };
+    if (!database) return emptySummary;
+
+    const tables = getUserTables(database);
+    const tableStats = tables.map(name => {
+        const columns = getTableColumns(name, database);
+        const foreignKeys = getTableForeignKeys(name, database);
+        const rowCount = getTableRowCount(name, database);
+        return { name, columns, foreignKeys, rowCount };
+    });
+
+    return {
+        tables,
+        tableStats,
+        columnCount: tableStats.reduce((total, table) => total + table.columns.length, 0),
+        rowCount: tableStats.reduce((total, table) => total + table.rowCount, 0),
+        relationCount: tableStats.reduce((total, table) => total + table.foreignKeys.length, 0),
+        emptyTables: tableStats.filter(table => table.rowCount === 0).map(table => table.name),
+        largestTable: tableStats.reduce(
+            (largest, table) => (!largest || table.rowCount > largest.rowCount ? table : largest),
+            null
+        )
+    };
+}
+
+function formatAnalyzeNumber(value) {
+    return Number(value || 0).toLocaleString('es-ES');
+}
+
+function formatAnalyzeCell(value) {
+    if (value === null || value === undefined) {
+        return '<span class="null-value">NULL</span>';
+    }
+    return escapeHtml(String(value));
+}
+
+function renderAnalyzeSummary(summary) {
+    const container = document.getElementById('analyzeSummary');
+    if (!container) return;
+
+    if (summary.tables.length === 0) {
+        container.innerHTML = `
+            <div class="analyze-empty-state analyze-empty-state-wide">
+                <i class="fas fa-database"></i>
+                <p>No hay tablas disponibles en este dataset.</p>
+            </div>
+        `;
         return;
     }
 
-    const isDarkTheme = document.documentElement.dataset.theme === 'dark';
-    Chart.defaults.color = isDarkTheme ? '#e2e8f0' : '#2C3E50';
-    Chart.defaults.borderColor = isDarkTheme ? 'rgba(148, 163, 184, 0.18)' : 'rgba(0, 0, 0, 0.1)';
+    const emptyTables = summary.emptyTables.length;
+    const metrics = [
+        { label: 'Tablas', value: summary.tables.length, icon: 'fa-table', tone: 'tone-blue', hint: 'Tablas de usuario' },
+        { label: 'Columnas', value: summary.columnCount, icon: 'fa-columns', tone: 'tone-violet', hint: 'Campos en total' },
+        { label: 'Filas', value: summary.rowCount, icon: 'fa-database', tone: 'tone-green', hint: 'Registros almacenados' },
+        { label: 'Relaciones', value: summary.relationCount, icon: 'fa-link', tone: 'tone-orange', hint: 'Claves foráneas' },
+        {
+            label: 'Tablas vacías',
+            value: emptyTables,
+            icon: 'fa-inbox',
+            tone: emptyTables ? 'tone-amber' : 'tone-green',
+            hint: emptyTables ? 'Revisar datos' : 'Todas con datos'
+        }
+    ];
 
-    const hasStudentsTable = getUserTables().includes('estudiantes');
-    if (!hasStudentsTable) {
-        if (chartCarreras) { chartCarreras.destroy(); chartCarreras = null; }
-        if (chartPromedios) { chartPromedios.destroy(); chartPromedios = null; }
+    container.innerHTML = metrics.map(metric => `
+        <div class="analyze-metric">
+            <span class="analyze-metric-icon ${metric.tone}"><i class="fas ${metric.icon}"></i></span>
+            <div>
+                <span class="analyze-metric-value">${formatAnalyzeNumber(metric.value)}</span>
+                <span class="analyze-metric-label">${metric.label}</span>
+                <span class="analyze-metric-hint">${metric.hint}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderAnalyzeTableList(summary) {
+    const list = document.getElementById('analyzeTableList');
+    if (!list) return;
+
+    if (summary.tableStats.length === 0) {
+        list.innerHTML = '<p class="analyze-empty-state"><i class="fas fa-inbox"></i> Sin tablas</p>';
         return;
     }
 
-    try {
-        if (chartCarreras) { chartCarreras.destroy(); chartCarreras = null; }
-        const resultCarreras = db.exec(`SELECT carrera, COUNT(*) as cantidad FROM estudiantes GROUP BY carrera`);
-        if (resultCarreras.length > 0 && resultCarreras[0].values.length > 0) {
-            const labels = resultCarreras[0].values.map(row => row[0]);
-            const data = resultCarreras[0].values.map(row => row[1]);
-            const colors = ['#336791', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#fee140', '#a18cd1'];
+    if (!summary.tableStats.some(table => table.name === analyzeSelectedTable)) {
+        analyzeSelectedTable = summary.tableStats[0].name;
+    }
 
-            const ctx = document.getElementById('chartCarreras').getContext('2d');
-            chartCarreras = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Estudiantes por carrera',
-                        data: data,
-                        backgroundColor: colors.slice(0, data.length),
-                        borderColor: colors.slice(0, data.length).map(c => c + 'cc'),
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        title: {
-                            display: true,
-                            text: 'Estudiantes por Carrera'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            stepSize: 1
-                        }
-                    }
+    list.innerHTML = summary.tableStats.map(table => {
+        const active = table.name === analyzeSelectedTable;
+        return `
+            <button type="button"
+                class="analyze-table-item${active ? ' active' : ''}"
+                data-table="${escapeHtml(table.name)}"
+                role="option"
+                aria-selected="${active}">
+                <span class="analyze-table-name"><i class="fas fa-table"></i> ${escapeHtml(table.name)}</span>
+                <span class="analyze-table-meta">${formatAnalyzeNumber(table.rowCount)} filas · ${formatAnalyzeNumber(table.columns.length)} col.</span>
+            </button>
+        `;
+    }).join('');
+
+    list.querySelectorAll('[data-table]').forEach(button => {
+        button.addEventListener('click', () => selectAnalyzeTable(button.dataset.table));
+    });
+}
+
+function renderAnalyzeTableDetail(table, database = db) {
+    const detail = document.getElementById('analyzeTableDetail');
+    if (!detail) return;
+
+    if (!table) {
+        detail.innerHTML = `
+            <div class="analyze-empty-state">
+                <i class="fas fa-table"></i>
+                <p>Selecciona una tabla para ver su estructura.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const foreignKeyByColumn = new Map(table.foreignKeys.map(fk => [fk.from, fk]));
+    const preview = getTablePreview(table.name, 5, database);
+
+    const columnRows = table.columns.map(column => {
+        const isPk = column.pk > 0;
+        const foreignKey = foreignKeyByColumn.get(column.name);
+        let keyBadge = '<span class="key-badge key-none">—</span>';
+        if (isPk && foreignKey) keyBadge = '<span class="key-badge key-pk-fk">PK/FK</span>';
+        else if (isPk) keyBadge = '<span class="key-badge key-pk">PK</span>';
+        else if (foreignKey) keyBadge = '<span class="key-badge key-fk">FK</span>';
+
+        return `
+            <tr>
+                <td><code>${escapeHtml(column.name)}</code></td>
+                <td>${escapeHtml(column.type || 'sin tipo')}</td>
+                <td>${keyBadge}</td>
+                <td>${column.notnull ? 'No' : 'Sí'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const previewRows = preview.values.map(row => `
+        <tr>${preview.columns.map((_, index) => `<td>${formatAnalyzeCell(row[index])}</td>`).join('')}</tr>
+    `).join('');
+
+    const previewHtml = preview.columns.length
+        ? `
+            <div class="table-detail-preview">
+                <table class="table-detail-table">
+                    <thead>
+                        <tr>${preview.columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr>
+                    </thead>
+                    <tbody>${previewRows}</tbody>
+                </table>
+            </div>
+        `
+        : `
+            <div class="analyze-empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>Esta tabla todavía no tiene registros.</p>
+            </div>
+        `;
+
+    const relationText = table.foreignKeys.length
+        ? `${table.foreignKeys.length} relación(es)`
+        : 'Sin relaciones';
+
+    detail.innerHTML = `
+        <div class="table-detail-head">
+            <div>
+                <h4><i class="fas fa-table"></i> ${escapeHtml(table.name)}</h4>
+                <p class="table-detail-meta">
+                    ${formatAnalyzeNumber(table.rowCount)} filas · ${formatAnalyzeNumber(table.columns.length)} columnas · ${escapeHtml(relationText)}
+                </p>
+            </div>
+            <div class="table-detail-actions">
+                <button type="button" class="btn-secondary btn-sm" data-analyze-action="copy" data-table="${escapeHtml(table.name)}">
+                    <i class="fas fa-copy"></i> Copiar SELECT
+                </button>
+                <button type="button" class="btn-secondary btn-sm" data-analyze-action="edit" data-table="${escapeHtml(table.name)}">
+                    <i class="fas fa-pen"></i> Editar datos
+                </button>
+                <button type="button" class="btn-primary btn-sm" data-analyze-action="practice" data-table="${escapeHtml(table.name)}">
+                    <i class="fas fa-play"></i> Practicar
+                </button>
+            </div>
+        </div>
+
+        <p class="table-detail-subtitle">Columnas</p>
+        <div class="table-detail-table-wrap">
+            <table class="table-detail-table">
+                <thead>
+                    <tr>
+                        <th>Columna</th>
+                        <th>Tipo</th>
+                        <th>Clave</th>
+                        <th>¿Nulo?</th>
+                    </tr>
+                </thead>
+                <tbody>${columnRows}</tbody>
+            </table>
+        </div>
+
+        <p class="table-detail-subtitle">Vista previa · ${formatAnalyzeNumber(preview.values.length)} fila(s)</p>
+        ${previewHtml}
+    `;
+
+    detail.querySelectorAll('[data-analyze-action]').forEach(button => {
+        button.addEventListener('click', () => {
+            if (button.dataset.analyzeAction === 'copy') {
+                copyAnalyzeSelect(button.dataset.table);
+            } else if (button.dataset.analyzeAction === 'edit') {
+                setAnalyzeExplorerMode('edit', database);
+            } else if (button.dataset.analyzeAction === 'practice') {
+                practiceAnalyzeTable(button.dataset.table);
+            }
+        });
+    });
+}
+
+function selectAnalyzeTable(tableName, database = db) {
+    if (tableName === analyzeSelectedTable && analyzeExplorerMode === 'edit') return;
+    if (tableName !== analyzeSelectedTable && analyzeExplorerMode === 'edit'
+        && !confirmDiscardTableEditorChanges('Vas a cambiar de tabla.')) {
+        return;
+    }
+
+    analyzeSelectedTable = tableName;
+    const summary = getAnalyzeSummary(database);
+    const selectedTable = summary.tableStats.find(table => table.name === tableName) || null;
+    renderAnalyzeTableList(summary);
+    renderAnalyzeTableDetail(selectedTable, database);
+    renderAnalyzeTableEditor(selectedTable, database);
+}
+
+function getAnalyzeOrphanIssues(summary, database = db) {
+    if (!database) return [];
+    const tableNames = new Set(summary.tables);
+    const issues = [];
+
+    summary.tableStats.forEach(table => {
+        table.foreignKeys.forEach(foreignKey => {
+            if (!tableNames.has(foreignKey.table)) return;
+            const parentTable = summary.tableStats.find(item => item.name === foreignKey.table);
+            const parentColumn = foreignKey.to || parentTable?.columns.find(column => column.pk > 0)?.name;
+            if (!parentColumn) return;
+
+            try {
+                const result = database.exec(`
+                    SELECT COUNT(*) AS total
+                    FROM ${quoteIdent(table.name)} AS child
+                    LEFT JOIN ${quoteIdent(foreignKey.table)} AS parent_row
+                        ON child.${quoteIdent(foreignKey.from)} = parent_row.${quoteIdent(parentColumn)}
+                    WHERE child.${quoteIdent(foreignKey.from)} IS NOT NULL
+                        AND parent_row.${quoteIdent(parentColumn)} IS NULL
+                `);
+                const count = result.length > 0 ? Number(result[0].values[0][0]) || 0 : 0;
+                if (count > 0) {
+                    issues.push({
+                        table: table.name,
+                        column: foreignKey.from,
+                        parentTable: foreignKey.table,
+                        parentColumn,
+                        count
+                    });
+                }
+            } catch (e) {
+                console.error(`No se pudo comprobar la relación ${table.name}.${foreignKey.from}:`, e);
+            }
+        });
+    });
+
+    return issues;
+}
+
+function getAnalyzeNullColumns(summary, database = db) {
+    if (!database) return [];
+    const issues = [];
+
+    summary.tableStats.forEach(table => {
+        if (table.rowCount === 0) return;
+        const nullableColumns = table.columns.filter(column => !column.notnull);
+        if (nullableColumns.length === 0) return;
+
+        try {
+            const selectParts = nullableColumns.map((column, index) => (
+                `SUM(CASE WHEN ${quoteIdent(column.name)} IS NULL THEN 1 ELSE 0 END) AS n${index}`
+            ));
+            const result = database.exec(
+                `SELECT ${selectParts.join(', ')} FROM ${quoteIdent(table.name)}`
+            );
+            const counts = result.length > 0 ? result[0].values[0] : [];
+            nullableColumns.forEach((column, index) => {
+                const count = Number(counts[index]) || 0;
+                if (count > 0) {
+                    issues.push({ table: table.name, column: column.name, count });
                 }
             });
+        } catch (e) {
+            console.error(`No se pudieron contar los nulos de ${table.name}:`, e);
         }
-    } catch(e) {
-        if (chartCarreras) { chartCarreras.destroy(); chartCarreras = null; }
-        console.log('Error en grafico de carreras:', e);
+    });
+
+    return issues;
+}
+
+function buildAnalyzeQualityChecks(summary, database = db) {
+    const checks = [];
+    const emptyTables = summary.emptyTables;
+
+    checks.push({
+        status: emptyTables.length ? 'warning' : 'ok',
+        title: 'Tablas con datos',
+        detail: emptyTables.length
+            ? `${emptyTables.length} tabla(s) sin registros: ${emptyTables.join(', ')}.`
+            : 'Todas las tablas contienen registros.'
+    });
+
+    const tablesWithoutPk = summary.tableStats
+        .filter(table => !table.columns.some(column => column.pk > 0))
+        .map(table => table.name);
+    checks.push({
+        status: tablesWithoutPk.length ? 'warning' : 'ok',
+        title: 'Claves primarias',
+        detail: tablesWithoutPk.length
+            ? `Sin clave primaria: ${tablesWithoutPk.join(', ')}.`
+            : 'Todas las tablas tienen clave primaria.'
+    });
+
+    const orphanIssues = getAnalyzeOrphanIssues(summary, database);
+    checks.push({
+        status: orphanIssues.length ? 'error' : 'ok',
+        title: 'Integridad referencial',
+        detail: orphanIssues.length
+            ? `${orphanIssues.length} relación(es) con registros huérfanos: ${orphanIssues.slice(0, 3).map(issue => `${issue.table}.${issue.column} (${issue.count})`).join(', ')}${orphanIssues.length > 3 ? '…' : ''}.`
+            : 'No se detectaron registros huérfanos en las claves foráneas.'
+    });
+
+    const nullColumns = getAnalyzeNullColumns(summary, database);
+    checks.push({
+        status: nullColumns.length ? 'info' : 'ok',
+        title: 'Valores nulos',
+        detail: nullColumns.length
+            ? `${nullColumns.length} columna(s) contienen nulos: ${nullColumns.slice(0, 3).map(issue => `${issue.table}.${issue.column} (${issue.count})`).join(', ')}${nullColumns.length > 3 ? '…' : ''}.`
+            : 'No se encontraron valores nulos en las columnas consultadas.'
+    });
+
+    const untypedColumns = summary.tableStats.flatMap(table => table.columns
+        .filter(column => !column.type)
+        .map(column => `${table.name}.${column.name}`));
+    checks.push({
+        status: untypedColumns.length ? 'warning' : 'ok',
+        title: 'Tipos declarados',
+        detail: untypedColumns.length
+            ? `${untypedColumns.length} columna(s) sin tipo: ${untypedColumns.slice(0, 3).join(', ')}${untypedColumns.length > 3 ? '…' : ''}.`
+            : 'Todas las columnas tienen un tipo declarado.'
+    });
+
+    return checks;
+}
+
+function renderAnalyzeQuality(summary, database = db) {
+    const container = document.getElementById('analyzeQuality');
+    if (!container) return;
+
+    if (summary.tableStats.length === 0) {
+        container.innerHTML = `
+            <div class="analyze-empty-state">
+                <i class="fas fa-shield-halved"></i>
+                <p>No hay datos para analizar.</p>
+            </div>
+        `;
+        return;
     }
-    
+
+    const meta = {
+        ok: { icon: 'fa-circle-check', label: 'Correcto' },
+        warning: { icon: 'fa-triangle-exclamation', label: 'Revisar' },
+        error: { icon: 'fa-circle-exclamation', label: 'Atención' },
+        info: { icon: 'fa-circle-info', label: 'Info' }
+    };
+
+    container.innerHTML = buildAnalyzeQualityChecks(summary, database).map(check => {
+        const checkMeta = meta[check.status] || meta.info;
+        return `
+            <div class="quality-item quality-${check.status}">
+                <span class="quality-icon"><i class="fas ${checkMeta.icon}"></i></span>
+                <div class="quality-copy">
+                    <strong>${escapeHtml(check.title)}</strong>
+                    <p>${escapeHtml(check.detail)}</p>
+                </div>
+                <span class="quality-badge">${checkMeta.label}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderAnalyzePanel(database = db) {
+    initAnalyzeExplorerControls();
+    updateAnalyzeExplorerModeUI();
+
+    const summary = getAnalyzeSummary(database);
+    renderAnalyzeSummary(summary);
+    renderAnalyzeTableList(summary);
+    const selectedTable = summary.tableStats.find(table => table.name === analyzeSelectedTable) || summary.tableStats[0] || null;
+    analyzeSelectedTable = selectedTable ? selectedTable.name : null;
+    renderAnalyzeTableDetail(selectedTable, database);
+    renderAnalyzeTableEditor(selectedTable, database);
+    renderAnalyzeQuality(summary, database);
+}
+
+async function copyAnalyzeSelect(tableName) {
+    const sql = `SELECT * FROM ${quoteIdent(tableName)} LIMIT 20;`;
     try {
-        if (chartPromedios) { chartPromedios.destroy(); chartPromedios = null; }
-        const resultPromedios = db.exec(`SELECT carrera, ROUND(AVG(promedio), 2) as promedio FROM estudiantes GROUP BY carrera`);
-        if (resultPromedios.length > 0 && resultPromedios[0].values.length > 0) {
-            const labels = resultPromedios[0].values.map(row => row[0]);
-            const data = resultPromedios[0].values.map(row => row[1]);
-            
-            const ctx = document.getElementById('chartPromedios').getContext('2d');
-            chartPromedios = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Promedio por carrera',
-                        data: data,
-                        borderColor: '#336791',
-                        backgroundColor: 'rgba(51, 103, 145, 0.1)',
-                        tension: 0.4,
-                        fill: true,
-                        pointBackgroundColor: '#336791',
-                        pointBorderColor: '#336791',
-                        pointRadius: 6,
-                        pointHoverRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: false },
-                        title: {
-                            display: true,
-                            text: 'Promedio por Carrera'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            min: 0,
-                            max: 20,
-                            title: {
-                                display: true,
-                                text: 'Promedio (0-20)'
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    } catch(e) {
-        if (chartPromedios) { chartPromedios.destroy(); chartPromedios = null; }
-        console.log('Error en grafico de promedios:', e);
+        await copyTextToClipboard(sql);
+        showToast('success', 'Consulta copiada al portapapeles.');
+    } catch (e) {
+        showToast('error', 'No se pudo copiar la consulta.');
     }
+}
+
+function practiceAnalyzeTable(tableName) {
+    const editor = document.getElementById('sqlEditor');
+    if (!editor) return;
+
+    const sql = `SELECT * FROM ${quoteIdent(tableName)} LIMIT 20;`;
+    editor.value = sql;
+    editor.selectionStart = editor.selectionEnd = sql.length;
+    activateSection('practice');
+    editor.focus();
+    runQuery();
 }
 
 // DATASETS
@@ -2358,6 +2855,7 @@ async function loadDataset(name) {
         preferences.dataset = name;
         savePreferences();
         syncDatasetSelector();
+        refreshPracticeContentForDataset();
 
         if (name === 'escuela') {
             initDatabase({ restore: false });
@@ -2374,7 +2872,7 @@ async function loadDataset(name) {
         showMessage(
             'success',
             `Dataset ${escapeHtml(dataset.name)} cargado`,
-            `${escapeHtml(dataset.description)} Los retos y los ejemplos guiados siguen usando el dataset Escuela.`
+            `${escapeHtml(dataset.description)} Los ejemplos y retos se adaptan a este dataset.`
         );
         showToast('success', `Dataset ${dataset.name} listo.`);
     } catch (error) {
@@ -2382,6 +2880,7 @@ async function loadDataset(name) {
         preferences.dataset = 'escuela';
         savePreferences();
         syncDatasetSelector();
+        refreshPracticeContentForDataset();
         showMessage('error', 'No se pudo cargar el dataset', `<code>${escapeHtml(error.message)}</code>`);
         showToast('error', 'Se restauró el dataset Escuela.');
         initDatabase({ restore: false });
@@ -2389,22 +2888,68 @@ async function loadDataset(name) {
 }
 
 // REINICIAR BASE DE DATOS
-async function resetDatabase() {
-    if (confirm('¿Seguro que quieres reiniciar la base de datos a su estado original? Se borrará la copia guardada en este navegador.')) {
-        dbInitialized = false;
+async function resetDatabase(skipConfirm = false) {
+    if (!skipConfirm && !confirm('¿Seguro que quieres reiniciar la base de datos a su estado original? Se borrará la copia guardada en este navegador.')) return;
+
+    dbInitialized = false;
+    lastQueryError = null;
+    aiCooldownUntil = 0;
+    preferences.dataset = 'escuela';
+    savePreferences();
+    syncDatasetSelector();
+    refreshPracticeContentForDataset();
+    showMessage('warning', 'Reiniciando base de datos...');
+    await clearSavedDatabase();
+    initDatabase({ restore: false });
+}
+
+async function restoreAnalyzeDatasetData() {
+    const datasetName = preferences.dataset;
+    const dataset = datasetName === 'escuela' ? null : window.SQL_ACADEMY_DATASETS?.[datasetName];
+    const label = datasetName === 'escuela' ? 'Escuela' : dataset?.name || datasetName;
+
+    if (datasetName !== 'escuela' && !dataset) {
+        showToast('error', 'El dataset activo no está disponible.');
+        return;
+    }
+    if (!SQLModule) {
+        showToast('warning', 'Espera a que la base de datos termine de inicializarse.');
+        return;
+    }
+    if (!confirm(`¿Restaurar los datos originales de ${label}? Se perderán los cambios guardados en este navegador.`)) return;
+
+    if (datasetName === 'escuela') {
+        await resetDatabase(true);
+        showToast('info', 'Restaurando los datos originales de Escuela.');
+        return;
+    }
+
+    try {
+        const nextDb = new SQLModule.Database();
+        nextDb.run('PRAGMA foreign_keys = ON;');
+        nextDb.run(dataset.sql);
+
+        if (db) {
+            try { db.close(); } catch (error) { /* ignorar */ }
+        }
+        db = nextDb;
+        dbInitialized = true;
         lastQueryError = null;
         aiCooldownUntil = 0;
-        preferences.dataset = 'escuela';
-        savePreferences();
-        syncDatasetSelector();
-        showMessage('warning', 'Reiniciando base de datos...');
+        aiResponseCache.clear();
+
         await clearSavedDatabase();
-        initDatabase({ restore: false });
+        refreshAll();
+        schedulePersistDatabase();
+        showToast('success', `Datos originales de ${dataset.name} restaurados.`);
+    } catch (error) {
+        console.error('No se pudieron restaurar los datos del dataset:', error);
+        showToast('error', `No se pudieron restaurar los datos: ${error.message}`);
     }
 }
 
 // EJEMPLOS POR CATEGORIAS
-function getExamplesByCategory() {
+function getEscuelaExamplesByCategory() {
     return {
         'basicos': {
             titulo: 'Consultas Basicas',
@@ -2522,7 +3067,233 @@ function getExamplesByCategory() {
     };
 }
 
-// MOSTRAR EJEMPLO POR CATEGORIA
+const SQL_ADDITIONAL_EXAMPLE_CATALOGS = {
+    tienda: {
+        basicos: {
+            titulo: 'Consultas Basicas',
+            ejemplos: [
+                { titulo: 'Todos los clientes', sql: 'SELECT * FROM clientes;' },
+                { titulo: 'Todos los productos', sql: 'SELECT * FROM productos;' },
+                { titulo: 'Todos los pedidos', sql: 'SELECT * FROM pedidos;' },
+                { titulo: 'Nombres y ciudades', sql: 'SELECT nombre, ciudad FROM clientes;' }
+            ]
+        },
+        filtros: {
+            titulo: 'Filtros (WHERE)',
+            ejemplos: [
+                { titulo: 'Productos con stock bajo', sql: 'SELECT nombre, categoria, precio, stock FROM productos WHERE stock <= 10;' },
+                { titulo: 'Clientes de Lima', sql: "SELECT nombre, ciudad FROM clientes WHERE ciudad = 'Lima';" },
+                { titulo: 'Pedidos pagados', sql: "SELECT * FROM pedidos WHERE estado = 'pagado';" },
+                { titulo: 'Lineas con cantidad mayor a 1', sql: 'SELECT pedido_id, producto_id, cantidad FROM detalle_pedidos WHERE cantidad > 1;' }
+            ]
+        },
+        orden: {
+            titulo: 'Ordenamiento (ORDER BY)',
+            ejemplos: [
+                { titulo: 'Productos por precio', sql: 'SELECT nombre, precio FROM productos ORDER BY precio DESC;' },
+                { titulo: 'Productos por stock', sql: 'SELECT nombre, stock FROM productos ORDER BY stock ASC, nombre ASC;' },
+                { titulo: 'Clientes por ciudad', sql: 'SELECT nombre, ciudad FROM clientes ORDER BY ciudad ASC, nombre ASC;' },
+                { titulo: 'Pedidos recientes', sql: 'SELECT id, fecha, estado FROM pedidos ORDER BY fecha DESC;' }
+            ]
+        },
+        agregacion: {
+            titulo: 'Agregaciones (AVG, COUNT, MAX, MIN, SUM)',
+            ejemplos: [
+                { titulo: 'Contar clientes', sql: 'SELECT COUNT(*) AS total FROM clientes;' },
+                { titulo: 'Precio promedio', sql: 'SELECT ROUND(AVG(precio), 2) AS precio_promedio FROM productos;' },
+                { titulo: 'Stock total', sql: 'SELECT SUM(stock) AS stock_total FROM productos;' },
+                { titulo: 'Precio maximo y minimo', sql: 'SELECT MAX(precio) AS maximo, MIN(precio) AS minimo FROM productos;' }
+            ]
+        },
+        groupby: {
+            titulo: 'Agrupaciones (GROUP BY)',
+            ejemplos: [
+                { titulo: 'Productos por categoria', sql: 'SELECT categoria, COUNT(*) AS productos FROM productos GROUP BY categoria ORDER BY productos DESC, categoria ASC;' },
+                { titulo: 'Pedidos por estado', sql: 'SELECT estado, COUNT(*) AS pedidos FROM pedidos GROUP BY estado ORDER BY pedidos DESC, estado ASC;' },
+                { titulo: 'Stock por categoria', sql: 'SELECT categoria, SUM(stock) AS stock_total FROM productos GROUP BY categoria ORDER BY stock_total DESC, categoria ASC;' },
+                { titulo: 'Precio promedio por categoria', sql: 'SELECT categoria, ROUND(AVG(precio), 2) AS precio_promedio FROM productos GROUP BY categoria ORDER BY categoria ASC;' }
+            ]
+        },
+        having: {
+            titulo: 'Filtros de Agrupacion (HAVING)',
+            ejemplos: [
+                { titulo: 'Categorias con mas de un producto', sql: 'SELECT categoria, COUNT(*) AS productos FROM productos GROUP BY categoria HAVING COUNT(*) > 1 ORDER BY productos DESC, categoria ASC;' },
+                { titulo: 'Clientes con mas de un pedido', sql: 'SELECT cliente_id, COUNT(*) AS pedidos FROM pedidos GROUP BY cliente_id HAVING COUNT(*) > 1 ORDER BY pedidos DESC, cliente_id ASC;' }
+            ]
+        },
+        join: {
+            titulo: 'JOIN (Relaciones entre tablas)',
+            ejemplos: [
+                { titulo: 'Pedidos con cliente', sql: 'SELECT p.id AS pedido, c.nombre AS cliente, p.fecha, p.estado FROM pedidos p JOIN clientes c ON c.id = p.cliente_id ORDER BY p.id ASC;' },
+                { titulo: 'Detalle con producto', sql: 'SELECT d.pedido_id, pr.nombre AS producto, d.cantidad, d.precio_unitario FROM detalle_pedidos d JOIN productos pr ON pr.id = d.producto_id ORDER BY d.pedido_id ASC, pr.nombre ASC;' },
+                { titulo: 'Total por pedido', sql: 'SELECT p.id AS pedido, SUM(d.cantidad * d.precio_unitario) AS total FROM pedidos p JOIN detalle_pedidos d ON d.pedido_id = p.id GROUP BY p.id ORDER BY p.id ASC;' },
+                { titulo: 'Ventas por categoria', sql: 'SELECT pr.categoria, SUM(d.cantidad * d.precio_unitario) AS total FROM detalle_pedidos d JOIN productos pr ON pr.id = d.producto_id GROUP BY pr.categoria ORDER BY total DESC, pr.categoria ASC;' }
+            ]
+        },
+        subconsultas: {
+            titulo: 'Subconsultas',
+            ejemplos: [
+                { titulo: 'Productos sobre el precio promedio', sql: 'SELECT nombre, precio FROM productos WHERE precio > (SELECT AVG(precio) FROM productos) ORDER BY precio DESC;' },
+                { titulo: 'Clientes con pedidos', sql: 'SELECT nombre FROM clientes WHERE id IN (SELECT cliente_id FROM pedidos) ORDER BY nombre ASC;' },
+                { titulo: 'Pedido con mayor total', sql: 'SELECT pedido_id, SUM(cantidad * precio_unitario) AS total FROM detalle_pedidos GROUP BY pedido_id ORDER BY total DESC LIMIT 1;' }
+            ]
+        },
+        operadores: {
+            titulo: 'Operadores Especiales',
+            ejemplos: [
+                { titulo: 'IN: Lima o Arequipa', sql: "SELECT nombre, ciudad FROM clientes WHERE ciudad IN ('Lima', 'Arequipa') ORDER BY nombre ASC;" },
+                { titulo: 'NOT IN: Sin perifericos ni audio', sql: "SELECT nombre, categoria FROM productos WHERE categoria NOT IN ('Perifericos', 'Audio') ORDER BY nombre ASC;" },
+                { titulo: 'BETWEEN: Precio entre 40 y 100', sql: 'SELECT nombre, precio FROM productos WHERE precio BETWEEN 40 AND 100 ORDER BY precio ASC;' },
+                { titulo: 'LIKE: Nombres que empiezan con A', sql: "SELECT nombre FROM clientes WHERE nombre LIKE 'A%';" },
+                { titulo: 'DISTINCT: Categorias unicas', sql: 'SELECT DISTINCT categoria FROM productos ORDER BY categoria ASC;' }
+            ]
+        },
+        avanzado: {
+            titulo: 'Consultas Avanzadas',
+            ejemplos: [
+                { titulo: 'Top 3 productos por unidades', sql: 'SELECT pr.nombre, SUM(d.cantidad) AS unidades FROM detalle_pedidos d JOIN productos pr ON pr.id = d.producto_id GROUP BY pr.id, pr.nombre ORDER BY unidades DESC, pr.nombre ASC LIMIT 3;' },
+                { titulo: 'Top 3 clientes por total gastado', sql: 'SELECT c.nombre, SUM(d.cantidad * d.precio_unitario) AS total FROM clientes c JOIN pedidos p ON p.cliente_id = c.id JOIN detalle_pedidos d ON d.pedido_id = p.id GROUP BY c.id, c.nombre ORDER BY total DESC, c.nombre ASC LIMIT 3;' },
+                { titulo: 'Pedidos sobre el total promedio', sql: 'SELECT p.id AS pedido, SUM(d.cantidad * d.precio_unitario) AS total FROM pedidos p JOIN detalle_pedidos d ON d.pedido_id = p.id GROUP BY p.id HAVING SUM(d.cantidad * d.precio_unitario) > (SELECT AVG(total) FROM (SELECT SUM(cantidad * precio_unitario) AS total FROM detalle_pedidos GROUP BY pedido_id)) ORDER BY total DESC;' }
+            ]
+        },
+        modificacion: {
+            titulo: 'Modificacion (INSERT, UPDATE, DELETE)',
+            ejemplos: [
+                { titulo: 'INSERT: Agregar cliente', sql: "INSERT INTO clientes (id, nombre, ciudad, email) VALUES (7, 'Gabriela Nunez', 'Lima', 'gabriela@example.com');" },
+                { titulo: 'INSERT: Agregar producto', sql: "INSERT INTO productos (id, nombre, categoria, precio, stock) VALUES (9, 'Tablet 10 pulgadas', 'Computadoras', 320.00, 8);" },
+                { titulo: 'UPDATE: Incrementar stock', sql: 'UPDATE productos SET stock = stock + 5 WHERE id = 8;' },
+                { titulo: 'DELETE: Eliminar producto', sql: 'DELETE FROM productos WHERE id = 9;' }
+            ]
+        }
+    },
+    biblioteca: {
+        basicos: {
+            titulo: 'Consultas Basicas',
+            ejemplos: [
+                { titulo: 'Todos los autores', sql: 'SELECT * FROM autores;' },
+                { titulo: 'Todos los libros', sql: 'SELECT * FROM libros;' },
+                { titulo: 'Todos los socios', sql: 'SELECT * FROM socios;' },
+                { titulo: 'Todos los prestamos', sql: 'SELECT * FROM prestamos;' }
+            ]
+        },
+        filtros: {
+            titulo: 'Filtros (WHERE)',
+            ejemplos: [
+                { titulo: 'Libros disponibles', sql: 'SELECT titulo, genero, disponible FROM libros WHERE disponible = 1;' },
+                { titulo: 'Libros de Novela', sql: "SELECT titulo, genero FROM libros WHERE genero = 'Novela';" },
+                { titulo: 'Autores de Colombia', sql: "SELECT nombre, pais FROM autores WHERE pais = 'Colombia';" },
+                { titulo: 'Prestamos sin devolver', sql: 'SELECT * FROM prestamos WHERE fecha_devolucion IS NULL;' }
+            ]
+        },
+        orden: {
+            titulo: 'Ordenamiento (ORDER BY)',
+            ejemplos: [
+                { titulo: 'Libros por anio', sql: 'SELECT titulo, anio FROM libros ORDER BY anio DESC, titulo ASC;' },
+                { titulo: 'Libros por titulo', sql: 'SELECT titulo FROM libros ORDER BY titulo ASC;' },
+                { titulo: 'Socios por fecha de alta', sql: 'SELECT nombre, fecha_alta FROM socios ORDER BY fecha_alta DESC;' },
+                { titulo: 'Prestamos recientes', sql: 'SELECT id, fecha_prestamo FROM prestamos ORDER BY fecha_prestamo DESC;' }
+            ]
+        },
+        agregacion: {
+            titulo: 'Agregaciones (AVG, COUNT, MAX, MIN, SUM)',
+            ejemplos: [
+                { titulo: 'Contar libros', sql: 'SELECT COUNT(*) AS total FROM libros;' },
+                { titulo: 'Anio promedio', sql: 'SELECT ROUND(AVG(anio), 0) AS anio_promedio FROM libros;' },
+                { titulo: 'Libros disponibles', sql: 'SELECT COUNT(*) AS disponibles FROM libros WHERE disponible = 1;' },
+                { titulo: 'Anio maximo y minimo', sql: 'SELECT MAX(anio) AS maximo, MIN(anio) AS minimo FROM libros;' }
+            ]
+        },
+        groupby: {
+            titulo: 'Agrupaciones (GROUP BY)',
+            ejemplos: [
+                { titulo: 'Libros por genero', sql: 'SELECT genero, COUNT(*) AS libros FROM libros GROUP BY genero ORDER BY libros DESC, genero ASC;' },
+                { titulo: 'Autores por pais', sql: 'SELECT pais, COUNT(*) AS autores FROM autores GROUP BY pais ORDER BY autores DESC, pais ASC;' },
+                { titulo: 'Prestamos por socio', sql: 'SELECT socio_id, COUNT(*) AS prestamos FROM prestamos GROUP BY socio_id ORDER BY prestamos DESC, socio_id ASC;' },
+                { titulo: 'Libros por autor', sql: 'SELECT autor_id, COUNT(*) AS libros FROM libros GROUP BY autor_id ORDER BY libros DESC, autor_id ASC;' }
+            ]
+        },
+        having: {
+            titulo: 'Filtros de Agrupacion (HAVING)',
+            ejemplos: [
+                { titulo: 'Generos con mas de dos libros', sql: 'SELECT genero, COUNT(*) AS libros FROM libros GROUP BY genero HAVING COUNT(*) > 2 ORDER BY libros DESC, genero ASC;' },
+                { titulo: 'Socios con mas de un prestamo', sql: 'SELECT socio_id, COUNT(*) AS prestamos FROM prestamos GROUP BY socio_id HAVING COUNT(*) > 1 ORDER BY prestamos DESC, socio_id ASC;' }
+            ]
+        },
+        join: {
+            titulo: 'JOIN (Relaciones entre tablas)',
+            ejemplos: [
+                { titulo: 'Libros con autor', sql: 'SELECT l.titulo, a.nombre AS autor FROM libros l JOIN autores a ON a.id = l.autor_id ORDER BY l.titulo ASC;' },
+                { titulo: 'Prestamos con libro y socio', sql: 'SELECT p.id, l.titulo, s.nombre AS socio, p.fecha_prestamo, p.fecha_devolucion FROM prestamos p JOIN libros l ON l.id = p.libro_id JOIN socios s ON s.id = p.socio_id ORDER BY p.id ASC;' },
+                { titulo: 'Libros por autor', sql: 'SELECT a.nombre, COUNT(l.id) AS libros FROM autores a LEFT JOIN libros l ON l.autor_id = a.id GROUP BY a.id, a.nombre ORDER BY libros DESC, a.nombre ASC;' },
+                { titulo: 'Prestamos por socio', sql: 'SELECT s.nombre, COUNT(p.id) AS prestamos FROM socios s LEFT JOIN prestamos p ON p.socio_id = s.id GROUP BY s.id, s.nombre ORDER BY prestamos DESC, s.nombre ASC;' }
+            ]
+        },
+        subconsultas: {
+            titulo: 'Subconsultas',
+            ejemplos: [
+                { titulo: 'Libros anteriores al promedio', sql: 'SELECT titulo, anio FROM libros WHERE anio < (SELECT AVG(anio) FROM libros) ORDER BY anio ASC;' },
+                { titulo: 'Libros del autor con mas libros', sql: 'SELECT titulo FROM libros WHERE autor_id = (SELECT autor_id FROM libros GROUP BY autor_id ORDER BY COUNT(*) DESC, autor_id ASC LIMIT 1) ORDER BY titulo ASC;' },
+                { titulo: 'Socio con mas prestamos', sql: 'SELECT socio_id, COUNT(*) AS prestamos FROM prestamos GROUP BY socio_id ORDER BY prestamos DESC, socio_id ASC LIMIT 1;' }
+            ]
+        },
+        operadores: {
+            titulo: 'Operadores Especiales',
+            ejemplos: [
+                { titulo: 'IN: Colombia o Argentina', sql: "SELECT nombre, pais FROM autores WHERE pais IN ('Colombia', 'Argentina') ORDER BY nombre ASC;" },
+                { titulo: 'NOT IN: Libros que no son Novela', sql: "SELECT titulo, genero FROM libros WHERE genero NOT IN ('Novela') ORDER BY titulo ASC;" },
+                { titulo: 'BETWEEN: Libros entre 1940 y 1970', sql: 'SELECT titulo, anio FROM libros WHERE anio BETWEEN 1940 AND 1970 ORDER BY anio ASC;' },
+                { titulo: 'LIKE: Titulos que contienen la', sql: "SELECT titulo FROM libros WHERE titulo LIKE '%la%' ORDER BY titulo ASC;" },
+                { titulo: 'DISTINCT: Generos unicos', sql: 'SELECT DISTINCT genero FROM libros ORDER BY genero ASC;' }
+            ]
+        },
+        avanzado: {
+            titulo: 'Consultas Avanzadas',
+            ejemplos: [
+                { titulo: 'Top 3 autores por libros', sql: 'SELECT a.nombre, COUNT(l.id) AS libros FROM autores a LEFT JOIN libros l ON l.autor_id = a.id GROUP BY a.id, a.nombre ORDER BY libros DESC, a.nombre ASC LIMIT 3;' },
+                { titulo: 'Socios con prestamos activos', sql: 'SELECT s.nombre, COUNT(p.id) AS activos FROM socios s JOIN prestamos p ON p.socio_id = s.id WHERE p.fecha_devolucion IS NULL GROUP BY s.id, s.nombre ORDER BY activos DESC, s.nombre ASC;' },
+                { titulo: 'Autores con libros disponibles', sql: 'SELECT a.nombre, COUNT(l.id) AS disponibles FROM autores a JOIN libros l ON l.autor_id = a.id WHERE l.disponible = 1 GROUP BY a.id, a.nombre ORDER BY disponibles DESC, a.nombre ASC;' }
+            ]
+        },
+        modificacion: {
+            titulo: 'Modificacion (INSERT, UPDATE, DELETE)',
+            ejemplos: [
+                { titulo: 'INSERT: Agregar autor', sql: "INSERT INTO autores (id, nombre, pais) VALUES (5, 'Julio Cortazar', 'Argentina');" },
+                { titulo: 'INSERT: Agregar libro', sql: "INSERT INTO libros (id, titulo, autor_id, anio, genero, disponible) VALUES (9, 'La fiesta del chivo', 4, 2000, 'Novela', 1);" },
+                { titulo: 'UPDATE: Marcar libro no disponible', sql: 'UPDATE libros SET disponible = 0 WHERE id = 1;' },
+                { titulo: 'DELETE: Eliminar libro', sql: 'DELETE FROM libros WHERE id = 9;' }
+            ]
+        }
+    }
+};
+
+function getExamplesByCategory(datasetName = preferences.dataset) {
+    if (datasetName === 'escuela') return getEscuelaExamplesByCategory();
+    return SQL_ADDITIONAL_EXAMPLE_CATALOGS[datasetName] || getEscuelaExamplesByCategory();
+}
+
+function renderCategorySelector() {
+    const selector = document.getElementById('categorySelector');
+    if (!selector) return;
+
+    const previous = selector.value;
+    const categories = getExamplesByCategory();
+    const keys = Object.keys(categories);
+    const options = keys.map(key => (
+        `<option value="${escapeHtml(key)}">${escapeHtml(categories[key].titulo)}</option>`
+    ));
+    options.push('<option value="aleatorio">Aleatorio</option>');
+    selector.innerHTML = options.join('');
+
+    if (keys.includes(previous)) {
+        selector.value = previous;
+    } else {
+        selector.value = keys[0] || 'aleatorio';
+    }
+}
+
+// CARGAR EJEMPLO POR CATEGORIA
+let lastSqlExample = null;
+
 function showExampleByCategory() {
     const selector = document.getElementById('categorySelector');
     if (!selector) {
@@ -2530,117 +3301,219 @@ function showExampleByCategory() {
         return;
     }
 
-    if (!getUserTables().includes('estudiantes')) {
-        showMessage(
-            'warning',
-            'Los ejemplos guiados usan el dataset Escuela',
-            'Cambia el dataset a “Escuela” para usar estos ejemplos, o escribe tus propias consultas sobre las tablas actuales.'
-        );
-        return;
-    }
-    
     const category = selector.value;
     const categories = getExamplesByCategory();
-    
+    const keys = Object.keys(categories);
+    if (!keys.length) {
+        showMessage('warning', 'No hay ejemplos para este dataset', 'Escribe una consulta directamente en el editor.');
+        return;
+    }
+
     let selectedCategory = category;
-    if (category === 'aleatorio') {
-        const keys = Object.keys(categories);
+    if (category === 'aleatorio' || !categories[selectedCategory]) {
         selectedCategory = keys[Math.floor(Math.random() * keys.length)];
     }
-    
+
     const categoryData = categories[selectedCategory];
-    if (!categoryData) return;
-    
+    if (!categoryData || !Array.isArray(categoryData.ejemplos) || !categoryData.ejemplos.length) return;
+
     const ejemplos = categoryData.ejemplos;
-    const ejemplo = ejemplos[Math.floor(Math.random() * ejemplos.length)];
-    
+    let ejemplo = ejemplos[Math.floor(Math.random() * ejemplos.length)];
+    let exampleKey = `${selectedCategory}:${ejemplo.sql}`;
+
+    if (ejemplos.length > 1 && exampleKey === lastSqlExample) {
+        const alternatives = ejemplos.filter(item => `${selectedCategory}:${item.sql}` !== lastSqlExample);
+        if (alternatives.length) {
+            ejemplo = alternatives[Math.floor(Math.random() * alternatives.length)];
+            exampleKey = `${selectedCategory}:${ejemplo.sql}`;
+        }
+    }
+
+    lastSqlExample = exampleKey;
+
     const editor = document.getElementById('sqlEditor');
     if (editor) {
         editor.value = ejemplo.sql;
+        editor.selectionStart = editor.selectionEnd = editor.value.length;
         editor.focus();
     }
-    
-    document.getElementById('resultOutput').classList.remove('result-placeholder');
-    document.getElementById('resultOutput').innerHTML = `
-        <div style="padding: 15px; background: #f0f4ff; border-radius: 8px; border-left: 4px solid #336791;">
-            <div style="color: #336791; font-weight: 700; font-size: 16px; margin-bottom: 5px;">
-                <i class="fas fa-book"></i> ${escapeHtml(categoryData.titulo)}
-            </div>
-            <div style="color: #555; font-size: 14px; margin-bottom: 8px;">
-                <i class="fas fa-lightbulb"></i> ${escapeHtml(ejemplo.titulo)}
-            </div>
-            <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">
-                ${escapeHtml(ejemplo.sql)}
-            </div>
-            <div style="margin-top: 8px; font-size: 12px; color: #999;">
-                <i class="fas fa-clock"></i> Presiona <strong>"Ejecutar"</strong> o <strong>Ctrl+Enter</strong> para ver el resultado
-            </div>
-        </div>
-    `;
+
+    const status = document.getElementById('sqlExampleStatus');
+    if (status) {
+        status.textContent = `Ejemplo cargado: ${ejemplo.titulo}`;
+    }
+
+    resetSqlResultPanel();
+    if (editor) editor.focus();
 }
 
 function showExamples() {
     showExampleByCategory();
 }
 
-// DONACIONES 
-function showDonationQR(type) {
+// DONACIONES VOLUNTARIAS
+const DONATION_METHODS = {
+    yape: {
+        id: 'yape',
+        label: 'Yape',
+        icon: 'fa-mobile-screen-button',
+        enabled: true,
+        type: 'qr',
+        image: 'assets/images/qr-yape.png',
+        alt: 'QR de Yape para donar a SQL Academy'
+    },
+    plin: {
+        id: 'plin',
+        label: 'Plin',
+        icon: 'fa-bolt',
+        enabled: true,
+        type: 'qr',
+        image: 'assets/images/qr-plin.png',
+        alt: 'QR de Plin para donar a SQL Academy'
+    },
+    paypal: {
+        id: 'paypal',
+        label: 'PayPal',
+        icon: 'fa-paypal',
+        enabled: false,
+        type: 'link',
+        url: ''
+    },
+    kofi: {
+        id: 'kofi',
+        label: 'Ko-fi',
+        icon: 'fa-mug-hot',
+        enabled: false,
+        type: 'link',
+        url: ''
+    }
+};
+
+const DONATION_QUOTES = [
+    'Este código no se va a escribir solo... bueno, a veces sí.',
+    'Tu donación es como un buen índice: hace que todo sea más rápido.',
+    'Con esto compro café para seguir soñando con código limpio.',
+    'Apoya a un programador, evita que tenga que usar Excel.',
+    'El servidor también tiene sentimientos (y necesita café).',
+    'Las donaciones son como las transacciones ACID: confiables y necesarias.',
+    'Gracias a ti, este proyecto no muere en el olvido.',
+    'Tu aporte es más rápido que un SELECT sin WHERE.',
+    'Así como las bases de datos necesitan índices, yo necesito café.',
+    'Cada café es un commit más en mi vida.',
+    'Las donaciones son el motor que mueve este proyecto.',
+    'Programar sin café es como SQL sin JOIN: incompleto.',
+    'Tu donación me da energía para seguir debugueando.',
+    'Café + código = felicidad.',
+    'No es una donación, es una inversión en código de calidad.'
+];
+
+function getEnabledDonationMethods() {
+    return Object.values(DONATION_METHODS).filter(method => (
+        method.enabled && (method.type !== 'link' || Boolean(method.url))
+    ));
+}
+
+function getDonationMethod(type) {
+    const methods = getEnabledDonationMethods();
+    return methods.find(method => method.id === type) || methods[0] || null;
+}
+
+function renderDonationMethodTabs(selectedId, methods) {
+    return `
+        <div class="donation-method-tabs" role="tablist" aria-label="Método de donación">
+            ${methods.map(method => `
+                <button type="button"
+                    class="donation-method-tab${method.id === selectedId ? ' active' : ''}"
+                    role="tab"
+                    aria-selected="${method.id === selectedId}"
+                    onclick="showDonationQR('${escapeHtml(method.id)}')">
+                    <i class="fas ${escapeHtml(method.icon)}"></i> ${escapeHtml(method.label)}
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderDonationMethodPanel(method) {
+    if (!method) return '';
+
+    if (method.type === 'qr') {
+        return `
+            <div class="donation-method-panel" role="tabpanel">
+                <div class="donation-qr-card">
+                    <a href="${escapeHtml(method.image)}" target="_blank" rel="noopener" class="donation-qr-link" title="Abrir QR de ${escapeHtml(method.label)} en tamaño completo" aria-label="Abrir QR de ${escapeHtml(method.label)} en tamaño completo">
+                        <img src="${escapeHtml(method.image)}" alt="${escapeHtml(method.alt)}" class="donation-qr-image">
+                        <span class="donation-qr-hint"><i class="fas fa-expand"></i> Ver QR en grande</span>
+                    </a>
+                </div>
+                <div class="donation-method-copy">
+                    <p class="donation-scan-copy"><i class="fas fa-qrcode"></i> Escanea el QR y elige el monto.</p>
+                    <p class="donation-amount">Monto libre desde <strong>S/1</strong>. Tú decides cuánto.</p>
+                </div>
+            </div>
+        `;
+    }
+
+    if (method.type === 'link') {
+        return `
+            <div class="donation-method-panel donation-method-panel-link" role="tabpanel">
+                <div class="donation-method-copy">
+                    <h3>Donar con ${escapeHtml(method.label)}</h3>
+                    <p>Serás redirigido a ${escapeHtml(method.label)} para completar la donación.</p>
+                    <a href="${escapeHtml(method.url)}" target="_blank" rel="noopener" class="btn-primary donation-link-btn">
+                        <i class="fas ${escapeHtml(method.icon)}"></i> Abrir ${escapeHtml(method.label)}
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    return '';
+}
+
+function showDonationQR(type = 'yape') {
     const modal = document.getElementById('donationModal');
     const body = document.getElementById('donationModalBody');
-    
+
     if (!modal || !body) {
         console.error('No se encontró el modal de donaciones');
         return;
     }
-    
-    const qrData = {
-        'yape': {
-            title: 'Yape',
-            image: 'images/qr-yape.png'
-        }
-    };
-    
-    const data = qrData[type];
-    if (!data) return;
-    
-    const funnyMessages = [
-        'Este código no se va a escribir solo... bueno, a veces sí, pero con café es más rápido ☕',
-        'Tu donación es como un buen índice: hace que todo sea más rápido 🚀',
-        'Con esto compro café para seguir soñando con código limpio 🧠',
-        'Apoya a un programador, evita que tenga que usar Excel 🐛',
-        'El servidor también tiene sentimientos (y necesita café) ❤️',
-        'Las donaciones son como las transacciones ACID: confiables y necesarias 🔑',
-        'Gracias a ti, este proyecto no muere en el olvido 🤖',
-        'Tu aporte es más rápido que un SELECT sin WHERE 😎',
-        'Así como las bases de datos necesitan índices, yo necesito café 📊',
-        'Cada café es un commit más en mi vida ☕💻',
-        'Las donaciones son el motor que mueve este proyecto 🚀',
-        'Programar sin café es como SQL sin JOIN: incompleto 😅',
-        'Tu donación me da energía para seguir debugueando 🔍',
-        'Café + código = felicidad (y bases de datos funcionales) ☕💻',
-        'No es una donación, es una inversión en código de calidad 📈'
-    ];
-    
-    const randomMessage = funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
-    
+
+    const methods = getEnabledDonationMethods();
+    const method = getDonationMethod(type);
+
+    if (!method) {
+        body.innerHTML = '<p class="text-muted">No hay métodos de donación disponibles.</p>';
+        return;
+    }
+
+    const quote = DONATION_QUOTES[Math.floor(Math.random() * DONATION_QUOTES.length)];
+
     body.innerHTML = `
-        <div style="text-align:center; padding:10px 0;">
-            <div style="font-size:0.8em; color:#999; margin-bottom:12px;">
-                <i class="fas fa-qrcode"></i> QR para transferencia
+        <div class="donation-card">
+            <p class="donation-lead">
+                Si te sirvió, deja una donación voluntaria desde S/1.
+            </p>
+
+            ${renderDonationMethodTabs(method.id, methods)}
+            ${renderDonationMethodPanel(method)}
+
+            <div class="donation-quote">“${escapeHtml(quote)}”</div>
+
+            <div class="donation-voluntary">
+                100% voluntario · No bloquea nada.
             </div>
-            <img src="${data.image}" alt="QR para ${data.title}" style="max-width:200px; border-radius:8px; border:2px solid #e9ecef; background:white; padding:8px;">
-            <div style="margin-top:14px; background:#f8f9fa; padding:10px 15px; border-radius:8px; border-left:3px solid #f39c12;">
-                <p style="color:#555; font-size:0.9em; margin:0; font-style:italic;">
-                    "${randomMessage}"
-                </p>
-            </div>
-            <div style="margin-top:10px; font-size:0.7em; color:#999;">
-                <i class="fas fa-code-branch" style="color:#dc3545;"></i> Totalmente voluntario · Sin presión
-            </div>
+            <p class="donation-footnote"><i class="fas fa-server"></i> Hosting, dominio y mantenimiento.</p>
         </div>
     `;
-    
-    openModal(modal);
+
+    if (!modal.classList.contains('active')) {
+        openModal(modal);
+    } else {
+        const activeTab = body.querySelector('.donation-method-tab.active');
+        if (activeTab) activeTab.focus();
+    }
 }
 
 function closeDonationModal() {
@@ -2651,7 +3524,7 @@ function closeDonationModal() {
 const dbInfo = {
     'postgresql': {
         title: 'PostgreSQL',
-        logo: 'logos/postgresql.png',
+        logo: 'assets/logos/postgresql.png',
         description: 'PostgreSQL es un sistema de gestion de bases de datos relacional orientado a objetos y de codigo abierto, considerado el mas avanzado del mundo.',
         type: 'Relacional (SQL)',
         licencia: 'Open Source',
@@ -2672,7 +3545,8 @@ const dbInfo = {
     },
     'mysql': {
         title: 'MySQL',
-        logo: 'logos/mysql.png',
+        logo: 'assets/logos/mysql.png',
+        logoDark: 'assets/logos/mysql-dark.png',
         description: 'MySQL es el sistema de gestion de bases de datos relacional mas popular del mundo. Es conocido por su velocidad, facilidad de uso y amplia adopcion en aplicaciones web.',
         type: 'Relacional (SQL)',
         licencia: 'Open Source',
@@ -2693,7 +3567,7 @@ const dbInfo = {
     },
     'sqlserver': {
         title: 'SQL Server',
-        logo: 'logos/sqlserver.png',
+        logo: 'assets/logos/sqlserver.png',
         description: 'Microsoft SQL Server es un sistema de gestion de bases de datos relacional desarrollado por Microsoft. Es ampliamente utilizado en entornos empresariales.',
         type: 'Relacional (SQL)',
         licencia: 'Comercial',
@@ -2714,7 +3588,7 @@ const dbInfo = {
     },
     'oracle': {
         title: 'Oracle Database',
-        logo: 'logos/oracle.png',
+        logo: 'assets/logos/oracle.png',
         description: 'Oracle Database es el sistema de gestion de bases de datos relacional mas utilizado en grandes corporaciones. Es conocido por su robustez y seguridad.',
         type: 'Relacional (SQL)',
         licencia: 'Comercial',
@@ -2735,7 +3609,7 @@ const dbInfo = {
     },
     'mariadb': {
         title: 'MariaDB',
-        logo: 'logos/mariadb.png',
+        logo: 'assets/logos/mariadb.png',
         description: 'MariaDB es un fork de MySQL creado por los desarrolladores originales. Ofrece mejoras de rendimiento y nuevas funcionalidades.',
         type: 'Relacional (SQL)',
         licencia: 'Open Source',
@@ -2756,7 +3630,8 @@ const dbInfo = {
     },
     'sqlite': {
         title: 'SQLite',
-        logo: 'logos/sqlite.png',
+        logo: 'assets/logos/sqlite.png',
+        logoDark: 'assets/logos/sqlite-dark.png',
         description: 'SQLite es una biblioteca que proporciona un motor de base de datos SQL ligero y sin servidor. Es la base de datos mas utilizada del mundo.',
         type: 'Relacional (SQL)',
         licencia: 'Dominio Publico',
@@ -2778,7 +3653,7 @@ const dbInfo = {
     // ===== GESTORES NoSQL =====
 'mongodb': {
     title: 'MongoDB',
-    logo: 'logos/mongodb.png',
+    logo: 'assets/logos/mongodb.png',
     description: 'MongoDB es la base de datos NoSQL documental más popular. Almacena datos en documentos JSON flexibles, ideales para aplicaciones modernas y datos semiestructurados.',
     type: 'NoSQL (Documental)',
     licencia: 'Open Source (SSPL) / Comercial',
@@ -2799,7 +3674,7 @@ const dbInfo = {
 },
 'firebase': {
     title: 'Firebase',
-    logo: 'logos/firebase.png',
+    logo: 'assets/logos/firebase.png',
     description: 'Firebase es la plataforma de Google que incluye una base de datos NoSQL en tiempo real. Es ideal para aplicaciones móviles y web con sincronización instantánea.',
     type: 'NoSQL (Tiempo Real)',
     licencia: 'Comercial (Google)',
@@ -2820,7 +3695,7 @@ const dbInfo = {
 },
 'redis': {
     title: 'Redis',
-    logo: 'logos/redis.png',
+    logo: 'assets/logos/redis.png',
     description: 'Redis es la base de datos clave-valor más rápida del mundo. Es ampliamente utilizada como caché, para sesiones de usuario y para aplicaciones que requieren baja latencia.',
     type: 'NoSQL (Clave-Valor)',
     licencia: 'Open Source (BSD)',
@@ -2841,7 +3716,7 @@ const dbInfo = {
 },
 'cassandra': {
     title: 'Cassandra',
-    logo: 'logos/cassandra.png',
+    logo: 'assets/logos/cassandra.png',
     description: 'Apache Cassandra es una base de datos NoSQL columnar diseñada para manejar grandes volúmenes de datos distribuidos en múltiples servidores. No tiene puntos de fallo.',
     type: 'NoSQL (Columnar)',
     licencia: 'Open Source (Apache 2.0)',
@@ -2862,7 +3737,7 @@ const dbInfo = {
 },
 'neo4j': {
     title: 'Neo4j',
-    logo: 'logos/neo4j.png',
+    logo: 'assets/logos/neo4j.png',
     description: 'Neo4j es la base de datos de grafos más utilizada del mundo. Permite modelar y consultar relaciones complejas de manera eficiente y natural.',
     type: 'NoSQL (Grafos)',
     licencia: 'Open Source (GPL) / Comercial',
@@ -2883,7 +3758,7 @@ const dbInfo = {
 },
 'elasticsearch': {
     title: 'Elasticsearch',
-    logo: 'logos/elasticsearch.png',
+    logo: 'assets/logos/elasticsearch.png',
     description: 'Elasticsearch es el motor de búsqueda y análisis de datos más popular. Está basado en Lucene y permite consultas full-text en tiempo real.',
     type: 'NoSQL (Busqueda)',
     licencia: 'Open Source (Apache 2.0)',
@@ -2916,8 +3791,9 @@ function openDBInfo(dbKey) {
     title.innerHTML = `<i class="fas fa-database"></i> ${info.title}`;
     
     let html = `
-        <div class="db-logo-large">
-            <img src="${info.logo}" alt="${info.title}">
+        <div class="db-logo-large${info.logoDark ? ' has-dark-logo' : ''}">
+            <img class="db-logo-light" src="${info.logo}" alt="${info.title}">
+            ${info.logoDark ? `<img class="db-logo-dark" src="${info.logoDark}" alt="" aria-hidden="true">` : ''}
         </div>
         
         <p style="font-size:1.05em; color:#444; line-height:1.7;">${info.description}</p>
@@ -2995,202 +3871,938 @@ function closeDBModal() {
 
 // CONCEPTOS CLAVE
 const conceptInfo = {
-    'mer': {
-        title: 'Modelo Entidad-Relacion (MER)',
+    mer: {
+        title: 'Modelo Entidad-Relación (MER)',
         icon: 'sitemap',
-        description: 'El Modelo Entidad-Relacion es un modelo conceptual para disenar bases de datos. Representa las entidades (tablas) y sus relaciones.',
+        level: 'Básico',
+        tags: ['SQL', 'Diseño'],
+        description: 'El modelo entidad-relación es una representación conceptual de los datos. Define entidades, atributos y relaciones antes de crear las tablas.',
         conceptos: [
-            'Entidad: Objeto del mundo real (ej: Estudiante, Curso)',
-            'Atributo: Caracteristica de una entidad (ej: nombre, edad)',
-            'Relacion: Asociacion entre entidades (ej: un estudiante se inscribe en un curso)',
-            'Cardinalidad: Numero de elementos que participan (1:1, 1:N, N:M)'
+            'Entidad: objeto del mundo real, como Estudiante o Curso.',
+            'Atributo: característica de una entidad, como nombre o edad.',
+            'Relación: asociación entre entidades, como “un estudiante se inscribe en un curso”.',
+            'Cardinalidad: cuántos elementos participan en una relación (1:1, 1:N, N:M).'
         ],
-        ejemplo: 'Un Estudiante se inscribe en varios Cursos. Un Curso tiene muchos Estudiantes. (Relacion N:M)'
+        ejemplo: 'Un Estudiante se inscribe en varios Cursos y un Curso tiene muchos Estudiantes. Es una relación N:M que suele resolverse con una tabla intermedia.'
     },
-    'normalizacion': {
-        title: 'Normalizacion de Bases de Datos',
+    normalizacion: {
+        title: 'Normalización de Bases de Datos',
         icon: 'layer-group',
-        description: 'La normalizacion es el proceso de organizar los datos en una base de datos para reducir la redundancia y mejorar la integridad.',
+        level: 'Intermedio',
+        tags: ['SQL', 'Diseño'],
+        description: 'La normalización organiza los datos para reducir redundancia y evitar anomalías al insertar, actualizar o eliminar registros.',
         conceptos: [
-            '1FN (Primera Forma Normal): Eliminar grupos repetidos, crear tabla separada',
-            '2FN (Segunda Forma Normal): Dependencia funcional completa de la clave primaria',
-            '3FN (Tercera Forma Normal): Eliminar dependencias transitivas',
-            'BCNF (Forma Normal de Boyce-Codd): Version mas estricta de 3FN'
+            '1FN: elimina grupos repetidos y valores multivaluados.',
+            '2FN: cada atributo depende de toda la clave primaria.',
+            '3FN: elimina dependencias transitivas entre columnas no clave.',
+            'BCNF: una versión más estricta de 3FN para casos especiales.'
         ],
-        ejemplo: 'Dividir una tabla de estudiantes que tambien contiene cursos en dos tablas: Estudiantes y Cursos'
+        ejemplo: 'En lugar de guardar los datos del curso repetidos en cada estudiante, separa Estudiantes, Cursos e Inscripciones.'
     },
-    'llaves': {
+    llaves: {
         title: 'Tipos de Llaves en Bases de Datos',
         icon: 'key',
-        description: 'Las llaves son atributos que identifican de manera unica los registros en una tabla.',
+        level: 'Básico',
+        tags: ['SQL', 'Estructura'],
+        description: 'Las llaves identifican registros y conectan tablas. Son una pieza central del modelo relacional.',
         conceptos: [
-            'Primary Key (PK): Identificador unico de cada registro',
-            'Foreign Key (FK): Llave que referencia la PK de otra tabla',
-            'Unique Key: Garantiza valores unicos en una columna',
-            'Composite Key: Llave compuesta por multiples columnas'
+            'Primary Key (PK): identificador único de cada fila.',
+            'Foreign Key (FK): referencia a la PK de otra tabla.',
+            'Unique Key: garantiza que los valores de una columna no se repitan.',
+            'Composite Key: clave formada por varias columnas.'
         ],
-        ejemplo: 'En una tabla de Inscripciones, la combinacion (estudiante_id, curso_id) es una llave compuesta'
+        ejemplo: 'En Inscripciones, (estudiante_id, curso_id) puede ser una clave compuesta. estudiante_id también es una FK hacia Estudiantes.'
     },
-    'sql': {
+    sql: {
         title: 'Comandos SQL (DDL, DML, DCL, TCL)',
         icon: 'code',
-        description: 'SQL se divide en varios tipos de comandos segun su funcion en la base de datos.',
+        level: 'Básico',
+        tags: ['SQL', 'Consultas'],
+        description: 'SQL agrupa sus comandos según su función: definir estructura, manipular datos, controlar permisos o gestionar transacciones.',
         conceptos: [
-            'DDL (Data Definition Language): CREATE, ALTER, DROP (definir estructura)',
-            'DML (Data Manipulation Language): SELECT, INSERT, UPDATE, DELETE (manipular datos)',
-            'DCL (Data Control Language): GRANT, REVOKE (control de permisos)',
-            'TCL (Transaction Control Language): COMMIT, ROLLBACK, SAVEPOINT (gestionar transacciones)'
+            'DDL: CREATE, ALTER y DROP definen la estructura.',
+            'DML: SELECT, INSERT, UPDATE y DELETE trabajan con los datos.',
+            'DCL: GRANT y REVOKE controlan permisos.',
+            'TCL: COMMIT, ROLLBACK y SAVEPOINT gestionan transacciones.'
         ],
-        ejemplo: 'CREATE TABLE estudiantes (id INT PRIMARY KEY, nombre VARCHAR(100));'
+        ejemplo: 'CREATE TABLE estudiantes (id INTEGER PRIMARY KEY, nombre TEXT); es DDL. INSERT INTO estudiantes VALUES (...); es DML.'
     },
-    'acid': {
+    acid: {
         title: 'Propiedades ACID',
         icon: 'shield-halved',
-        description: 'ACID son las propiedades que garantizan la integridad de las transacciones en una base de datos.',
+        level: 'Intermedio',
+        tags: ['SQL', 'Transacciones'],
+        description: 'ACID describe las garantías que hacen que una transacción sea segura incluso ante errores o concurrencia.',
         conceptos: [
-            'Atomicidad: La transaccion se completa completamente o no se realiza',
-            'Consistencia: La transaccion mantiene las reglas de la base de datos',
-            'Aislamiento: Las transacciones concurrentes no interfieren entre si',
-            'Durabilidad: Los cambios persisten incluso despues de fallos'
+            'Atomicidad: la transacción se completa entera o no se aplica.',
+            'Consistencia: se respetan las reglas e integridad de la base.',
+            'Aislamiento: las transacciones concurrentes no se pisan entre sí.',
+            'Durabilidad: los cambios confirmados sobreviven a fallos.'
         ],
-        ejemplo: 'Una transferencia bancaria: Si falla, no se debe perder dinero (Atomicidad)'
+        ejemplo: 'En una transferencia bancaria, no puede descontarse el dinero de una cuenta sin sumarlo en la otra. Atomicidad lo impide.'
     },
-    'indices': {
-        title: 'Indices en Bases de Datos',
+    indices: {
+        title: 'Índices en Bases de Datos',
         icon: 'list',
-        description: 'Los indices mejoran la velocidad de las consultas al permitir busquedas mas rapidas.',
+        level: 'Intermedio',
+        tags: ['SQL', 'Rendimiento'],
+        description: 'Un índice es una estructura auxiliar que acelera determinadas lecturas a cambio de espacio y de un coste extra en escrituras.',
         conceptos: [
-            'Indice B-Tree: El mas comun, organiza datos en arbol balanceado',
-            'Indice Hash: Busquedas exactas muy rapidas',
-            'Indice Full-Text: Busqueda de texto completo',
-            'Trade-off: Mejora lecturas pero ralentiza escrituras'
+            'B-Tree: el índice más común; sirve para rangos y búsquedas ordenadas.',
+            'Hash: muy rápido para igualdad exacta, pero no para rangos.',
+            'Full-Text: pensado para buscar palabras dentro de textos.',
+            'Trade-off: mejora lecturas, pero ralentiza INSERT, UPDATE y DELETE.'
         ],
-        ejemplo: 'CREATE INDEX idx_nombre ON estudiantes(nombre);'
+        ejemplo: 'CREATE INDEX idx_estudiantes_nombre ON estudiantes(nombre); puede acelerar búsquedas por nombre.'
     },
-
-// CONCEPTOS NoSQL
-'nosql': {
-    title: 'Bases de Datos NoSQL',
-    icon: 'database',
-    description: 'Las bases de datos NoSQL (Not Only SQL) son sistemas de gestion de bases de datos que no utilizan el modelo relacional tradicional. Estan diseñadas para manejar grandes volumenes de datos no estructurados o semiestructurados.',
-    conceptos: [
-        'NoSQL significa "Not Only SQL" (No solo SQL)',
-        'No requieren un esquema fijo (schema-less)',
-        'Escalabilidad horizontal (distribucion en multiples servidores)',
-        'Mayor flexibilidad para datos no estructurados',
-        'Ideal para Big Data y aplicaciones en tiempo real',
-        'Tipos: Documentos, Clave-Valor, Columnas, Grafos'
-    ],
-    ejemplo: 'MongoDB es la base de datos NoSQL mas popular. Almacena datos en documentos JSON flexibles.'
-},
-'documentales': {
-    title: 'Bases de Datos Documentales',
-    icon: 'file-lines',
-    description: 'Las bases de datos documentales almacenan datos en documentos (generalmente JSON o XML). Cada documento puede tener una estructura diferente, lo que permite gran flexibilidad.',
-    conceptos: [
-        'Almacenan datos en documentos (JSON, BSON, XML)',
-        'Estructura flexible: cada documento puede tener campos diferentes',
-        'Ideal para datos semiestructurados',
-        'Consultas por contenido del documento',
-        'Indexacion de campos para busquedas rapidas',
-        'Ejemplos: MongoDB, Firestore, CouchDB'
-    ],
-    ejemplo: 'En MongoDB, un documento de usuario puede tener campos como nombre, email, direccion, y cada usuario puede tener campos diferentes.'
-},
-'clave-valor': {
-    title: 'Bases de Datos Clave-Valor',
-    icon: 'key',
-    description: 'Las bases de datos clave-valor son las mas simples. Almacenan datos como pares de clave y valor, donde la clave es unica y el valor puede ser cualquier tipo de dato.',
-    conceptos: [
-        'Estructura simple: clave unica → valor',
-        'Altisimo rendimiento en lecturas/escrituras',
-        'Ideal para cache y sesiones de usuario',
-        'Escalabilidad horizontal nativa',
-        'Sin esquema fijo',
-        'Ejemplos: Redis, DynamoDB, Riak'
-    ],
-    ejemplo: 'En Redis, puedes almacenar la sesion de un usuario con clave "user:123" y valor "{nombre: Juan, rol: admin}"'
-},
-'columnas': {
-    title: 'Bases de Datos por Columnas',
-    icon: 'table-cells',
-    description: 'Las bases de datos columnares almacenan datos por columnas en lugar de filas. Esto las hace muy eficientes para consultas analiticas que solo necesitan algunas columnas.',
-    conceptos: [
-        'Almacenamiento orientado a columnas (no a filas)',
-        'Excelente para consultas analiticas (OLAP)',
-        'Compresion de datos muy eficiente',
-        'Ideal para Big Data y data warehouses',
-        'Escalabilidad horizontal',
-        'Ejemplos: Cassandra, HBase, Bigtable'
-    ],
-    ejemplo: 'En Cassandra, los datos se organizan en column families (familias de columnas) para consultas rapidas.'
-},
-'grafos': {
-    title: 'Bases de Datos de Grafos',
-    icon: 'share-nodes',
-    description: 'Las bases de datos de grafos estan diseñadas para representar y consultar relaciones complejas entre datos. Son ideales para redes sociales, recomendaciones y sistemas de conexiones.',
-    conceptos: [
-        'Representan datos como nodos, aristas y propiedades',
-        'Excelentes para relaciones complejas y conexiones',
-        'Consultas eficientes en profundidad (amigos de amigos)',
-        'Ideal para redes sociales, fraudes, recomendaciones',
-        'Escalables para grandes volumenes de relaciones',
-        'Ejemplos: Neo4j, Amazon Neptune, ArangoDB'
-    ],
-    ejemplo: 'En Neo4j, puedes consultar la red de amigos de un usuario con una consulta como: MATCH (user:Person)-[:FRIENDS]->(friends) RETURN friends'
-},
-'tiempo-real': {
-    title: 'Bases de Datos en Tiempo Real',
-    icon: 'bolt',
-    description: 'Las bases de datos en tiempo real estan diseñadas para aplicaciones que requieren actualizaciones instantaneas y sincronizacion en milisegundos.',
-    conceptos: [
-        'Sincronizacion en tiempo real (sub-milisegundo)',
-        'Actualizaciones instantaneas para todos los clientes',
-        'Ideal para aplicaciones colaborativas y juegos',
-        'Escalabilidad horizontal para millones de usuarios',
-        'Soporte para eventos y streams de datos',
-        'Ejemplos: Firebase Realtime Database, RethinkDB, Supabase'
-    ],
-    ejemplo: 'Firebase Realtime Database permite que multiples usuarios vean cambios en tiempo real, como en una aplicacion de chat o colaboracion.'
-}
+    joins: {
+        title: 'Tipos de JOIN',
+        icon: 'link',
+        level: 'Intermedio',
+        tags: ['SQL', 'Consultas'],
+        description: 'JOIN combina filas de dos o más tablas usando una condición. Elegir el tipo correcto cambia qué filas aparecen en el resultado.',
+        conceptos: [
+            'INNER JOIN: solo devuelve las filas que coinciden en ambas tablas.',
+            'LEFT JOIN: conserva todas las filas de la tabla izquierda.',
+            'RIGHT JOIN: conserva todas las filas de la tabla derecha.',
+            'FULL JOIN: conserva las filas de ambos lados cuando el motor lo soporta.',
+            'CROSS JOIN: genera todas las combinaciones posibles.'
+        ],
+        ejemplo: 'SELECT e.nombre, c.nombre FROM estudiantes e JOIN inscripciones i ON e.id = i.estudiante_id JOIN cursos c ON i.curso_id = c.id;'
+    },
+    nosql: {
+        title: 'Bases de Datos NoSQL',
+        icon: 'database',
+        level: 'Básico',
+        tags: ['NoSQL', 'Big Data'],
+        description: 'NoSQL agrupa motores que no usan el modelo relacional tradicional. Están pensados para datos flexibles, grandes volúmenes o patrones de acceso concretos.',
+        conceptos: [
+            'NoSQL significa “Not Only SQL”: no implica que SQL desaparezca.',
+            'No requieren un esquema fijo, aunque el modelo de datos sigue importando.',
+            'Suelen buscar escalabilidad horizontal.',
+            'Tipos principales: documentos, clave-valor, columnas y grafos.'
+        ],
+        ejemplo: 'MongoDB guarda documentos JSON flexibles. Redis guarda pares clave-valor. Neo4j modela nodos y relaciones.'
+    },
+    documentales: {
+        title: 'Bases de Datos Documentales',
+        icon: 'file-lines',
+        level: 'Básico',
+        tags: ['NoSQL', 'Documentos'],
+        description: 'Almacenan la información en documentos, normalmente JSON o BSON. Cada documento puede tener una estructura distinta.',
+        conceptos: [
+            'Documentos con campos y objetos anidados.',
+            'Esquema flexible, pero conviene definir convenciones.',
+            'Buen encaje para catálogos, perfiles y contenido semiestructurado.',
+            'Consultas por campos internos e indexación de rutas.'
+        ],
+        ejemplo: 'Un documento de usuario puede incluir nombre, email y una lista de direcciones sin crear tres tablas distintas.'
+    },
+    'clave-valor': {
+        title: 'Bases de Datos Clave-Valor',
+        icon: 'key',
+        level: 'Básico',
+        tags: ['NoSQL', 'Cache'],
+        description: 'Son las bases más simples: guardan un valor asociado a una clave única. Destacan por su velocidad y su facilidad para escalar.',
+        conceptos: [
+            'Estructura clave → valor.',
+            'Lecturas y escrituras muy rápidas.',
+            'Ideales para caché, sesiones y contadores.',
+            'No son la mejor opción para consultas relacionales complejas.'
+        ],
+        ejemplo: 'En Redis puedes guardar user:123 → { nombre: "Ana", rol: "admin" } con una expiración de sesión.'
+    },
+    columnas: {
+        title: 'Bases de Datos por Columnas',
+        icon: 'table-cells',
+        level: 'Intermedio',
+        tags: ['NoSQL', 'Analítica'],
+        description: 'Guardan los datos por columnas en lugar de por filas. Son eficientes para analítica porque leen solo las columnas necesarias y comprimen mejor.',
+        conceptos: [
+            'Almacenamiento orientado a columnas.',
+            'Excelente para OLAP, agregaciones y data warehouses.',
+            'Buena compresión y lectura de grandes volúmenes.',
+            'No suelen ser la primera opción para OLTP con muchas escrituras pequeñas.'
+        ],
+        ejemplo: 'Cassandra organiza los datos en familias de columnas para consultas distribuidas de alta escala.'
+    },
+    grafos: {
+        title: 'Bases de Datos de Grafos',
+        icon: 'share-nodes',
+        level: 'Intermedio',
+        tags: ['NoSQL', 'Redes'],
+        description: 'Representan la información como nodos, aristas y propiedades. Son ideales cuando las relaciones son tan importantes como los datos.',
+        conceptos: [
+            'Nodos: entidades, como personas o productos.',
+            'Aristas: relaciones, como “amigo de” o “compró”.',
+            'Propiedades: atributos de nodos y aristas.',
+            'Recorridos eficientes para amigos de amigos, rutas y recomendaciones.'
+        ],
+        ejemplo: 'En Neo4j puedes consultar MATCH (u:Person)-[:FRIENDS]->(f) RETURN f; para encontrar amigos directos.'
+    },
+    'tiempo-real': {
+        title: 'Bases de Datos en Tiempo Real',
+        icon: 'bolt',
+        level: 'Intermedio',
+        tags: ['NoSQL', 'Tiempo Real'],
+        description: 'Están diseñadas para sincronizar cambios y notificar a los clientes casi al instante. Son habituales en apps colaborativas y chats.',
+        conceptos: [
+            'Sincronización instantánea entre clientes.',
+            'Suscripciones a cambios y eventos.',
+            'Buen encaje para chats, juegos y edición colaborativa.',
+            'Hay que pensar en conflictos, latencia y consistencia.'
+        ],
+        ejemplo: 'Firebase Realtime Database notifica a todos los clientes cuando cambia un documento compartido.'
+    },
+    cap: {
+        title: 'Teorema CAP',
+        icon: 'circle-nodes',
+        level: 'Avanzado',
+        tags: ['NoSQL', 'Distribución'],
+        description: 'CAP explica que, ante una partición de red, un sistema distribuido debe elegir entre consistencia y disponibilidad. No significa que solo puedas tener dos propiedades siempre.',
+        conceptos: [
+            'Consistencia (C): todos los nodos ven el mismo dato.',
+            'Disponibilidad (A): el sistema responde aunque haya fallos.',
+            'Tolerancia a particiones (P): el sistema sigue funcionando si se separa la red.',
+            'CP prioriza datos consistentes; AP prioriza seguir respondiendo.'
+        ],
+        ejemplo: 'En una partición de red, un sistema AP puede devolver una versión antigua del dato para seguir disponible; un sistema CP puede rechazar la operación hasta recuperar consistencia.'
+    }
 };
 
-// ABRIR MODAL DE CONCEPTOS
+const conceptMistakes = {
+    mer: [
+        'Confundir una entidad conceptual con una tabla física.',
+        'Olvidar indicar la cardinalidad de las relaciones.'
+    ],
+    normalizacion: [
+        'Normalizar sin medir el coste de los JOINs posteriores.',
+        'Confundir 2FN con 3FN.'
+    ],
+    llaves: [
+        'Usar una FK como PK sin que sea necesario.',
+        'Pensar que UNIQUE y PRIMARY KEY son exactamente lo mismo.'
+    ],
+    sql: [
+        'Confundir DDL con DML.',
+        'Pensar que SELECT modifica los datos.'
+    ],
+    acid: [
+        'Creer que ACID es exclusivo de las bases SQL.',
+        'Confundir aislamiento con consistencia.'
+    ],
+    indices: [
+        'Indexar todas las columnas por si acaso.',
+        'Olvidar que los índices también cuestan espacio y escrituras.'
+    ],
+    joins: [
+        'Hacer JOIN sin condición ON y provocar un producto cartesiano.',
+        'Confundir LEFT JOIN con INNER JOIN.'
+    ],
+    nosql: [
+        'Creer que NoSQL significa que ya no se usa SQL.',
+        'Elegir NoSQL sin un patrón de acceso claro.'
+    ],
+    documentales: [
+        'Duplicar datos sin control y crear inconsistencias.',
+        'Pensar que un esquema flexible significa que no hay que modelar.'
+    ],
+    'clave-valor': [
+        'Usarlas para consultas relacionales complejas.',
+        'No definir expiración o estrategia de invalidación en caché.'
+    ],
+    columnas: [
+        'Usarlas para OLTP con muchas escrituras pequeñas.',
+        'Ignorar el coste de las escrituras y la modelización por consultas.'
+    ],
+    grafos: [
+        'Usarlas para datos tabulares simples sin relaciones profundas.',
+        'Olvidar indexar las propiedades que se usan en los recorridos.'
+    ],
+    'tiempo-real': [
+        'Confundir tiempo real con baja latencia puntual.',
+        'No prever conflictos de escritura concurrente.'
+    ],
+    cap: [
+        'Creer que se pueden tener C, A y P al mismo tiempo durante una partición.',
+        'Pensar que CAP es una elección fija para siempre: depende del escenario.'
+    ]
+};
+
+const conceptPractices = {
+    mer: { type: 'analyze', label: 'Ver ERD', icon: 'fa-project-diagram' },
+    normalizacion: { type: 'analyze', label: 'Ver ERD', icon: 'fa-project-diagram' },
+    llaves: { type: 'analyze', label: 'Ver claves en el ERD', icon: 'fa-key' },
+    sql: { type: 'lesson', lessonId: 'select', label: 'Practicar SELECT', icon: 'fa-play' },
+    acid: { type: 'practice', label: 'Ir al editor SQL', icon: 'fa-code' },
+    indices: { type: 'analyze', label: 'Ver tablas y relaciones', icon: 'fa-table-list' },
+    joins: { type: 'lesson', lessonId: 'join', label: 'Practicar JOIN', icon: 'fa-link' },
+    nosql: { type: 'nosql', label: 'Abrir laboratorio NoSQL', icon: 'fa-flask' },
+    documentales: { type: 'nosql', label: 'Probar documentos', icon: 'fa-file-lines' },
+    'clave-valor': { type: 'nosql', label: 'Abrir laboratorio NoSQL', icon: 'fa-key' },
+    columnas: { type: 'nosql', label: 'Explorar agregaciones', icon: 'fa-table-cells' },
+    grafos: { type: 'nosql', label: 'Abrir laboratorio NoSQL', icon: 'fa-share-nodes' },
+    'tiempo-real': { type: 'nosql', label: 'Abrir laboratorio NoSQL', icon: 'fa-bolt' },
+    cap: { type: 'nosql', label: 'Explorar NoSQL', icon: 'fa-circle-nodes' }
+};
+
+const conceptRelated = {
+    mer: ['normalizacion', 'llaves', 'joins'],
+    normalizacion: ['mer', 'llaves'],
+    llaves: ['mer', 'joins'],
+    sql: ['joins', 'acid'],
+    acid: ['sql', 'cap'],
+    indices: ['sql', 'columnas'],
+    joins: ['llaves', 'mer'],
+    nosql: ['documentales', 'clave-valor', 'columnas', 'grafos', 'cap'],
+    documentales: ['nosql', 'clave-valor'],
+    'clave-valor': ['nosql', 'tiempo-real'],
+    columnas: ['nosql', 'indices'],
+    grafos: ['nosql', 'cap'],
+    'tiempo-real': ['nosql', 'clave-valor'],
+    cap: ['nosql', 'acid', 'grafos']
+};
+
+const conceptQuizzes = {
+    mer: [
+        { question: '¿Qué representa una entidad en el MER?', options: ['Un objeto del mundo real', 'Una consulta SQL', 'Un índice'], answer: 0 },
+        { question: '¿Qué indica una cardinalidad 1:N?', options: ['Un elemento se relaciona con muchos', 'Muchos con muchos', 'Ningún elemento se relaciona'], answer: 0 }
+    ],
+    normalizacion: [
+        { question: '¿Qué busca la normalización?', options: ['Reducir redundancia y mejorar integridad', 'Duplicar los datos', 'Eliminar todas las claves'], answer: 0 },
+        { question: '¿Qué forma normal elimina dependencias transitivas?', options: ['3FN', '1FN', 'Ninguna'], answer: 0 }
+    ],
+    llaves: [
+        { question: '¿Qué hace una Foreign Key?', options: ['Referencia la PK de otra tabla', 'Identifica la fila de su propia tabla', 'Crea un índice Full-Text'], answer: 0 },
+        { question: '¿Qué es una clave compuesta?', options: ['Una clave formada por varias columnas', 'Una clave foránea', 'Un índice único'], answer: 0 }
+    ],
+    sql: [
+        { question: '¿Qué grupo incluye CREATE, ALTER y DROP?', options: ['DDL', 'DML', 'DCL'], answer: 0 },
+        { question: '¿Qué comando pertenece a DML?', options: ['INSERT', 'GRANT', 'COMMIT'], answer: 0 }
+    ],
+    acid: [
+        { question: '¿Qué propiedad garantiza que una transacción se complete o no se aplique?', options: ['Atomicidad', 'Durabilidad', 'Aislamiento'], answer: 0 },
+        { question: '¿Qué propiedad evita que transacciones concurrentes interfieran?', options: ['Aislamiento', 'Consistencia', 'Atomicidad'], answer: 0 }
+    ],
+    indices: [
+        { question: '¿Qué mejora principalmente un índice?', options: ['Velocidad de lectura', 'Velocidad de escritura', 'Espacio libre'], answer: 0 },
+        { question: '¿Qué índice es el más común?', options: ['B-Tree', 'Hash', 'Full-Text'], answer: 0 }
+    ],
+    joins: [
+        { question: '¿Qué JOIN devuelve solo las filas que coinciden en ambas tablas?', options: ['INNER JOIN', 'LEFT JOIN', 'FULL JOIN'], answer: 0 },
+        { question: '¿Qué JOIN conserva todas las filas de la tabla izquierda?', options: ['LEFT JOIN', 'INNER JOIN', 'CROSS JOIN'], answer: 0 }
+    ],
+    nosql: [
+        { question: '¿Qué significa NoSQL?', options: ['Not Only SQL', 'No SQL', 'New SQL'], answer: 0 },
+        { question: '¿Qué tipo de escalabilidad suele buscar NoSQL?', options: ['Horizontal', 'Vertical', 'Ninguna'], answer: 0 }
+    ],
+    documentales: [
+        { question: '¿Cómo almacenan los datos?', options: ['Documentos JSON/BSON', 'Filas y columnas', 'Grafos'], answer: 0 },
+        { question: '¿Qué base de datos es documental?', options: ['MongoDB', 'Redis', 'Neo4j'], answer: 0 }
+    ],
+    'clave-valor': [
+        { question: '¿Qué estructura usan?', options: ['Clave → valor', 'Tabla → fila', 'Nodo → arista'], answer: 0 },
+        { question: '¿Para qué se usan mucho?', options: ['Caché y sesiones', 'Data warehouses', 'Grafos sociales'], answer: 0 }
+    ],
+    columnas: [
+        { question: '¿Cómo almacenan los datos?', options: ['Por columnas', 'Por filas', 'Por documentos'], answer: 0 },
+        { question: '¿Para qué son ideales?', options: ['Analítica y OLAP', 'Transacciones OLTP', 'Grafos'], answer: 0 }
+    ],
+    grafos: [
+        { question: '¿Qué elementos usan?', options: ['Nodos y aristas', 'Filas y columnas', 'Claves y valores'], answer: 0 },
+        { question: '¿Para qué son ideales?', options: ['Redes sociales y recomendaciones', 'Nóminas', 'Caché'], answer: 0 }
+    ],
+    'tiempo-real': [
+        { question: '¿Qué ofrecen?', options: ['Sincronización instantánea', 'Copias de seguridad', 'Índices B-Tree'], answer: 0 },
+        { question: '¿Qué ejemplo encaja?', options: ['Chat colaborativo', 'Facturación mensual', 'Data warehouse'], answer: 0 }
+    ],
+    cap: [
+        { question: '¿Qué tres propiedades plantea CAP?', options: ['Consistencia, disponibilidad y tolerancia a particiones', 'Atomicidad, consistencia e integridad', 'Clave, valor y documento'], answer: 0 },
+        { question: 'En una partición, ¿qué suele sacrificar un sistema AP?', options: ['Consistencia', 'Disponibilidad', 'Tolerancia a particiones'], answer: 0 }
+    ]
+};
+
+const CONCEPT_PROGRESS_KEY = 'sql-academy-concepts-v1';
+let conceptProgress = {};
+let activeGuideFilter = 'all';
+let activeConceptFilter = 'all';
+let learnLibraryInitialized = false;
+
+function loadConceptProgress() {
+    const stored = readStoredJSON(CONCEPT_PROGRESS_KEY, {});
+    conceptProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+}
+
+function saveConceptProgress() {
+    writeStoredJSON(CONCEPT_PROGRESS_KEY, conceptProgress);
+}
+
+function isConceptCompleted(key) {
+    return Boolean(conceptProgress[key]?.completed);
+}
+
+function getConceptMasteryStats() {
+    const total = Object.keys(conceptInfo).length;
+    const completed = Object.keys(conceptInfo).filter(isConceptCompleted).length;
+    return {
+        total,
+        completed,
+        percent: total ? Math.round((completed / total) * 100) : 0
+    };
+}
+
+function updateConceptProgressUI() {
+    const stats = getConceptMasteryStats();
+    const text = document.getElementById('conceptProgressText');
+    const bar = document.getElementById('conceptProgressBar');
+    const track = document.getElementById('conceptProgressTrack');
+    if (text) text.textContent = `${stats.completed} de ${stats.total}`;
+    if (bar) bar.style.width = `${stats.percent}%`;
+    if (track) track.setAttribute('aria-valuenow', String(stats.percent));
+
+    document.querySelectorAll('[data-concept-badge]').forEach(badge => {
+        badge.hidden = !isConceptCompleted(badge.dataset.conceptBadge);
+    });
+    document.querySelectorAll('[data-concept-card]').forEach(card => {
+        card.classList.toggle('is-completed', isConceptCompleted(card.dataset.conceptKey));
+    });
+}
+
+function markConceptCompleted(key) {
+    if (isConceptCompleted(key)) return false;
+    conceptProgress[key] = {
+        completed: true,
+        completedAt: new Date().toISOString()
+    };
+    saveConceptProgress();
+    updateConceptProgressUI();
+    renderLearningProgressDashboard();
+    showToast('success', 'Concepto dominado. Se ha guardado en tu progreso.');
+    return true;
+}
+
+function getConceptLevelClass(level) {
+    if (level === 'Básico') return 'basico';
+    if (level === 'Intermedio') return 'intermedio';
+    return 'avanzado';
+}
+
+function normalizeLibraryText(value) {
+    return String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+function activateLearnTab(tabName) {
+    const next = tabName === 'concepts' ? 'concepts' : 'guides';
+    const tabs = Array.from(document.querySelectorAll('.learn-tab'));
+    const panels = {
+        guides: document.getElementById('learnGuidesPanel'),
+        concepts: document.getElementById('learnConceptsPanel')
+    };
+
+    tabs.forEach(tab => {
+        const active = tab.dataset.learnTab === next;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+    });
+
+    Object.entries(panels).forEach(([name, panel]) => {
+        if (!panel) return;
+        const active = name === next;
+        panel.hidden = !active;
+        panel.classList.toggle('active', active);
+    });
+
+    if (next === 'concepts') updateConceptProgressUI();
+}
+
+function filterLearnGuides() {
+    const input = document.getElementById('guideSearch');
+    const query = normalizeLibraryText(input?.value || '');
+    const cards = Array.from(document.querySelectorAll('[data-guide-card]'));
+    let visible = 0;
+
+    cards.forEach(card => {
+        const tags = (card.dataset.tags || '').split(' ').filter(Boolean);
+        const matchesFilter = activeGuideFilter === 'all' || tags.includes(activeGuideFilter);
+        const haystack = normalizeLibraryText(`${card.dataset.search || ''} ${card.textContent}`);
+        const matchesQuery = !query || haystack.includes(query);
+        const match = matchesFilter && matchesQuery;
+        card.hidden = !match;
+        if (match) visible += 1;
+    });
+
+    document.querySelectorAll('#learnGuidesPanel .db-group').forEach(group => {
+        const groupCards = Array.from(group.querySelectorAll('[data-guide-card]'));
+        group.hidden = groupCards.length > 0 && groupCards.every(card => card.hidden);
+    });
+
+    const empty = document.getElementById('guideEmptyState');
+    if (empty) empty.hidden = visible > 0;
+}
+
+function setGuideFilter(filter) {
+    activeGuideFilter = filter;
+    document.querySelectorAll('[data-guide-filter]').forEach(button => {
+        const active = button.dataset.guideFilter === filter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    filterLearnGuides();
+}
+
+function filterConcepts() {
+    const input = document.getElementById('conceptSearch');
+    const query = normalizeLibraryText(input?.value || '');
+    const cards = Array.from(document.querySelectorAll('[data-concept-card]'));
+    let visible = 0;
+
+    cards.forEach(card => {
+        const tags = (card.dataset.tags || '').split(' ').filter(Boolean);
+        const level = card.dataset.level || '';
+        const matchesFilter = activeConceptFilter === 'all'
+            || tags.includes(activeConceptFilter)
+            || level === activeConceptFilter;
+        const haystack = normalizeLibraryText(`${card.dataset.search || ''} ${card.textContent}`);
+        const matchesQuery = !query || haystack.includes(query);
+        const match = matchesFilter && matchesQuery;
+        card.hidden = !match;
+        if (match) visible += 1;
+    });
+
+    const empty = document.getElementById('conceptEmptyState');
+    if (empty) empty.hidden = visible > 0;
+}
+
+function setConceptFilter(filter) {
+    activeConceptFilter = filter;
+    document.querySelectorAll('[data-concept-filter]').forEach(button => {
+        const active = button.dataset.conceptFilter === filter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    filterConcepts();
+}
+
+function openConceptLibrary() {
+    activateSection('learn');
+    activateLearnTab('concepts');
+    const search = document.getElementById('conceptSearch');
+    if (search) search.value = '';
+    setConceptFilter('all');
+    const section = document.getElementById('section-learn');
+    if (section && typeof section.scrollIntoView === 'function') {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function toggleMotorFinder() {
+    const body = document.getElementById('motorFinderBody');
+    const button = document.getElementById('motorFinderToggle');
+    if (!body || !button) return;
+    body.hidden = !body.hidden;
+    button.innerHTML = body.hidden
+        ? 'Abrir asistente <i class="fas fa-chevron-down"></i>'
+        : 'Cerrar asistente <i class="fas fa-chevron-up"></i>';
+    if (!body.hidden) {
+        const first = body.querySelector('select');
+        if (first) first.focus();
+    }
+}
+
+function getMotorRecommendation(answers) {
+    const make = (id, name, reason, avoid) => ({ id, name, reason, avoid });
+
+    if (answers.type === 'graph') {
+        return make('neo4j', 'Neo4j', 'Modela nodos y relaciones de forma nativa. Es la opción natural si las conexiones son el centro del problema.', 'Si tus datos son tablas simples y no necesitas recorridos profundos.');
+    }
+    if (answers.type === 'search') {
+        return make('elasticsearch', 'Elasticsearch', 'Está pensado para búsqueda de texto, filtros y analítica sobre grandes volúmenes.', 'Si necesitas transacciones estrictas o eres la fuente de verdad principal.');
+    }
+    if (answers.type === 'keyvalue') {
+        return make('redis', 'Redis', 'Es rapidísimo para caché, sesiones, contadores y datos efímeros.', 'Si necesitas consultas relacionales complejas o agregaciones pesadas.');
+    }
+    if (answers.type === 'documents') {
+        if (answers.realtime === 'yes') {
+            return make('firebase', 'Firebase', 'Combina documentos flexibles con sincronización en tiempo real y una integración sencilla.', 'Si necesitas consultas relacionales complejas o control total del backend.');
+        }
+        return make('mongodb', 'MongoDB', 'Documentos flexibles, buen encaje para perfiles, catálogos y contenido semiestructurado.', 'Si el modelo es muy relacional y necesitas JOINs y transacciones complejas.');
+    }
+    if (answers.realtime === 'yes') {
+        return make('firebase', 'Firebase', 'Sincronización instantánea y documentos flexibles para apps colaborativas.', 'Si necesitas transacciones estrictas o un esquema muy relacional.');
+    }
+    if (answers.transactions === 'yes') {
+        return make('postgresql', 'PostgreSQL', 'Relacional, robusto, con ACID, tipos avanzados y un ecosistema muy completo.', 'Si buscas principalmente caché o una escala horizontal extrema sin operaciones relacionales.');
+    }
+    if (answers.scale === 'yes') {
+        return make('cassandra', 'Cassandra', 'Diseñada para alta disponibilidad y escala horizontal con cargas distribuidas.', 'Si necesitas transacciones complejas o consultas ad hoc muy flexibles.');
+    }
+    return make('mysql', 'MySQL', 'Una opción relacional muy extendida, sencilla de operar y con buen rendimiento general.', 'Si necesitas características avanzadas de PostgreSQL o modelado documental.');
+}
+
+function recommendMotor() {
+    const result = document.getElementById('motorFinderResult');
+    if (!result) return;
+    const answers = {
+        type: document.getElementById('motorFinderType')?.value || 'structured',
+        transactions: document.getElementById('motorFinderTransactions')?.value || 'yes',
+        scale: document.getElementById('motorFinderScale')?.value || 'no',
+        realtime: document.getElementById('motorFinderRealtime')?.value || 'no'
+    };
+    const recommendation = getMotorRecommendation(answers);
+    const darkLogos = {
+        mysql: 'assets/logos/mysql-dark.png',
+        sqlite: 'assets/logos/sqlite-dark.png'
+    };
+    const darkLogo = darkLogos[recommendation.id] || '';
+    result.hidden = false;
+    result.innerHTML = `
+        <div class="motor-result-card">
+            <span class="motor-result-logo${darkLogo ? ' has-dark-logo' : ''}">
+                <img class="db-logo-light" src="assets/logos/${recommendation.id}.png" alt="${escapeHtml(recommendation.name)}">
+                ${darkLogo ? `<img class="db-logo-dark" src="${darkLogo}" alt="" aria-hidden="true">` : ''}
+            </span>
+            <div class="motor-result-copy">
+                <span class="motor-result-eyebrow">Recomendación</span>
+                <h3>${escapeHtml(recommendation.name)}</h3>
+                <p>${escapeHtml(recommendation.reason)}</p>
+                <p class="motor-result-avoid"><strong>Cuidado:</strong> ${escapeHtml(recommendation.avoid)}</p>
+            </div>
+            <button type="button" class="btn-secondary" onclick="openDBInfo('${recommendation.id}')">
+                Ver ficha <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    `;
+    if (typeof result.scrollIntoView === 'function') {
+        result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function getConceptDiagram(key) {
+    const diagrams = {
+        mer: `
+            <div class="concept-diagram diagram-mer">
+                <div class="diagram-entity"><strong>Estudiante</strong><span>id · nombre</span></div>
+                <span class="diagram-relation">1 : N</span>
+                <div class="diagram-entity"><strong>Curso</strong><span>id · nombre</span></div>
+            </div>
+        `,
+        normalizacion: `
+            <div class="concept-diagram diagram-normalization">
+                <div class="diagram-panel"><span>Antes</span><strong>Estudiantes + cursos</strong><small>datos repetidos</small></div>
+                <i class="fas fa-arrow-right diagram-arrow"></i>
+                <div class="diagram-panel"><span>Después</span><strong>Estudiantes / Cursos</strong><small>sin redundancia</small></div>
+            </div>
+        `,
+        llaves: `
+            <div class="concept-diagram diagram-keys">
+                <div class="diagram-key-row"><span class="diagram-pk">PK</span> estudiantes.id</div>
+                <div class="diagram-key-row"><span class="diagram-fk">FK</span> inscripciones.estudiante_id</div>
+                <div class="diagram-key-row"><span class="diagram-unique">UQ</span> estudiantes.email</div>
+            </div>
+        `,
+        sql: `
+            <div class="concept-diagram diagram-sql-groups">
+                <span class="diagram-chip chip-blue">DDL</span>
+                <span class="diagram-chip chip-green">DML</span>
+                <span class="diagram-chip chip-amber">DCL</span>
+                <span class="diagram-chip chip-violet">TCL</span>
+            </div>
+        `,
+        acid: `
+            <div class="concept-diagram diagram-acid">
+                <div><strong>A</strong><span>Atomicidad</span></div>
+                <div><strong>C</strong><span>Consistencia</span></div>
+                <div><strong>I</strong><span>Aislamiento</span></div>
+                <div><strong>D</strong><span>Durabilidad</span></div>
+            </div>
+        `,
+        indices: `
+            <div class="concept-diagram diagram-index">
+                <div class="diagram-index-row"><span>Sin índice</span><strong>1000 filas</strong></div>
+                <div class="diagram-index-row"><span>Con índice</span><strong>3 saltos</strong></div>
+            </div>
+        `,
+        joins: `
+            <div class="concept-diagram diagram-join">
+                <div class="diagram-join-circle"><span>A</span><span>B</span></div>
+                <p>INNER JOIN = intersección</p>
+            </div>
+        `,
+        nosql: `
+            <div class="concept-diagram diagram-nosql-types">
+                <span>Documentos</span>
+                <span>Clave-Valor</span>
+                <span>Columnas</span>
+                <span>Grafos</span>
+            </div>
+        `,
+        documentales: `
+            <div class="concept-diagram diagram-json">
+                <pre><code>{
+  "nombre": "Ana",
+  "cursos": ["SQL", "NoSQL"]
+}</code></pre>
+            </div>
+        `,
+        'clave-valor': `
+            <div class="concept-diagram diagram-kv">
+                <span>user:123</span>
+                <i class="fas fa-arrow-right"></i>
+                <strong>{ nombre: "Ana" }</strong>
+            </div>
+        `,
+        columnas: `
+            <div class="concept-diagram diagram-columns">
+                <div class="diagram-row-view"><span>fila 1</span><span>fila 2</span><span>fila 3</span></div>
+                <div class="diagram-column-view"><span>col A</span><span>col B</span></div>
+            </div>
+        `,
+        grafos: `
+            <div class="concept-diagram diagram-graph">
+                <span class="diagram-node">Ana</span>
+                <span class="diagram-edge">amiga</span>
+                <span class="diagram-node">Luis</span>
+                <span class="diagram-edge">amigo</span>
+                <span class="diagram-node">Eva</span>
+            </div>
+        `,
+        'tiempo-real': `
+            <div class="concept-diagram diagram-realtime">
+                <span>Cliente A</span>
+                <span>Servidor</span>
+                <span>Cliente B</span>
+                <i class="fas fa-arrows-rotate"></i>
+            </div>
+        `,
+        cap: `
+            <div class="concept-diagram diagram-cap">
+                <div class="diagram-cap-triangle">
+                    <span class="cap-c">C</span>
+                    <span class="cap-a">A</span>
+                    <span class="cap-p">P</span>
+                </div>
+                <p>Ante una partición: CP o AP</p>
+            </div>
+        `
+    };
+    return diagrams[key] || '';
+}
+
+function copyConceptExample(key) {
+    const info = conceptInfo[key];
+    if (!info) return;
+    copyTextToClipboard(info.ejemplo)
+        .then(() => showToast('success', 'Ejemplo copiado al portapapeles.'))
+        .catch(() => showToast('error', 'No se pudo copiar el ejemplo.'));
+}
+
+function practiceConcept(key) {
+    const practice = conceptPractices[key];
+    if (!practice) return;
+    closeConceptModal();
+
+    if (practice.type === 'analyze') {
+        activateSection('analyze');
+        generateDiagram();
+        setTimeout(() => {
+            const diagram = document.getElementById('diagramContainer');
+            if (diagram && typeof diagram.scrollIntoView === 'function') {
+                diagram.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 60);
+        return;
+    }
+    if (practice.type === 'lesson') {
+        openLearningPath();
+        selectLearningLesson(practice.lessonId);
+        return;
+    }
+    if (practice.type === 'challenge') {
+        openSQLChallenges();
+        openChallenge(practice.challengeId);
+        return;
+    }
+    if (practice.type === 'nosql') {
+        activateSection('nosql');
+        return;
+    }
+    activateSection('practice');
+}
+
+function getConceptQuizOptions(question) {
+    const options = question.options.map((text, index) => ({
+        text,
+        correct: index === question.answer
+    }));
+    const seed = Array.from(question.question)
+        .reduce((total, character) => total + character.charCodeAt(0), 0);
+    const offset = seed % options.length;
+    const rotated = options.slice(offset).concat(options.slice(0, offset));
+    return {
+        options: rotated.map(option => option.text),
+        answer: rotated.findIndex(option => option.correct)
+    };
+}
+
+function submitConceptQuiz(event, key) {
+    event.preventDefault();
+    const info = conceptInfo[key];
+    const quiz = conceptQuizzes[key] || [];
+    const form = event.target;
+    const result = document.getElementById('conceptQuizResult');
+    if (!info || !quiz.length || !result) return;
+
+    let correct = 0;
+    const correctAnswers = [];
+    quiz.forEach((question, index) => {
+        const quizOptions = getConceptQuizOptions(question);
+        const selected = form.querySelector(`input[name="q${index}"]:checked`);
+        const value = selected ? Number(selected.value) : -1;
+        if (value === quizOptions.answer) correct += 1;
+        correctAnswers.push(quizOptions.options[quizOptions.answer]);
+    });
+
+    if (correct === quiz.length) {
+        const wasCompleted = isConceptCompleted(key);
+        markConceptCompleted(key);
+        const status = document.getElementById('conceptModalStatus');
+        if (status) {
+            status.className = 'concept-modal-status is-complete';
+            status.innerHTML = '<i class="fas fa-check"></i> Dominado';
+        }
+        result.className = 'concept-quiz-result is-success';
+        result.innerHTML = `
+            <strong><i class="fas fa-circle-check"></i> ¡Concepto dominado!</strong>
+            <p>Has acertado las ${quiz.length} preguntas. ${wasCompleted ? 'Ya estaba guardado en tu progreso.' : 'Se ha guardado en tu progreso.'}</p>
+        `;
+        return;
+    }
+
+    result.className = 'concept-quiz-result is-error';
+    result.innerHTML = `
+        <strong><i class="fas fa-circle-xmark"></i> Has acertado ${correct} de ${quiz.length}</strong>
+        <p>Revisa el contenido e inténtalo de nuevo.</p>
+        <details>
+            <summary>Ver respuestas correctas</summary>
+            <ul>${correctAnswers.map(answer => `<li>${escapeHtml(answer)}</li>`).join('')}</ul>
+        </details>
+    `;
+}
+
 function openConcept(conceptKey) {
     const info = conceptInfo[conceptKey];
     if (!info) return;
-    
+
     const modal = document.getElementById('conceptModal');
     const title = document.getElementById('conceptModalTitle');
     const body = document.getElementById('conceptModalBody');
-    
-    title.innerHTML = `<i class="fas fa-${info.icon}"></i> ${info.title}`;
-    
-    let html = `
-        <p style="font-size:1.05em; color:#444; line-height:1.7;">${info.description}</p>
-        
-        <h3><i class="fas fa-list"></i> Conceptos Clave</h3>
-        <ul>
-            ${info.conceptos.map(c => `<li>${c}</li>`).join('')}
-        </ul>
-        
-        <h3><i class="fas fa-lightbulb"></i> Ejemplo Practico</h3>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #336791; color: #555;">
-            ${info.ejemplo}
+    if (!modal || !title || !body) return;
+
+    const completed = isConceptCompleted(conceptKey);
+    const practice = conceptPractices[conceptKey];
+    const related = (conceptRelated[conceptKey] || []).filter(key => conceptInfo[key]);
+    const mistakes = conceptMistakes[conceptKey] || [];
+    const quiz = conceptQuizzes[conceptKey] || [];
+    const diagram = getConceptDiagram(conceptKey);
+
+    title.innerHTML = `<i class="fas fa-${info.icon}"></i> ${escapeHtml(info.title)}`;
+    body.innerHTML = `
+        <div class="concept-modal-meta">
+            <span class="challenge-level ${getConceptLevelClass(info.level)}">${escapeHtml(info.level)}</span>
+            ${info.tags.map(tag => `<span class="concept-tag ${tag === 'SQL' ? 'sql-tag' : tag === 'NoSQL' ? 'nosql-tag' : ''}">${escapeHtml(tag)}</span>`).join('')}
+            <span id="conceptModalStatus" class="concept-modal-status ${completed ? 'is-complete' : ''}">
+                ${completed ? '<i class="fas fa-check"></i> Dominado' : 'Pendiente de quiz'}
+            </span>
         </div>
-        
-        <div style="margin-top: 15px; padding: 12px; background: #e9ecef; border-radius: 8px; font-size:0.85em; color:#666;">
-            <i class="fas fa-info-circle" style="color: #336791;"></i>
-            Este concepto forma parte de los fundamentos que te ayudarán a elegir y diseñar el modelo de datos adecuado.
+        <p class="concept-modal-description">${escapeHtml(info.description)}</p>
+        ${diagram ? `<div class="concept-diagram-wrap">${diagram}</div>` : ''}
+        <h3><i class="fas fa-list"></i> Conceptos clave</h3>
+        <ul class="concept-modal-list">${info.conceptos.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        <h3><i class="fas fa-lightbulb"></i> Ejemplo práctico</h3>
+        <div class="concept-example">
+            <pre><code>${escapeHtml(info.ejemplo)}</code></pre>
+            <button type="button" class="btn-secondary btn-sm" onclick="copyConceptExample('${conceptKey}')">
+                <i class="fas fa-copy"></i> Copiar ejemplo
+            </button>
         </div>
+        ${mistakes.length ? `
+            <h3><i class="fas fa-triangle-exclamation"></i> Errores comunes</h3>
+            <ul class="concept-mistakes">${mistakes.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        ` : ''}
+        <div class="concept-modal-actions">
+            ${practice ? `
+                <button type="button" class="btn-primary" onclick="practiceConcept('${conceptKey}')">
+                    <i class="fas ${practice.icon || 'fa-play'}"></i> ${escapeHtml(practice.label)}
+                </button>
+            ` : ''}
+        </div>
+        <div class="concept-quiz">
+            <h3><i class="fas fa-circle-question"></i> Mini-quiz</h3>
+            <p class="concept-quiz-intro">Responde las dos preguntas para marcar el concepto como dominado.</p>
+            <form class="concept-quiz-form" onsubmit="submitConceptQuiz(event, '${conceptKey}')">
+                ${quiz.map((question, questionIndex) => {
+                    const quizOptions = getConceptQuizOptions(question);
+                    return `
+                        <fieldset class="concept-quiz-question">
+                            <legend>${questionIndex + 1}. ${escapeHtml(question.question)}</legend>
+                            ${quizOptions.options.map((option, optionIndex) => `
+                                <label class="concept-quiz-option">
+                                    <input type="radio" name="q${questionIndex}" value="${optionIndex}">
+                                    <span>${escapeHtml(option)}</span>
+                                </label>
+                            `).join('')}
+                        </fieldset>
+                    `;
+                }).join('')}
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-check"></i> Comprobar respuestas
+                </button>
+            </form>
+            <div id="conceptQuizResult" class="concept-quiz-result" role="status" aria-live="polite"></div>
+        </div>
+        ${related.length ? `
+            <div class="concept-related">
+                <span>Conceptos relacionados</span>
+                <div>${related.map(key => `<button type="button" onclick="openConcept('${key}')">${escapeHtml(conceptInfo[key].title)}</button>`).join('')}</div>
+            </div>
+        ` : ''}
     `;
-    
-    body.innerHTML = html;
+
     openModal(modal);
 }
 
 function closeConceptModal() {
     closeModal(document.getElementById('conceptModal'));
+}
+
+function initLearnLibrary() {
+    loadConceptProgress();
+    updateConceptProgressUI();
+    if (learnLibraryInitialized) return;
+    learnLibraryInitialized = true;
+
+    document.querySelectorAll('.learn-tab').forEach(tab => {
+        tab.addEventListener('click', () => activateLearnTab(tab.dataset.learnTab));
+        tab.addEventListener('keydown', event => {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+            const tabs = Array.from(document.querySelectorAll('.learn-tab'));
+            const index = tabs.indexOf(tab);
+            if (index === -1) return;
+            event.preventDefault();
+            const offset = event.key === 'ArrowRight' ? 1 : -1;
+            const nextTab = tabs[(index + offset + tabs.length) % tabs.length];
+            nextTab.focus();
+            activateLearnTab(nextTab.dataset.learnTab);
+        });
+    });
+
+    activateLearnTab('guides');
+    setGuideFilter('all');
+    setConceptFilter('all');
 }
 
 // ============================================
@@ -3272,9 +4884,363 @@ const challengeCatalog = [
     }
 ];
 
+
+const debugChallengeCatalogByDataset = {
+    escuela: [
+        {
+            id: 'debug-escuela-having',
+            titulo: 'Filtra grupos, no filas',
+            nivel: 'intermedio',
+            descripcion: 'Muestra las carreras con 5 o más estudiantes y su total. Ordena por total descendente y luego por carrera ascendente.',
+            brokenSql: `SELECT carrera, COUNT(*) AS total
+FROM estudiantes
+GROUP BY carrera
+WHERE COUNT(*) >= 5
+ORDER BY total DESC, carrera ASC;`,
+            problema: 'SQLite lanza un error de sintaxis: WHERE no puede filtrar el resultado de COUNT(*) porque se ejecuta antes de agrupar.',
+            pista: 'Cambia WHERE por HAVING.',
+            sqlEsperado: `SELECT carrera, COUNT(*) AS total
+FROM estudiantes
+GROUP BY carrera
+HAVING COUNT(*) >= 5
+ORDER BY total DESC, carrera ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-escuela-join',
+            titulo: 'El JOIN sin condición',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el nombre del estudiante, el nombre del curso y la nota de cada inscripción. Ordena por estudiante y curso.',
+            brokenSql: `SELECT e.nombre AS estudiante, c.nombre AS curso, i.nota
+FROM estudiantes e
+JOIN inscripciones i
+JOIN cursos c
+ORDER BY e.nombre ASC, c.nombre ASC;`,
+            problema: 'La consulta devuelve muchísimas combinaciones: los JOIN no tienen condición ON y se está generando un producto cartesiano.',
+            pista: 'Añade ON e.id = i.estudiante_id y ON i.curso_id = c.id.',
+            sqlEsperado: `SELECT e.nombre AS estudiante, c.nombre AS curso, i.nota
+FROM estudiantes e
+JOIN inscripciones i ON e.id = i.estudiante_id
+JOIN cursos c ON i.curso_id = c.id
+ORDER BY e.nombre ASC, c.nombre ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-escuela-group',
+            titulo: 'Falta una columna en GROUP BY',
+            nivel: 'avanzado',
+            descripcion: 'Cuenta cuántos estudiantes hay por carrera y ciudad. Ordena por total descendente y luego por carrera y ciudad.',
+            brokenSql: `SELECT carrera, ciudad, COUNT(*) AS total
+FROM estudiantes
+GROUP BY carrera
+ORDER BY total DESC, carrera ASC, ciudad ASC;`,
+            problema: 'La consulta se ejecuta, pero muestra una ciudad arbitraria por carrera porque ciudad no está en GROUP BY.',
+            pista: 'Agrupa por carrera y ciudad.',
+            sqlEsperado: `SELECT carrera, ciudad, COUNT(*) AS total
+FROM estudiantes
+GROUP BY carrera, ciudad
+ORDER BY total DESC, carrera ASC, ciudad ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-escuela-subquery',
+            titulo: 'Un agregado dentro de WHERE',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los estudiantes con promedio superior al promedio general. Ordena por promedio descendente y nombre ascendente.',
+            brokenSql: `SELECT nombre, promedio
+FROM estudiantes
+WHERE promedio > AVG(promedio)
+ORDER BY promedio DESC, nombre ASC;`,
+            problema: 'SQLite lanza misuse of aggregate function AVG(): no se puede usar AVG() directamente en un WHERE.',
+            pista: 'Compara promedio con una subconsulta: (SELECT AVG(promedio) FROM estudiantes).',
+            sqlEsperado: `SELECT nombre, promedio
+FROM estudiantes
+WHERE promedio > (SELECT AVG(promedio) FROM estudiantes)
+ORDER BY promedio DESC, nombre ASC;`,
+            ordenada: true
+        }
+    ],
+    tienda: [
+        {
+            id: 'debug-tienda-having',
+            titulo: 'Filtra estados después de agrupar',
+            nivel: 'intermedio',
+            descripcion: 'Muestra los estados de pedido con más de dos pedidos y su total. Ordena por total descendente y estado ascendente.',
+            brokenSql: `SELECT estado, COUNT(*) AS total
+FROM pedidos
+GROUP BY estado
+WHERE COUNT(*) > 2
+ORDER BY total DESC, estado ASC;`,
+            problema: 'SQLite lanza un error de sintaxis: WHERE no puede filtrar COUNT(*).',
+            pista: 'Cambia WHERE por HAVING.',
+            sqlEsperado: `SELECT estado, COUNT(*) AS total
+FROM pedidos
+GROUP BY estado
+HAVING COUNT(*) > 2
+ORDER BY total DESC, estado ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-tienda-join',
+            titulo: 'Pedidos y clientes sin relación',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el nombre del cliente, la fecha y el estado de cada pedido. Ordena por fecha.',
+            brokenSql: `SELECT c.nombre, p.fecha, p.estado
+FROM pedidos p
+JOIN clientes c
+ORDER BY p.fecha ASC;`,
+            problema: 'La consulta devuelve combinaciones que no existen: el JOIN no tiene condición ON.',
+            pista: 'Añade ON p.cliente_id = c.id.',
+            sqlEsperado: `SELECT c.nombre, p.fecha, p.estado
+FROM pedidos p
+JOIN clientes c ON p.cliente_id = c.id
+ORDER BY p.fecha ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-tienda-sum',
+            titulo: 'Cuenta filas o suma unidades',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los 3 productos con más unidades vendidas. Ordena por unidades descendente y nombre ascendente.',
+            brokenSql: `SELECT pr.nombre, COUNT(d.cantidad) AS unidades
+FROM detalle_pedidos d
+JOIN productos pr ON pr.id = d.producto_id
+GROUP BY pr.id, pr.nombre
+ORDER BY unidades DESC, pr.nombre ASC
+LIMIT 3;`,
+            problema: 'COUNT cuenta líneas de pedido, no la cantidad de unidades vendidas.',
+            pista: 'Cambia COUNT por SUM.',
+            sqlEsperado: `SELECT pr.nombre, SUM(d.cantidad) AS unidades
+FROM detalle_pedidos d
+JOIN productos pr ON pr.id = d.producto_id
+GROUP BY pr.id, pr.nombre
+ORDER BY unidades DESC, pr.nombre ASC
+LIMIT 3;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-tienda-group',
+            titulo: 'Producto arbitrario por categoría',
+            nivel: 'avanzado',
+            descripcion: 'Cuenta cuántos productos hay por categoría y nombre. Ordena por total descendente y luego por categoría y nombre.',
+            brokenSql: `SELECT categoria, nombre, COUNT(*) AS total
+FROM productos
+GROUP BY categoria
+ORDER BY total DESC, categoria ASC, nombre ASC;`,
+            problema: 'La consulta se ejecuta, pero muestra un producto arbitrario por categoría porque nombre no está en GROUP BY.',
+            pista: 'Agrupa por categoria y nombre.',
+            sqlEsperado: `SELECT categoria, nombre, COUNT(*) AS total
+FROM productos
+GROUP BY categoria, nombre
+ORDER BY total DESC, categoria ASC, nombre ASC;`,
+            ordenada: true
+        }
+    ],
+    biblioteca: [
+        {
+            id: 'debug-biblioteca-having',
+            titulo: 'Filtra géneros después de agrupar',
+            nivel: 'intermedio',
+            descripcion: 'Muestra los géneros con más de un libro y su total. Ordena por total descendente y género ascendente.',
+            brokenSql: `SELECT genero, COUNT(*) AS total
+FROM libros
+GROUP BY genero
+WHERE COUNT(*) > 1
+ORDER BY total DESC, genero ASC;`,
+            problema: 'SQLite lanza un error de sintaxis: WHERE no puede filtrar COUNT(*).',
+            pista: 'Cambia WHERE por HAVING.',
+            sqlEsperado: `SELECT genero, COUNT(*) AS total
+FROM libros
+GROUP BY genero
+HAVING COUNT(*) > 1
+ORDER BY total DESC, genero ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-biblioteca-join',
+            titulo: 'Libros y autores sin relación',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el título de cada libro y el nombre de su autor. Ordena por título.',
+            brokenSql: `SELECT l.titulo, a.nombre
+FROM libros l
+JOIN autores a
+ORDER BY l.titulo ASC;`,
+            problema: 'La consulta devuelve combinaciones que no existen: el JOIN no tiene condición ON.',
+            pista: 'Añade ON l.autor_id = a.id.',
+            sqlEsperado: `SELECT l.titulo, a.nombre
+FROM libros l
+JOIN autores a ON l.autor_id = a.id
+ORDER BY l.titulo ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-biblioteca-subquery',
+            titulo: 'Promedio dentro de WHERE',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los libros publicados después del año medio. Ordena por año descendente y título ascendente.',
+            brokenSql: `SELECT titulo, anio
+FROM libros
+WHERE anio > AVG(anio)
+ORDER BY anio DESC, titulo ASC;`,
+            problema: 'SQLite lanza misuse of aggregate function AVG(): no se puede usar AVG() directamente en un WHERE.',
+            pista: 'Usa una subconsulta: (SELECT AVG(anio) FROM libros).',
+            sqlEsperado: `SELECT titulo, anio
+FROM libros
+WHERE anio > (SELECT AVG(anio) FROM libros)
+ORDER BY anio DESC, titulo ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-biblioteca-group',
+            titulo: 'Disponibilidad arbitraria por género',
+            nivel: 'avanzado',
+            descripcion: 'Cuenta cuántos libros hay por género y disponibilidad. Ordena por total descendente y luego por género y disponibilidad.',
+            brokenSql: `SELECT genero, disponible, COUNT(*) AS total
+FROM libros
+GROUP BY genero
+ORDER BY total DESC, genero ASC, disponible ASC;`,
+            problema: 'La consulta se ejecuta, pero muestra un valor arbitrario de disponible por género porque disponible no está en GROUP BY.',
+            pista: 'Agrupa por genero y disponible.',
+            sqlEsperado: `SELECT genero, disponible, COUNT(*) AS total
+FROM libros
+GROUP BY genero, disponible
+ORDER BY total DESC, genero ASC, disponible ASC;`,
+            ordenada: true
+        }
+    ]
+};
+
+const challengeCatalogByDataset = {
+    escuela: challengeCatalog,
+    tienda: [
+        {
+            id: 'tienda-stock-01',
+            titulo: 'Productos con stock bajo',
+            nivel: 'basico',
+            descripcion: 'Muestra el nombre, la categoria y el stock de los productos con 10 unidades o menos. Ordena por stock ascendente y luego por nombre ascendente.',
+            pista: 'Usa WHERE stock <= 10 y ORDER BY stock ASC, nombre ASC.',
+            sqlEsperado: 'SELECT nombre, categoria, stock FROM productos WHERE stock <= 10 ORDER BY stock ASC, nombre ASC;',
+            ordenada: true
+        },
+        {
+            id: 'tienda-clientes-01',
+            titulo: 'Clientes de Lima y Arequipa',
+            nivel: 'basico',
+            descripcion: 'Muestra el nombre y la ciudad de los clientes de Lima o Arequipa. Ordena por ciudad ascendente y luego por nombre ascendente.',
+            pista: 'Usa el operador IN con las dos ciudades.',
+            sqlEsperado: "SELECT nombre, ciudad FROM clientes WHERE ciudad IN ('Lima', 'Arequipa') ORDER BY ciudad ASC, nombre ASC;",
+            ordenada: true
+        },
+        {
+            id: 'tienda-estados-01',
+            titulo: 'Pedidos por estado',
+            nivel: 'intermedio',
+            descripcion: 'Muestra cada estado de pedido y cuantos pedidos tiene. Ordena por cantidad descendente y luego por estado ascendente.',
+            pista: 'Agrupa con GROUP BY estado y cuenta con COUNT(*).',
+            sqlEsperado: 'SELECT estado, COUNT(*) AS pedidos FROM pedidos GROUP BY estado ORDER BY pedidos DESC, estado ASC;',
+            ordenada: true
+        },
+        {
+            id: 'tienda-detalle-01',
+            titulo: 'Detalle completo de pedidos',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el id del pedido, el cliente, el producto, la cantidad y el precio unitario de cada linea. Ordena por pedido y luego por producto.',
+            pista: 'Une pedidos, clientes, detalle_pedidos y productos.',
+            sqlEsperado: 'SELECT p.id AS pedido, c.nombre AS cliente, pr.nombre AS producto, d.cantidad, d.precio_unitario FROM pedidos p JOIN clientes c ON c.id = p.cliente_id JOIN detalle_pedidos d ON d.pedido_id = p.id JOIN productos pr ON pr.id = d.producto_id ORDER BY p.id ASC, pr.nombre ASC;',
+            ordenada: true
+        },
+        {
+            id: 'tienda-top-01',
+            titulo: 'Top 3 productos vendidos',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los 3 productos con mas unidades vendidas. Ordena por unidades descendente y, en empate, por nombre ascendente.',
+            pista: 'Une detalle_pedidos con productos, agrupa por producto y suma cantidad.',
+            sqlEsperado: 'SELECT pr.nombre, SUM(d.cantidad) AS unidades FROM detalle_pedidos d JOIN productos pr ON pr.id = d.producto_id GROUP BY pr.id, pr.nombre ORDER BY unidades DESC, pr.nombre ASC LIMIT 3;',
+            ordenada: true
+        },
+        {
+            id: 'tienda-having-01',
+            titulo: 'Clientes con mas de un pedido',
+            nivel: 'avanzado',
+            descripcion: 'Muestra el nombre de los clientes que tienen mas de un pedido y cuantos pedidos tienen. Ordena por cantidad descendente y luego por nombre ascendente.',
+            pista: 'Une clientes con pedidos, agrupa y filtra con HAVING COUNT(p.id) > 1.',
+            sqlEsperado: 'SELECT c.nombre, COUNT(p.id) AS pedidos FROM clientes c JOIN pedidos p ON p.cliente_id = c.id GROUP BY c.id, c.nombre HAVING COUNT(p.id) > 1 ORDER BY pedidos DESC, c.nombre ASC;',
+            ordenada: true
+        }
+    ],
+    biblioteca: [
+        {
+            id: 'biblioteca-disponibles-01',
+            titulo: 'Libros disponibles',
+            nivel: 'basico',
+            descripcion: 'Muestra el titulo, el genero y el anio de los libros disponibles. Ordena por titulo ascendente.',
+            pista: 'Filtra con disponible = 1.',
+            sqlEsperado: 'SELECT titulo, genero, anio FROM libros WHERE disponible = 1 ORDER BY titulo ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-activos-01',
+            titulo: 'Prestamos sin devolver',
+            nivel: 'basico',
+            descripcion: 'Muestra el id del prestamo, el titulo del libro, el socio y la fecha de prestamo de los prestamos sin devolver. Ordena por id ascendente.',
+            pista: 'Filtra con fecha_devolucion IS NULL y une libros y socios.',
+            sqlEsperado: 'SELECT p.id, l.titulo, s.nombre AS socio, p.fecha_prestamo FROM prestamos p JOIN libros l ON l.id = p.libro_id JOIN socios s ON s.id = p.socio_id WHERE p.fecha_devolucion IS NULL ORDER BY p.id ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-generos-01',
+            titulo: 'Libros por genero',
+            nivel: 'intermedio',
+            descripcion: 'Muestra cada genero y cuantos libros tiene. Ordena por cantidad descendente y luego por genero ascendente.',
+            pista: 'Agrupa con GROUP BY genero y cuenta con COUNT(*).',
+            sqlEsperado: 'SELECT genero, COUNT(*) AS libros FROM libros GROUP BY genero ORDER BY libros DESC, genero ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-autores-01',
+            titulo: 'Libros con autor',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el titulo del libro, el nombre del autor y su pais. Ordena por titulo ascendente.',
+            pista: 'Une libros con autores usando autor_id.',
+            sqlEsperado: 'SELECT l.titulo, a.nombre AS autor, a.pais FROM libros l JOIN autores a ON a.id = l.autor_id ORDER BY l.titulo ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-having-01',
+            titulo: 'Autores con dos o mas libros',
+            nivel: 'avanzado',
+            descripcion: 'Muestra el nombre de los autores que tienen dos o mas libros y cuantos libros tienen. Ordena por cantidad descendente y luego por nombre ascendente.',
+            pista: 'Une autores con libros, agrupa y filtra con HAVING COUNT(l.id) >= 2.',
+            sqlEsperado: 'SELECT a.nombre, COUNT(l.id) AS libros FROM autores a JOIN libros l ON l.autor_id = a.id GROUP BY a.id, a.nombre HAVING COUNT(l.id) >= 2 ORDER BY libros DESC, a.nombre ASC;',
+            ordenada: true
+        },
+        {
+            id: 'biblioteca-top-01',
+            titulo: 'Top 3 autores por libros',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los 3 autores con mas libros. Ordena por cantidad descendente y, en empate, por nombre ascendente.',
+            pista: 'Usa LEFT JOIN desde autores hacia libros, agrupa y limita a 3.',
+            sqlEsperado: 'SELECT a.nombre, COUNT(l.id) AS libros FROM autores a LEFT JOIN libros l ON l.autor_id = a.id GROUP BY a.id, a.nombre ORDER BY libros DESC, a.nombre ASC LIMIT 3;',
+            ordenada: true
+        }
+    ]
+};
+
+function getChallengeCatalog(datasetName = preferences.dataset) {
+    return challengeCatalogByDataset[datasetName] || challengeCatalog;
+}
+
+function getActiveChallengeCatalog() {
+    return getChallengeCatalog();
+}
+
 let currentChallengeId = null;
 let challengeAttempts = 0;
 let challengeProgress = {};
+let selectedNoSQLChallengeId = null;
+let learningPathProgress = {};
+let currentLearningLessonId = null;
+let learningPathEventsBound = false;
 
 function loadChallengeProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.challenges, {});
@@ -3286,16 +5252,16 @@ function saveChallengeProgress() {
 }
 
 function getChallengeById(id) {
-    return challengeCatalog.find(challenge => challenge.id === id) || null;
+    return getActiveChallengeCatalog().find(challenge => challenge.id === id) || null;
 }
 
 function getCompletedChallengeCount() {
-    return challengeCatalog.filter(challenge => challengeProgress[challenge.id]?.completed).length;
+    return getActiveChallengeCatalog().filter(challenge => challengeProgress[challenge.id]?.completed).length;
 }
 
 function renderChallengeProgress() {
     const completed = getCompletedChallengeCount();
-    const total = challengeCatalog.length;
+    const total = getActiveChallengeCatalog().length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     const text = document.getElementById('challengeProgressText');
@@ -3310,7 +5276,7 @@ function renderChallengeList() {
     const list = document.getElementById('challengeList');
     if (!list) return;
 
-    list.innerHTML = challengeCatalog.map(challenge => {
+    list.innerHTML = getActiveChallengeCatalog().map(challenge => {
         const completed = Boolean(challengeProgress[challenge.id]?.completed);
         const active = challenge.id === currentChallengeId;
         return `
@@ -3332,9 +5298,49 @@ function renderChallengeList() {
     renderChallengeProgress();
 }
 
+function renderChallengePlaceholder() {
+    const detail = document.getElementById('challengeDetail');
+    if (!detail) return;
+    detail.innerHTML = `
+        <div class="challenge-empty">
+            <i class="fas fa-trophy"></i>
+            <h3>Elige un reto para empezar</h3>
+            <p>Los retos validan el resultado de tu consulta, no el texto exacto. Puedes resolverlos de varias formas.</p>
+        </div>
+    `;
+}
+
 function initChallenges() {
     loadChallengeProgress();
     renderChallengeList();
+    renderChallengePlaceholder();
+    renderDebugChallengeList();
+    renderDebugChallengePlaceholder();
+}
+
+function refreshPracticeContentForDataset() {
+    renderCategorySelector();
+    lastSqlExample = null;
+
+    const exampleStatus = document.getElementById('sqlExampleStatus');
+    if (exampleStatus) {
+        exampleStatus.textContent = 'Elige una categoría o pulsa «Siguiente ejemplo»';
+    }
+
+    currentChallengeId = null;
+    challengeAttempts = 0;
+    renderChallengeList();
+    renderChallengePlaceholder();
+
+    currentDebugChallengeId = null;
+    debugChallengeAttempts = 0;
+    renderDebugChallengeList();
+    renderDebugChallengePlaceholder();
+
+    analyzeSelectedTable = null;
+    analyzeExplorerMode = 'view';
+
+    refreshLearningPath({ selectFirst: true });
 }
 
 function openChallenge(id) {
@@ -3486,6 +5492,7 @@ function markChallengeComplete(challenge) {
     };
     saveChallengeProgress();
     renderChallengeList();
+    renderLearningProgressDashboard();
 }
 
 function runChallenge() {
@@ -3496,14 +5503,6 @@ function runChallenge() {
     }
     if (!dbInitialized) {
         showToast('warning', 'Espera a que la base de datos termine de inicializarse.');
-        return;
-    }
-
-    if (!getUserTables().includes('estudiantes')) {
-        setChallengeResult(
-            'warning',
-            '<strong><i class="fas fa-triangle-exclamation"></i> Dataset incompatible</strong>Los retos están diseñados para el dataset Escuela. Cambia el dataset desde la sección Practicar para resolverlos.'
-        );
         return;
     }
 
@@ -3579,24 +5578,1754 @@ function runChallenge() {
 }
 
 function nextChallenge() {
-    const currentIndex = challengeCatalog.findIndex(challenge => challenge.id === currentChallengeId);
-    const next = challengeCatalog[currentIndex + 1];
+    const activeCatalog = getActiveChallengeCatalog();
+    const currentIndex = activeCatalog.findIndex(challenge => challenge.id === currentChallengeId);
+    const next = activeCatalog[currentIndex + 1];
     if (next) {
         openChallenge(next.id);
     } else {
-        showToast('success', '¡Has llegado al final de los retos!');
+        showToast('success', '¡Has llegado al final de los retos de este dataset!');
     }
 }
 
 function resetChallengeProgress() {
-    if (!confirm('¿Reiniciar el progreso de todos los retos?')) return;
-    challengeProgress = {};
-    removeStoredItem(STORAGE_KEYS.challenges);
+    const datasetLabel = preferences.dataset === 'escuela'
+        ? 'Escuela'
+        : (window.SQL_ACADEMY_DATASETS?.[preferences.dataset]?.name || preferences.dataset);
+    if (!confirm(`¿Reiniciar el progreso de los retos de ${datasetLabel}?`)) return;
+
+    getActiveChallengeCatalog().forEach(challenge => {
+        delete challengeProgress[challenge.id];
+    });
+    saveChallengeProgress();
     renderChallengeList();
-    if (currentChallengeId) {
-        openChallenge(currentChallengeId);
+    renderChallengePlaceholder();
+    currentChallengeId = null;
+    challengeAttempts = 0;
+    renderLearningProgressDashboard();
+    showToast('info', `Progreso de retos de ${datasetLabel} reiniciado.`);
+}
+
+
+// ============================================
+// RETOS DE DEPURACION SQL
+// ============================================
+
+let currentDebugChallengeId = null;
+let debugChallengeAttempts = 0;
+
+function getDebugChallengeCatalog(datasetName = preferences.dataset) {
+    return debugChallengeCatalogByDataset[datasetName] || debugChallengeCatalogByDataset.escuela;
+}
+
+function getActiveDebugChallengeCatalog() {
+    return getDebugChallengeCatalog();
+}
+
+function getDebugChallengeById(id) {
+    return getActiveDebugChallengeCatalog().find(challenge => challenge.id === id) || null;
+}
+
+function getCompletedDebugChallengeCount() {
+    return getActiveDebugChallengeCatalog().filter(challenge => challengeProgress[challenge.id]?.completed).length;
+}
+
+function renderDebugChallengeProgress() {
+    const catalog = getActiveDebugChallengeCatalog();
+    const completed = getCompletedDebugChallengeCount();
+    const percent = catalog.length ? Math.round((completed / catalog.length) * 100) : 0;
+    const text = document.getElementById('debugProgressText');
+    const bar = document.getElementById('debugProgressBar');
+    const track = document.getElementById('debugProgressTrack');
+    if (text) text.textContent = `${completed} de ${catalog.length}`;
+    if (bar) bar.style.width = `${percent}%`;
+    if (track) track.setAttribute('aria-valuenow', String(percent));
+}
+
+function renderDebugChallengeList() {
+    const list = document.getElementById('debugChallengeList');
+    if (!list) return;
+
+    const catalog = getActiveDebugChallengeCatalog();
+    if (!catalog.length) {
+        list.innerHTML = '<p class="text-muted">No hay retos de depuración para este dataset.</p>';
+        renderDebugChallengeProgress();
+        return;
     }
-    showToast('info', 'Progreso de retos reiniciado.');
+
+    list.innerHTML = catalog.map(challenge => {
+        const completed = Boolean(challengeProgress[challenge.id]?.completed);
+        const active = challenge.id === currentDebugChallengeId;
+        return `
+            <button type="button" class="challenge-card${completed ? ' completed' : ''}${active ? ' active' : ''}" onclick="openDebugChallenge('${escapeHtml(challenge.id)}')" aria-pressed="${active}">
+                <span class="challenge-card-title">
+                    ${escapeHtml(challenge.titulo)}
+                    ${completed ? '<i class="fas fa-circle-check" title="Completado"></i>' : ''}
+                </span>
+                <span class="challenge-card-meta">
+                    <span class="challenge-level ${escapeHtml(challenge.nivel)}">${escapeHtml(challenge.nivel)}</span>
+                    <span>${completed ? 'Completado' : 'Pendiente'}</span>
+                </span>
+            </button>
+        `;
+    }).join('');
+
+    renderDebugChallengeProgress();
+}
+
+function renderDebugChallengePlaceholder() {
+    const detail = document.getElementById('debugChallengeDetail');
+    if (!detail) return;
+    detail.innerHTML = `
+        <div class="challenge-empty">
+            <i class="fas fa-bug"></i>
+            <h3>Encuentra el error</h3>
+            <p>Elige un reto de depuración para revisar una consulta rota, entender qué falla y corregirla.</p>
+        </div>
+    `;
+}
+
+function describeDebugComparison(comparison) {
+    if (comparison.reason === 'columns') {
+        return `Se esperaban ${comparison.expectedColumns} columnas y tu corrección devolvió ${comparison.actualColumns}.`;
+    }
+    if (comparison.reason === 'rows') {
+        return `Se esperaban ${comparison.expectedRows} filas y tu corrección devolvió ${comparison.actualRows}.`;
+    }
+    if (comparison.reason === 'values') {
+        return 'Las columnas y el número de filas coinciden, pero los valores o el orden no son los esperados.';
+    }
+    if (comparison.reason === 'no_result') {
+        return 'La consulta no devolvió un conjunto de resultados.';
+    }
+    return 'La consulta todavía no devuelve el resultado esperado.';
+}
+
+function openDebugChallenge(id) {
+    const challenge = getDebugChallengeById(id);
+    const detail = document.getElementById('debugChallengeDetail');
+    if (!challenge || !detail) return;
+
+    currentDebugChallengeId = id;
+    debugChallengeAttempts = 0;
+    renderDebugChallengeList();
+
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <h3>${escapeHtml(challenge.titulo)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${escapeHtml(challenge.nivel)}">${escapeHtml(challenge.nivel)}</span>
+                    <span class="text-muted">Depuración · validación por resultado</span>
+                </div>
+            </div>
+        </div>
+        <div class="challenge-description">${escapeHtml(challenge.descripcion)}</div>
+
+        <div class="debug-broken-block">
+            <div class="debug-block-head">
+                <span><i class="fas fa-bug"></i> Consulta con el error</span>
+                <button type="button" class="btn-ghost btn-sm" onclick="resetDebugQuery()">
+                    <i class="fas fa-rotate-left"></i> Restaurar
+                </button>
+            </div>
+            <pre><code>${escapeHtml(challenge.brokenSql)}</code></pre>
+        </div>
+
+        <div class="debug-symptom">
+            <span>Qué ocurre</span>
+            <p>${escapeHtml(challenge.problema)}</p>
+        </div>
+
+        <label for="debugEditor" class="sr-only">Consulta SQL corregida para el reto de depuración</label>
+        <textarea id="debugEditor" spellcheck="false" placeholder="Corrige la consulta aquí...">${escapeHtml(challenge.brokenSql)}</textarea>
+        <div class="challenge-actions">
+            <button type="button" onclick="runDebugChallenge()">
+                <i class="fas fa-play"></i> Comprobar corrección
+            </button>
+            <button type="button" class="btn-secondary" onclick="showDebugHint()">
+                <i class="fas fa-lightbulb"></i> Ver pista
+            </button>
+            <button type="button" class="btn-secondary" onclick="resetDebugQuery()">
+                <i class="fas fa-rotate-left"></i> Restaurar consulta rota
+            </button>
+        </div>
+        <div id="debugHint" class="challenge-hint" hidden>${escapeHtml(challenge.pista)}</div>
+        <div id="debugResult" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para depurar</strong>
+            Corrige la consulta y pulsa «Comprobar corrección».
+        </div>
+        <div id="debugNext" class="path-next" hidden></div>
+    `;
+
+    const editor = document.getElementById('debugEditor');
+    if (editor) editor.focus();
+}
+
+function markDebugChallengeComplete(challenge) {
+    challengeProgress[challenge.id] = {
+        completed: true,
+        completedAt: new Date().toISOString()
+    };
+    saveChallengeProgress();
+    renderDebugChallengeList();
+}
+
+function showDebugNext(challenge) {
+    const container = document.getElementById('debugNext');
+    if (!container) return;
+    const catalog = getActiveDebugChallengeCatalog();
+    const index = catalog.findIndex(item => item.id === challenge.id);
+    const next = catalog[index + 1];
+    container.hidden = false;
+    container.innerHTML = next
+        ? `<button type="button" class="btn-primary" onclick="nextDebugChallenge()">Siguiente depuración: ${escapeHtml(next.titulo)} <i class="fas fa-arrow-right"></i></button>`
+        : '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Has completado las depuraciones de este dataset!</div>';
+}
+
+function runDebugChallenge() {
+    const challenge = getDebugChallengeById(currentDebugChallengeId);
+    const editor = document.getElementById('debugEditor');
+    if (!challenge || !editor) return;
+
+    const query = editor.value.trim();
+    if (!query) {
+        showDebugResult('warning', '<strong><i class="fas fa-circle-exclamation"></i> Falta la consulta</strong> Escribe una corrección antes de comprobarla.');
+        return;
+    }
+    if (!isReadOnlyQuery(query)) {
+        showDebugResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> La depuración solo permite consultas <code>SELECT</code> o <code>WITH</code>.');
+        return;
+    }
+    if (!dbInitialized || !db) {
+        showDebugResult('warning', '<strong><i class="fas fa-hourglass-half"></i> Base de datos no disponible</strong> Espera a que termine de inicializarse.');
+        return;
+    }
+
+    try {
+        const expected = db.exec(challenge.sqlEsperado);
+        const actual = db.exec(query);
+        const comparison = compareChallengeResults(expected, actual, challenge.ordenada);
+
+        if (comparison.ok) {
+            const wasCompleted = Boolean(challengeProgress[challenge.id]?.completed);
+            markDebugChallengeComplete(challenge);
+            showDebugResult('success', `
+                <strong><i class="fas fa-circle-check"></i> ¡Consulta corregida!</strong>
+                ${wasCompleted ? 'Ya tenías este reto completado.' : 'El resultado coincide con la solución esperada.'}
+            `);
+            showDebugNext(challenge);
+            showToast('success', 'Reto de depuración completado.');
+            return;
+        }
+
+        debugChallengeAttempts += 1;
+        const solutionButton = debugChallengeAttempts >= 2
+            ? '<div class="challenge-result-actions"><button type="button" class="btn-secondary" onclick="showDebugSolution()"><i class="fas fa-eye"></i> Ver solución</button></div>'
+            : '';
+        showDebugResult('error', `
+            <strong><i class="fas fa-circle-xmark"></i> Todavía no</strong>
+            ${escapeHtml(describeDebugComparison(comparison))}
+            ${solutionButton}
+        `);
+    } catch (error) {
+        debugChallengeAttempts += 1;
+        const solutionButton = debugChallengeAttempts >= 2
+            ? '<div class="challenge-result-actions"><button type="button" class="btn-secondary" onclick="showDebugSolution()"><i class="fas fa-eye"></i> Ver solución</button></div>'
+            : '';
+        showDebugResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Error en la consulta</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+            ${solutionButton}
+        `);
+    }
+}
+
+function showDebugResult(type, html) {
+    const result = document.getElementById('debugResult');
+    if (!result) return;
+    result.className = `challenge-result ${type}`;
+    result.innerHTML = html;
+}
+
+function showDebugHint() {
+    const hint = document.getElementById('debugHint');
+    if (!hint) return;
+    hint.hidden = !hint.hidden;
+}
+
+function showDebugSolution() {
+    const challenge = getDebugChallengeById(currentDebugChallengeId);
+    const editor = document.getElementById('debugEditor');
+    if (!challenge || !editor) return;
+    editor.value = challenge.sqlEsperado;
+    editor.focus();
+    showToast('info', 'Solución cargada. Ejecútala para comprobar el resultado.');
+}
+
+function resetDebugQuery() {
+    const challenge = getDebugChallengeById(currentDebugChallengeId);
+    const editor = document.getElementById('debugEditor');
+    if (!challenge || !editor) return;
+    editor.value = challenge.brokenSql;
+    editor.focus();
+}
+
+function nextDebugChallenge() {
+    const catalog = getActiveDebugChallengeCatalog();
+    const index = catalog.findIndex(challenge => challenge.id === currentDebugChallengeId);
+    const next = catalog[index + 1];
+    if (next) {
+        openDebugChallenge(next.id);
+    } else {
+        showToast('success', '¡Has llegado al final de las depuraciones de este dataset!');
+    }
+}
+
+function resetDebugChallengeProgress() {
+    if (!confirm('¿Reiniciar el progreso de los retos de depuración de este dataset?')) return;
+    getActiveDebugChallengeCatalog().forEach(challenge => {
+        delete challengeProgress[challenge.id];
+    });
+    saveChallengeProgress();
+    currentDebugChallengeId = null;
+    debugChallengeAttempts = 0;
+    renderDebugChallengeList();
+    renderDebugChallengePlaceholder();
+    showToast('info', 'Progreso de depuración reiniciado.');
+}
+
+// ============================================
+// RUTA DE APRENDIZAJE SQL
+// ============================================
+
+const LEARNING_PATH_PROFILES = {
+    escuela: {
+        name: 'Escuela',
+        mainTable: 'estudiantes',
+        labelColumn: 'nombre',
+        filterColumn: 'carrera',
+        filterValue: 'Ingenieria',
+        sortColumn: 'promedio',
+        groupColumn: 'carrera',
+        exampleGroup: { table: 'estudiantes', column: 'ciudad' },
+        join: {
+            left: 'estudiantes',
+            right: 'inscripciones',
+            leftKey: 'id',
+            rightKey: 'estudiante_id',
+            columns: 'estudiantes.nombre, inscripciones.anio, inscripciones.nota',
+            description: 'Cada inscripción pertenece a un estudiante.'
+        }
+    },
+    tienda: {
+        name: 'Tienda',
+        mainTable: 'productos',
+        labelColumn: 'nombre',
+        filterColumn: 'categoria',
+        filterValue: 'Perifericos',
+        sortColumn: 'precio',
+        groupColumn: 'categoria',
+        exampleGroup: { table: 'pedidos', column: 'estado' },
+        join: {
+            left: 'pedidos',
+            right: 'clientes',
+            leftKey: 'cliente_id',
+            rightKey: 'id',
+            columns: 'clientes.nombre, pedidos.fecha, pedidos.estado',
+            description: 'Cada pedido pertenece a un cliente.'
+        }
+    },
+    biblioteca: {
+        name: 'Biblioteca',
+        mainTable: 'libros',
+        labelColumn: 'titulo',
+        filterColumn: 'genero',
+        filterValue: 'Novela',
+        sortColumn: 'anio',
+        groupColumn: 'genero',
+        exampleGroup: { table: 'libros', column: 'disponible' },
+        join: {
+            left: 'libros',
+            right: 'autores',
+            leftKey: 'autor_id',
+            rightKey: 'id',
+            columns: 'libros.titulo, autores.nombre',
+            description: 'Cada libro tiene un autor.'
+        }
+    }
+};
+
+const LEARNING_CONCEPTS = [
+    { id: 'select', label: 'Seleccionar', icon: 'fa-table-columns', description: 'Elegir columnas y filas.' },
+    { id: 'where', label: 'Filtros', icon: 'fa-filter', description: 'Filtrar con WHERE.' },
+    { id: 'order', label: 'Ordenar', icon: 'fa-arrow-down-wide-short', description: 'Ordenar resultados.' },
+    { id: 'limit', label: 'Limitar', icon: 'fa-scissors', description: 'Quedarte con el top N.' },
+    { id: 'join', label: 'JOIN', icon: 'fa-link', description: 'Combinar tablas relacionadas.' },
+    { id: 'group', label: 'Agrupar', icon: 'fa-layer-group', description: 'GROUP BY y COUNT.' },
+    { id: 'having', label: 'HAVING', icon: 'fa-list-check', description: 'Filtrar grupos.' },
+    { id: 'subquery', label: 'Subconsultas', icon: 'fa-code-branch', description: 'Consultas dentro de otras.' }
+];
+
+const CHALLENGE_CONCEPT_BY_ID = {
+    'basico-01': 'select',
+    'filtro-01': 'where',
+    'orden-01': 'order',
+    'agregacion-01': 'group',
+    'join-01': 'join',
+    'join-02': 'join',
+    'subconsulta-01': 'subquery',
+    'having-01': 'having',
+    'tienda-stock-01': 'where',
+    'tienda-clientes-01': 'where',
+    'tienda-estados-01': 'group',
+    'tienda-detalle-01': 'join',
+    'tienda-top-01': 'join',
+    'tienda-having-01': 'having',
+    'biblioteca-disponibles-01': 'where',
+    'biblioteca-activos-01': 'where',
+    'biblioteca-generos-01': 'group',
+    'biblioteca-autores-01': 'join',
+    'biblioteca-having-01': 'having',
+    'biblioteca-top-01': 'join'
+};
+
+function getChallengeConceptId(challenge) {
+    if (CHALLENGE_CONCEPT_BY_ID[challenge.id]) return CHALLENGE_CONCEPT_BY_ID[challenge.id];
+    const text = `${challenge.titulo || ''} ${challenge.descripcion || ''}`.toLowerCase();
+    if (text.includes('having')) return 'having';
+    if (text.includes('join')) return 'join';
+    if (text.includes('subconsulta')) return 'subquery';
+    if (text.includes('agrup') || text.includes('cuenta')) return 'group';
+    if (text.includes('orden')) return 'order';
+    if (text.includes('filtra') || text.includes('where')) return 'where';
+    return 'select';
+}
+
+function getConceptLabel(conceptId) {
+    return LEARNING_CONCEPTS.find(concept => concept.id === conceptId)?.label || conceptId;
+}
+
+function buildLearningLessons(profile) {
+    const main = profile.mainTable;
+    const label = profile.labelColumn;
+    const filter = profile.filterColumn;
+    const filterValue = profile.filterValue;
+    const sort = profile.sortColumn;
+    const group = profile.groupColumn;
+    const exampleGroup = profile.exampleGroup || { table: main, column: group };
+    const join = profile.join;
+    const joinCondition = `${join.left}.${join.leftKey} = ${join.right}.${join.rightKey}`;
+
+    return [
+        {
+            id: 'select',
+            title: 'Selecciona columnas',
+            level: 'Básico',
+            objective: `Aprende a elegir solo las columnas que necesitas de ${main}.`,
+            explanation: `SELECT * devuelve todas las columnas. En una consulta real conviene pedir solo los datos que vas a usar: ${label} y ${sort}.`,
+            example: `SELECT ${label}\nFROM ${main};`,
+            starter: `SELECT *\nFROM ${main};`,
+            expectedSql: `SELECT ${label}, ${sort}\nFROM ${main};`,
+            hint: `Sustituye * por ${label}, ${sort}.`,
+            ordered: false
+        },
+        {
+            id: 'where',
+            title: 'Filtra con WHERE',
+            level: 'Básico',
+            objective: `Filtra las filas de ${main} donde ${filter} sea '${filterValue}'.`,
+            explanation: 'WHERE se ejecuta sobre cada fila y solo deja pasar las que cumplen la condición. Los textos van entre comillas simples.',
+            example: `SELECT *\nFROM ${main}\nWHERE ${filter} = '${filterValue}';`,
+            starter: `SELECT ${label}, ${filter}\nFROM ${main}\nWHERE ${filter} = '';`,
+            expectedSql: `SELECT ${label}, ${filter}\nFROM ${main}\nWHERE ${filter} = '${filterValue}';`,
+            hint: `Escribe '${filterValue}' entre las comillas simples del WHERE.`,
+            ordered: false
+        },
+        {
+            id: 'order',
+            title: 'Ordena con ORDER BY',
+            level: 'Básico',
+            objective: `Ordena ${main} por ${sort} de mayor a menor. Si hay empate, usa ${label} de forma ascendente.`,
+            explanation: 'ORDER BY ordena el resultado. ASC es ascendente y DESC descendente. Puedes indicar más de un criterio separándolos con comas.',
+            example: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} ASC, ${label} ASC;`,
+            starter: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort};`,
+            expectedSql: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} DESC, ${label} ASC;`,
+            hint: `Añade DESC a ${sort} y un segundo criterio: ${label} ASC.`,
+            ordered: true
+        },
+        {
+            id: 'limit',
+            title: 'Limita resultados',
+            level: 'Básico',
+            objective: `Muestra solo los 5 primeros resultados después de ordenar por ${sort} y desempatar por ${label}.`,
+            explanation: 'LIMIT corta el resultado. Se suele combinar con ORDER BY para obtener el top N.',
+            example: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} DESC, ${label} ASC\nLIMIT 3;`,
+            starter: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} DESC, ${label} ASC\nLIMIT 3;`,
+            expectedSql: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} DESC, ${label} ASC\nLIMIT 5;`,
+            hint: 'Mantén el orden y cambia LIMIT 3 por LIMIT 5.',
+            ordered: true
+        },
+        {
+            id: 'join',
+            title: 'Combina tablas con JOIN',
+            level: 'Intermedio',
+            objective: `Une ${join.left} con ${join.right} usando su clave.`,
+            explanation: `${join.description} JOIN combina filas de dos tablas y ON indica la condición que las relaciona.`,
+            example: `SELECT *\nFROM ${join.left}\nJOIN ${join.right}\n  ON ${joinCondition};`,
+            starter: `SELECT *\nFROM ${join.left}\nJOIN ${join.right}\n  ON ${joinCondition};`,
+            expectedSql: `SELECT ${join.columns}\nFROM ${join.left}\nJOIN ${join.right}\n  ON ${joinCondition};`,
+            hint: `En el SELECT escribe: ${join.columns}.`,
+            ordered: false
+        },
+        {
+            id: 'group',
+            title: 'Agrupa y cuenta',
+            level: 'Intermedio',
+            objective: `Cuenta cuántas filas hay para cada valor de ${group} y ordena de mayor a menor.`,
+            explanation: 'GROUP BY agrupa filas que comparten un valor. COUNT(*) cuenta cuántas hay en cada grupo.',
+            example: `SELECT ${exampleGroup.column}, COUNT(*)\nFROM ${exampleGroup.table}\nGROUP BY ${exampleGroup.column};`,
+            starter: `SELECT ${group}, COUNT(*)\nFROM ${main};`,
+            expectedSql: `SELECT ${group}, COUNT(*) AS total\nFROM ${main}\nGROUP BY ${group}\nORDER BY total DESC, ${group} ASC;`,
+            hint: `Usa COUNT(*) AS total y ordena por total DESC; si hay empate, por ${group} ASC.`,
+            ordered: true
+        },
+        {
+            id: 'having',
+            title: 'Filtra grupos con HAVING',
+            level: 'Avanzado',
+            objective: `Muestra solo los grupos de ${group} que tienen más de una fila, ordenados por total.`,
+            explanation: 'WHERE filtra filas antes de agrupar; HAVING filtra grupos después de GROUP BY.',
+            example: `SELECT ${exampleGroup.column}, COUNT(*) AS total\nFROM ${exampleGroup.table}\nGROUP BY ${exampleGroup.column}\nHAVING COUNT(*) > 2;`,
+            starter: `SELECT ${group}, COUNT(*) AS total\nFROM ${main}\nGROUP BY ${group};`,
+            expectedSql: `SELECT ${group}, COUNT(*) AS total\nFROM ${main}\nGROUP BY ${group}\nHAVING COUNT(*) > 1\nORDER BY total DESC, ${group} ASC;`,
+            hint: `Añade HAVING COUNT(*) > 1 y ordena por total DESC, ${group} ASC.`,
+            ordered: true
+        },
+        {
+            id: 'subquery',
+            title: 'Usa una subconsulta',
+            level: 'Avanzado',
+            objective: `Compara cada fila con el promedio de ${sort} usando una subconsulta.`,
+            explanation: `Una subconsulta es una consulta dentro de otra. Aquí calcula el promedio de ${sort} y el WHERE lo usa como referencia.`,
+            example: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > 0\nORDER BY ${sort} DESC, ${label} ASC;`,
+            starter: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > 0\nORDER BY ${sort} DESC, ${label} ASC;`,
+            expectedSql: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > (SELECT AVG(${sort}) FROM ${main})\nORDER BY ${sort} DESC, ${label} ASC;`,
+            hint: `Sustituye 0 por (SELECT AVG(${sort}) FROM ${main}) y mantén el orden.`,
+            ordered: true
+        }
+    ];
+}
+
+function getLearningDatasetName() {
+    return LEARNING_PATH_PROFILES[preferences.dataset] ? preferences.dataset : 'escuela';
+}
+
+function getLearningProfile() {
+    return LEARNING_PATH_PROFILES[getLearningDatasetName()];
+}
+
+function getLearningLessonsForDataset(datasetName) {
+    return buildLearningLessons(LEARNING_PATH_PROFILES[datasetName] || LEARNING_PATH_PROFILES.escuela);
+}
+
+function getLearningLessons() {
+    return getLearningLessonsForDataset(getLearningDatasetName());
+}
+
+function getLearningLessonById(id) {
+    return getLearningLessons().find(lesson => lesson.id === id) || null;
+}
+
+function getLearningLevelClass(level) {
+    if (level === 'Básico') return 'basico';
+    if (level === 'Intermedio') return 'intermedio';
+    return 'avanzado';
+}
+
+function loadLearningPathProgress() {
+    const stored = readStoredJSON(STORAGE_KEYS.learningPath, {});
+    learningPathProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+}
+
+function saveLearningPathProgress() {
+    writeStoredJSON(STORAGE_KEYS.learningPath, learningPathProgress);
+}
+
+function getLearningDatasetProgress() {
+    const dataset = getLearningDatasetName();
+    if (!learningPathProgress[dataset] || typeof learningPathProgress[dataset] !== 'object') {
+        learningPathProgress[dataset] = {};
+    }
+    return learningPathProgress[dataset];
+}
+
+function isLearningLessonCompletedForDataset(id, datasetName) {
+    return Boolean(learningPathProgress[datasetName]?.[id]?.completed);
+}
+
+function isLearningLessonCompleted(id) {
+    return isLearningLessonCompletedForDataset(id, getLearningDatasetName());
+}
+
+function markLearningLessonCompleted(id) {
+    getLearningDatasetProgress()[id] = {
+        completed: true,
+        completedAt: new Date().toISOString()
+    };
+    saveLearningPathProgress();
+    renderLearningProgressDashboard();
+}
+
+function getLearningProgressStats() {
+    const lessons = getLearningLessons();
+    const completed = lessons.filter(lesson => isLearningLessonCompleted(lesson.id)).length;
+    return {
+        total: lessons.length,
+        completed,
+        percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0
+    };
+}
+
+function getLearningDatasetStats(datasetName) {
+    const lessons = getLearningLessonsForDataset(datasetName);
+    const challenges = getChallengeCatalog(datasetName);
+    const lessonsCompleted = lessons.filter(lesson => (
+        isLearningLessonCompletedForDataset(lesson.id, datasetName)
+    )).length;
+    const challengesCompleted = challenges.filter(challenge => (
+        Boolean(challengeProgress[challenge.id]?.completed)
+    )).length;
+    const total = lessons.length + challenges.length;
+    const completed = lessonsCompleted + challengesCompleted;
+
+    return {
+        datasetName,
+        name: LEARNING_PATH_PROFILES[datasetName]?.name || datasetName,
+        lessonsTotal: lessons.length,
+        lessonsCompleted,
+        challengesTotal: challenges.length,
+        challengesCompleted,
+        total,
+        completed,
+        percent: total ? Math.round((completed / total) * 100) : 0
+    };
+}
+
+function getLearningGlobalStats() {
+    const datasetStats = Object.keys(LEARNING_PATH_PROFILES).map(getLearningDatasetStats);
+    const totals = datasetStats.reduce((accumulator, stat) => ({
+        lessonsTotal: accumulator.lessonsTotal + stat.lessonsTotal,
+        lessonsCompleted: accumulator.lessonsCompleted + stat.lessonsCompleted,
+        challengesTotal: accumulator.challengesTotal + stat.challengesTotal,
+        challengesCompleted: accumulator.challengesCompleted + stat.challengesCompleted,
+        total: accumulator.total + stat.total,
+        completed: accumulator.completed + stat.completed
+    }), {
+        lessonsTotal: 0,
+        lessonsCompleted: 0,
+        challengesTotal: 0,
+        challengesCompleted: 0,
+        total: 0,
+        completed: 0
+    });
+
+    return {
+        ...totals,
+        percent: totals.total ? Math.round((totals.completed / totals.total) * 100) : 0,
+        datasetStats
+    };
+}
+
+function getLearningConceptStats() {
+    return LEARNING_CONCEPTS.map(concept => {
+        const stats = {
+            lessonsTotal: 0,
+            lessonsCompleted: 0,
+            challengesTotal: 0,
+            challengesCompleted: 0
+        };
+
+        Object.keys(LEARNING_PATH_PROFILES).forEach(datasetName => {
+            const lessons = getLearningLessonsForDataset(datasetName)
+                .filter(lesson => lesson.id === concept.id);
+            stats.lessonsTotal += lessons.length;
+            stats.lessonsCompleted += lessons.filter(lesson => (
+                isLearningLessonCompletedForDataset(lesson.id, datasetName)
+            )).length;
+
+            const challenges = getChallengeCatalog(datasetName)
+                .filter(challenge => getChallengeConceptId(challenge) === concept.id);
+            stats.challengesTotal += challenges.length;
+            stats.challengesCompleted += challenges.filter(challenge => (
+                Boolean(challengeProgress[challenge.id]?.completed)
+            )).length;
+        });
+
+        const total = stats.lessonsTotal + stats.challengesTotal;
+        const completed = stats.lessonsCompleted + stats.challengesCompleted;
+        return {
+            ...concept,
+            ...stats,
+            total,
+            completed,
+            percent: total ? Math.round((completed / total) * 100) : 0
+        };
+    });
+}
+
+function getRecentLearningActivity() {
+    const activity = [];
+
+    Object.entries(learningPathProgress).forEach(([datasetName, progress]) => {
+        Object.entries(progress || {}).forEach(([lessonId, data]) => {
+            if (!data?.completedAt) return;
+            const lesson = getLearningLessonsForDataset(datasetName)
+                .find(item => item.id === lessonId);
+            if (!lesson) return;
+            activity.push({
+                type: 'Lección',
+                title: lesson.title,
+                datasetName,
+                icon: 'fa-route',
+                completedAt: data.completedAt
+            });
+        });
+    });
+
+    Object.entries(challengeProgress).forEach(([challengeId, data]) => {
+        if (!data?.completedAt) return;
+        const datasetName = Object.keys(LEARNING_PATH_PROFILES).find(name => (
+            getChallengeCatalog(name).some(challenge => challenge.id === challengeId)
+        ));
+        if (!datasetName) return;
+        const challenge = getChallengeCatalog(datasetName)
+            .find(item => item.id === challengeId);
+        if (!challenge) return;
+        activity.push({
+            type: 'Reto',
+            title: challenge.titulo,
+            datasetName,
+            icon: 'fa-trophy',
+            completedAt: data.completedAt
+        });
+    });
+
+    return activity
+        .sort((left, right) => new Date(right.completedAt) - new Date(left.completedAt))
+        .slice(0, 4);
+}
+
+function getLearningRecommendation() {
+    const datasetName = getLearningDatasetName();
+    const profile = LEARNING_PATH_PROFILES[datasetName];
+    const lessons = getLearningLessonsForDataset(datasetName);
+    const nextLesson = lessons.find(lesson => (
+        !isLearningLessonCompletedForDataset(lesson.id, datasetName)
+    ));
+    if (nextLesson) {
+        const completedLessons = lessons.filter(lesson => (
+            isLearningLessonCompletedForDataset(lesson.id, datasetName)
+        )).length;
+        return {
+            kind: 'lesson',
+            title: nextLesson.title,
+            message: completedLessons > 0
+                ? `Continúa la ruta de ${profile.name} con la lección ${lessons.indexOf(nextLesson) + 1}.`
+                : `Empieza la ruta de ${profile.name} con la lección ${lessons.indexOf(nextLesson) + 1}.`,
+            action: completedLessons > 0 ? 'Continuar lección' : 'Comenzar lección',
+            onclick: `continueLearningLesson('${nextLesson.id}')`,
+            icon: 'fa-route'
+        };
+    }
+
+    const challenges = getChallengeCatalog(datasetName);
+    const nextChallenge = challenges.find(challenge => !challengeProgress[challenge.id]?.completed);
+    if (nextChallenge) {
+        return {
+            kind: 'challenge',
+            title: nextChallenge.titulo,
+            message: `Practica ${getConceptLabel(getChallengeConceptId(nextChallenge))} con un reto de ${profile.name}.`,
+            action: 'Practicar reto',
+            onclick: `practiceLearningChallenge('${nextChallenge.id}')`,
+            icon: 'fa-trophy'
+        };
+    }
+
+    const otherDataset = Object.keys(LEARNING_PATH_PROFILES).find(name => {
+        if (name === datasetName) return false;
+        return getLearningLessonsForDataset(name).some(lesson => (
+            !isLearningLessonCompletedForDataset(lesson.id, name)
+        )) || getChallengeCatalog(name).some(challenge => !challengeProgress[challenge.id]?.completed);
+    });
+
+    if (otherDataset) {
+        return {
+            kind: 'dataset',
+            title: `Ruta de ${profile.name} completada`,
+            message: `Ya completaste este dataset. Cambia a ${LEARNING_PATH_PROFILES[otherDataset].name} desde Practicar para seguir avanzando.`,
+            action: 'Ir a Practicar',
+            onclick: "activateSection('practice')",
+            icon: 'fa-arrow-right'
+        };
+    }
+
+    return {
+        kind: 'done',
+        title: '¡Todo completado!',
+        message: 'Has terminado las lecciones y retos de todos los datasets. Repasa o explora el laboratorio NoSQL.',
+        action: 'Ir a Retos',
+        onclick: 'openSQLChallenges()',
+        icon: 'fa-trophy'
+    };
+}
+
+function formatLearningActivityDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) return 'Hoy';
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+}
+
+function renderLearningPathList() {
+    const list = document.getElementById('pathLessonList');
+    if (!list) return;
+
+    const lessons = getLearningLessons();
+    const profile = getLearningProfile();
+    const stats = getLearningProgressStats();
+    const progressText = document.getElementById('pathProgressText');
+    const progressBar = document.getElementById('pathProgressBar');
+    const progressTrack = document.getElementById('pathProgressTrack');
+    const datasetLabel = document.getElementById('pathDatasetLabel');
+
+    if (progressText) progressText.textContent = `${stats.completed} de ${stats.total}`;
+    if (progressBar) progressBar.style.width = `${stats.percent}%`;
+    if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(stats.percent));
+    if (datasetLabel) datasetLabel.textContent = `Dataset SQL: ${profile.name}`;
+
+    const ctaButton = document.getElementById('pathCtaBtn');
+    if (ctaButton) {
+        const ctaLabel = stats.completed === stats.total
+            ? 'Repasar ruta'
+            : stats.completed > 0
+                ? 'Continuar ruta'
+                : 'Comenzar ruta';
+        ctaButton.innerHTML = `${ctaLabel} <i class="fas fa-arrow-right"></i>`;
+    }
+
+    if (!lessons.length) {
+        list.innerHTML = '<p class="text-muted">No hay lecciones disponibles.</p>';
+        return;
+    }
+
+    if (!currentLearningLessonId || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
+        const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
+        currentLearningLessonId = next.id;
+    }
+
+    list.innerHTML = lessons.map((lesson, index) => {
+        const completed = isLearningLessonCompleted(lesson.id);
+        const active = lesson.id === currentLearningLessonId;
+        const status = completed ? 'Completada' : (active ? 'En curso' : 'Pendiente');
+        return `
+            <button type="button" class="challenge-card path-step${active ? ' active' : ''}${completed ? ' completed' : ''}" data-learning-lesson="${escapeHtml(lesson.id)}" aria-pressed="${active}">
+                <span class="challenge-card-title">
+                    <span class="path-step-index">${completed ? '<i class="fas fa-check"></i>' : index + 1}</span>
+                    <span class="path-step-title">${escapeHtml(lesson.title)}</span>
+                </span>
+                <span class="challenge-card-meta">
+                    <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
+                    <span>${status}</span>
+                </span>
+            </button>
+        `;
+    }).join('');
+
+    list.querySelectorAll('[data-learning-lesson]').forEach(button => {
+        button.addEventListener('click', () => selectLearningLesson(button.dataset.learningLesson));
+    });
+
+    renderLearningProgressDashboard();
+}
+
+function renderLearningProgressDashboard() {
+    const container = document.getElementById('learningProgressDashboard');
+    if (!container) return;
+
+    const globalStats = getLearningGlobalStats();
+    const conceptStats = getLearningConceptStats();
+    const recommendation = getLearningRecommendation();
+    const activity = getRecentLearningActivity();
+    const dominated = conceptStats.filter(concept => concept.percent === 100).length;
+    const started = conceptStats.filter(concept => concept.percent > 0).length;
+    const profile = getLearningProfile();
+    const conceptLibrary = getConceptMasteryStats();
+
+    const metrics = [
+        {
+            label: 'Lecciones',
+            value: `${globalStats.lessonsCompleted}/${globalStats.lessonsTotal}`,
+            icon: 'fa-book-open',
+            tone: 'tone-blue',
+            hint: 'Ruta de aprendizaje'
+        },
+        {
+            label: 'Retos',
+            value: `${globalStats.challengesCompleted}/${globalStats.challengesTotal}`,
+            icon: 'fa-trophy',
+            tone: 'tone-amber',
+            hint: 'Retos SQL'
+        },
+        {
+            label: 'Actividades',
+            value: `${globalStats.completed}/${globalStats.total}`,
+            icon: 'fa-list-check',
+            tone: 'tone-green',
+            hint: 'Lecciones + retos'
+        },
+        {
+            label: 'Conceptos de ruta',
+            value: `${dominated}/${conceptStats.length}`,
+            icon: 'fa-graduation-cap',
+            tone: 'tone-violet',
+            hint: 'Al 100%'
+        }
+    ];
+
+    container.innerHTML = `
+        <div class="progress-hero">
+            <div class="progress-hero-copy">
+                <span class="progress-eyebrow"><i class="fas fa-chart-simple"></i> Tu mapa de habilidades</span>
+                <h3>Progreso global</h3>
+                <p>Dataset activo: <strong>${escapeHtml(profile.name)}</strong>. Has completado ${globalStats.completed} de ${globalStats.total} actividades entre lecciones y retos de los tres datasets SQL.</p>
+                <div class="progress-hero-bar" role="progressbar" aria-label="Progreso global" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${globalStats.percent}">
+                    <span style="width:${globalStats.percent}%"></span>
+                </div>
+            </div>
+            <div class="progress-hero-score">
+                <strong>${globalStats.percent}%</strong>
+                <span>global</span>
+            </div>
+        </div>
+
+        <div class="progress-recommendation progress-recommendation-${recommendation.kind}">
+            <span class="progress-recommendation-icon"><i class="fas ${recommendation.icon}"></i></span>
+            <div class="progress-recommendation-copy">
+                <span>Siguiente paso recomendado</span>
+                <strong>${escapeHtml(recommendation.title)}</strong>
+                <p>${escapeHtml(recommendation.message)}</p>
+            </div>
+            <button type="button" class="btn-primary" onclick="${recommendation.onclick}">
+                ${escapeHtml(recommendation.action)} <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <div class="progress-summary">
+            ${metrics.map(metric => `
+                <div class="analyze-metric">
+                    <span class="analyze-metric-icon ${metric.tone}"><i class="fas ${metric.icon}"></i></span>
+                    <div>
+                        <span class="analyze-metric-value">${metric.value}</span>
+                        <span class="analyze-metric-label">${metric.label}</span>
+                        <span class="analyze-metric-hint">${metric.hint}</span>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-section-head">
+                <div>
+                    <h3>Dominio por concepto</h3>
+                    <p>Combinación de lecciones y retos de los tres datasets.</p>
+                </div>
+                <span class="progress-section-badge">${started} de ${conceptStats.length} iniciados</span>
+            </div>
+            <div class="concept-mastery-grid">
+                ${conceptStats.map(concept => {
+                    const levelClass = concept.percent === 100
+                        ? 'is-complete'
+                        : concept.percent >= 80
+                            ? 'is-high'
+                            : concept.percent > 0
+                                ? 'is-progress'
+                                : 'is-empty';
+                    const status = concept.percent === 100
+                        ? 'Dominado'
+                        : concept.percent >= 80
+                            ? 'Casi'
+                            : concept.percent > 0
+                                ? 'En progreso'
+                                : 'Sin empezar';
+                    return `
+                        <article class="concept-mastery-card ${levelClass}">
+                            <div class="concept-mastery-head">
+                                <span class="concept-mastery-icon"><i class="fas ${concept.icon}"></i></span>
+                                <div class="concept-mastery-copy">
+                                    <h4>${escapeHtml(concept.label)}</h4>
+                                    <p>${escapeHtml(concept.description)}</p>
+                                </div>
+                                <span class="concept-mastery-percent">${concept.percent}%</span>
+                            </div>
+                            <div class="concept-mastery-bar" role="progressbar" aria-label="${escapeHtml(concept.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${concept.percent}">
+                                <span style="width:${concept.percent}%"></span>
+                            </div>
+                            <div class="concept-mastery-foot">
+                                <span>${concept.completed} de ${concept.total} actividades · ${status}</span>
+                                <button type="button" class="btn-ghost btn-sm" onclick="practiceLearningConcept('${concept.id}')">
+                                    Practicar <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </article>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+
+        <div class="progress-section concept-library-progress">
+            <div class="progress-section-head">
+                <div>
+                    <h3>Biblioteca de conceptos</h3>
+                    <p>Fichas completadas con el mini-quiz de Aprender.</p>
+                </div>
+                <span class="progress-section-badge">${conceptLibrary.completed} de ${conceptLibrary.total}</span>
+            </div>
+            <div class="concept-library-row">
+                <div class="concept-library-bar" role="progressbar" aria-label="Biblioteca de conceptos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${conceptLibrary.percent}">
+                    <span style="width:${conceptLibrary.percent}%"></span>
+                </div>
+                <button type="button" class="btn-secondary" onclick="openConceptLibrary()">
+                    Explorar conceptos <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="progress-columns">
+            <div class="progress-section">
+                <div class="progress-section-head">
+                    <div>
+                        <h3>Progreso por dataset</h3>
+                        <p>Lecciones y retos completados en cada base.</p>
+                    </div>
+                </div>
+                <div class="dataset-progress-list">
+                    ${globalStats.datasetStats.map(stat => `
+                        <article class="dataset-progress-card${stat.datasetName === getLearningDatasetName() ? ' is-active' : ''}">
+                            <div class="dataset-progress-head">
+                                <div>
+                                    <strong>${escapeHtml(stat.name)}</strong>
+                                    <span>${stat.completed} de ${stat.total} actividades</span>
+                                </div>
+                                <span class="dataset-progress-percent">${stat.percent}%</span>
+                            </div>
+                            <div class="dataset-progress-bar" role="progressbar" aria-label="${escapeHtml(stat.name)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${stat.percent}">
+                                <span style="width:${stat.percent}%"></span>
+                            </div>
+                            <div class="dataset-progress-meta">
+                                <span>${stat.lessonsCompleted}/${stat.lessonsTotal} lecciones</span>
+                                <span>${stat.challengesCompleted}/${stat.challengesTotal} retos</span>
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="progress-section-head">
+                    <div>
+                        <h3>Actividad SQL reciente</h3>
+                        <p>Tus últimos avances en lecciones y retos SQL.</p>
+                    </div>
+                </div>
+                ${activity.length ? `
+                    <div class="recent-activity-list">
+                        ${activity.map(item => `
+                            <div class="recent-activity-item">
+                                <span class="recent-activity-icon"><i class="fas ${item.icon}"></i></span>
+                                <div>
+                                    <strong title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</strong>
+                                    <span>${item.type} · ${escapeHtml(LEARNING_PATH_PROFILES[item.datasetName]?.name || item.datasetName)}</span>
+                                </div>
+                                <time datetime="${escapeHtml(item.completedAt)}">${escapeHtml(formatLearningActivityDate(item.completedAt))}</time>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="progress-empty">
+                        <i class="fas fa-clock"></i>
+                        <p>Aún no has completado actividades. Empieza con la primera lección.</p>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+}
+
+function activatePathTab(tabName) {
+    const next = tabName === 'progress' ? 'progress' : 'lessons';
+    const tabs = Array.from(document.querySelectorAll('.path-tab'));
+    const panels = {
+        lessons: document.getElementById('pathLessonsPanel'),
+        progress: document.getElementById('pathProgressPanel')
+    };
+
+    tabs.forEach(tab => {
+        const active = tab.dataset.pathTab === next;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+    });
+
+    Object.entries(panels).forEach(([name, panel]) => {
+        if (!panel) return;
+        const active = name === next;
+        panel.hidden = !active;
+        panel.classList.toggle('active', active);
+    });
+
+    if (next === 'progress') {
+        renderLearningProgressDashboard();
+    }
+}
+
+function openLearningPath() {
+    activateSection('path');
+    activatePathTab('lessons');
+}
+
+function continueLearningLesson(id) {
+    openLearningPath();
+    selectLearningLesson(id);
+}
+
+function openSQLChallenges() {
+    activateSection('challenges');
+    activateChallengeTab('sql');
+}
+
+function practiceLearningChallenge(id) {
+    openSQLChallenges();
+    openChallenge(id);
+}
+
+function practiceLearningConcept(conceptId) {
+    const datasetName = getLearningDatasetName();
+    const profile = LEARNING_PATH_PROFILES[datasetName];
+    const lesson = getLearningLessonsForDataset(datasetName)
+        .find(item => item.id === conceptId && !isLearningLessonCompletedForDataset(item.id, datasetName));
+    if (lesson) {
+        continueLearningLesson(lesson.id);
+        return;
+    }
+
+    const challenge = getChallengeCatalog(datasetName)
+        .find(item => getChallengeConceptId(item) === conceptId && !challengeProgress[item.id]?.completed);
+    if (challenge) {
+        practiceLearningChallenge(challenge.id);
+        return;
+    }
+
+    const otherDataset = Object.keys(LEARNING_PATH_PROFILES).find(name => {
+        if (name === datasetName) return false;
+        const hasPendingLesson = getLearningLessonsForDataset(name).some(item => (
+            item.id === conceptId && !isLearningLessonCompletedForDataset(item.id, name)
+        ));
+        const hasPendingChallenge = getChallengeCatalog(name).some(item => (
+            getChallengeConceptId(item) === conceptId && !challengeProgress[item.id]?.completed
+        ));
+        return hasPendingLesson || hasPendingChallenge;
+    });
+
+    if (otherDataset) {
+        showToast('info', `Este concepto ya está completo en ${profile.name}. Cambia a ${LEARNING_PATH_PROFILES[otherDataset].name} desde Practicar para seguir.`);
+        return;
+    }
+
+    showToast('success', `¡Ya dominas ${getConceptLabel(conceptId)}!`);
+}
+
+function renderLearningLessonDetail() {
+    const detail = document.getElementById('pathLessonDetail');
+    if (!detail) return;
+
+    const lessons = getLearningLessons();
+    const lesson = getLearningLessonById(currentLearningLessonId);
+    if (!lesson) {
+        detail.innerHTML = `
+            <div class="challenge-empty">
+                <i class="fas fa-route"></i>
+                <h3>Elige una lección</h3>
+                <p>Selecciona un paso de la ruta para empezar a practicar.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const profile = getLearningProfile();
+    const tables = dbInitialized && typeof getUserTables === 'function' ? getUserTables() : [];
+    if (tables.length > 0 && !tables.includes(profile.mainTable)) {
+        detail.innerHTML = `
+            <div class="challenge-empty">
+                <i class="fas fa-database"></i>
+                <h3>Dataset no compatible</h3>
+                <p>La ruta de ${escapeHtml(profile.name)} necesita la tabla <code>${escapeHtml(profile.mainTable)}</code>. Cambia de dataset o reinicia la base para practicar.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const index = lessons.findIndex(item => item.id === lesson.id);
+    const completed = isLearningLessonCompleted(lesson.id);
+    const nextLesson = lessons[index + 1];
+    const stats = getLearningProgressStats();
+    const allComplete = stats.completed === stats.total;
+    const nextMarkup = nextLesson
+        ? `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`
+        : allComplete
+            ? '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>'
+            : '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes.</div>';
+
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <h3>${index + 1}. ${escapeHtml(lesson.title)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
+                    <span class="text-muted">Lección ${index + 1} de ${lessons.length}</span>
+                    <span id="pathLessonStatus" class="path-completed-badge" ${completed ? '' : 'hidden'}><i class="fas fa-check"></i> Completada</span>
+                </div>
+            </div>
+        </div>
+        <div class="path-objective">
+            <span>Objetivo</span>
+            <p>${escapeHtml(lesson.objective)}</p>
+        </div>
+        <div class="challenge-description">${escapeHtml(lesson.explanation)}</div>
+        <div class="path-example">
+            <div class="path-example-head">
+                <span><i class="fas fa-code"></i> Ejemplo</span>
+                <button type="button" class="btn-ghost btn-sm" onclick="loadLearningExample()">
+                    <i class="fas fa-arrow-down"></i> Usar ejemplo
+                </button>
+            </div>
+            <pre><code>${escapeHtml(lesson.example)}</code></pre>
+        </div>
+        <label for="pathEditor" class="sr-only">Consulta SQL para la lección</label>
+        <textarea id="pathEditor" spellcheck="false" placeholder="Escribe tu consulta SQL aquí...">${escapeHtml(lesson.starter)}</textarea>
+        <div class="challenge-actions">
+            <button type="button" id="pathRunBtn" onclick="runLearningLesson()">
+                <i class="fas fa-play"></i> Comprobar lección
+            </button>
+            <button type="button" id="pathHintBtn" class="btn-secondary" onclick="showLearningHint()">
+                <i class="fas fa-lightbulb"></i> Ver pista
+            </button>
+            <button type="button" class="btn-secondary" onclick="clearLearningEditor()">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+        </div>
+        <div id="pathHint" class="challenge-hint" hidden>${escapeHtml(lesson.hint)}</div>
+        <div id="pathResult" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para practicar</strong>
+            Escribe tu consulta y pulsa «Comprobar lección».
+        </div>
+        <div id="pathNext" class="path-next" ${completed ? '' : 'hidden'}>${completed ? nextMarkup : ''}</div>
+    `;
+}
+
+function renderLearningPath() {
+    renderLearningPathList();
+    renderLearningLessonDetail();
+}
+
+function refreshLearningPath(options = {}) {
+    const lessons = getLearningLessons();
+    if (options.selectFirst || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
+        const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
+        currentLearningLessonId = next?.id || null;
+    }
+    renderLearningPath();
+}
+
+function initLearningPath() {
+    loadLearningPathProgress();
+    currentLearningLessonId = null;
+    refreshLearningPath({ selectFirst: true });
+    activatePathTab('lessons');
+
+    if (learningPathEventsBound) return;
+    learningPathEventsBound = true;
+
+    document.querySelectorAll('.path-tab').forEach(tab => {
+        tab.addEventListener('click', () => activatePathTab(tab.dataset.pathTab));
+        tab.addEventListener('keydown', event => {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+            const tabs = Array.from(document.querySelectorAll('.path-tab'));
+            const index = tabs.indexOf(tab);
+            if (index === -1) return;
+            event.preventDefault();
+            const offset = event.key === 'ArrowRight' ? 1 : -1;
+            const nextTab = tabs[(index + offset + tabs.length) % tabs.length];
+            nextTab.focus();
+            activatePathTab(nextTab.dataset.pathTab);
+        });
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.target?.id !== 'pathEditor') return;
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            event.preventDefault();
+            runLearningLesson();
+        }
+    });
+}
+
+function selectLearningLesson(id) {
+    if (!getLearningLessonById(id)) return;
+    currentLearningLessonId = id;
+    renderLearningPath();
+    const editor = document.getElementById('pathEditor');
+    if (editor) editor.focus();
+}
+
+function setLearningResult(type, html) {
+    const result = document.getElementById('pathResult');
+    if (!result) return;
+    result.className = `challenge-result ${type}`;
+    result.innerHTML = html;
+}
+
+function resetLearningResult() {
+    const result = document.getElementById('pathResult');
+    if (!result) return;
+    result.className = 'challenge-result';
+    result.innerHTML = '<strong><i class="fas fa-circle-info"></i> Listo para practicar</strong> Escribe tu consulta y pulsa «Comprobar lección».';
+}
+
+function learningComparisonMessage(comparison) {
+    if (comparison.reason === 'columns') {
+        return `Se esperaban ${comparison.expectedColumns} columnas y tu consulta devolvió ${comparison.actualColumns}. Revisa el SELECT.`;
+    }
+    if (comparison.reason === 'rows') {
+        return `Se esperaban ${comparison.expectedRows} filas y tu consulta devolvió ${comparison.actualRows}. Revisa el filtro, el JOIN o el LIMIT.`;
+    }
+    if (comparison.reason === 'values') {
+        return 'Las filas y columnas coinciden, pero los valores no. Revisa el orden, los cálculos o las columnas seleccionadas.';
+    }
+    if (comparison.reason === 'no_result') {
+        return 'Tu consulta no devolvió un conjunto de resultados.';
+    }
+    return 'Todavía no coincide con el resultado esperado.';
+}
+
+function showLearningNext(lesson) {
+    const container = document.getElementById('pathNext');
+    if (!container) return;
+    const lessons = getLearningLessons();
+    const index = lessons.findIndex(item => item.id === lesson.id);
+    const nextLesson = lessons[index + 1];
+    const stats = getLearningProgressStats();
+
+    container.hidden = false;
+    if (nextLesson) {
+        container.innerHTML = `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`;
+    } else if (stats.completed === stats.total) {
+        container.innerHTML = '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
+    } else {
+        container.innerHTML = '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes.</div>';
+    }
+}
+
+function runLearningLesson(database = db, initialized = dbInitialized) {
+    const lesson = getLearningLessonById(currentLearningLessonId);
+    const editor = document.getElementById('pathEditor');
+    if (!lesson || !editor) return;
+
+    const query = editor.value.trim();
+    if (!query) {
+        setLearningResult('warning', '<strong><i class="fas fa-circle-exclamation"></i> Falta la consulta</strong> Escribe una consulta antes de comprobarla.');
+        return;
+    }
+    if (!isReadOnlyQuery(query)) {
+        setLearningResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> La ruta solo permite consultas <code>SELECT</code> o <code>WITH</code>.');
+        return;
+    }
+    if (!initialized || !database) {
+        setLearningResult('warning', '<strong><i class="fas fa-hourglass-half"></i> Base de datos no disponible</strong> Espera a que termine de inicializarse e inténtalo de nuevo.');
+        return;
+    }
+
+    try {
+        const expected = database.exec(lesson.expectedSql);
+        const actual = database.exec(query);
+        const comparison = compareChallengeResults(expected, actual, lesson.ordered);
+
+        if (comparison.ok) {
+            markLearningLessonCompleted(lesson.id);
+            renderLearningPathList();
+            const status = document.getElementById('pathLessonStatus');
+            if (status) status.hidden = false;
+            const stats = getLearningProgressStats();
+            const lessons = getLearningLessons();
+            const currentIndex = lessons.findIndex(item => item.id === lesson.id);
+            const hasNext = Boolean(lessons[currentIndex + 1]);
+            const nextMessage = stats.completed === stats.total
+                ? 'Has terminado la ruta.'
+                : hasNext
+                    ? 'Puedes continuar con la siguiente lección.'
+                    : 'Has completado esta lección. Aún quedan pendientes en la ruta.';
+            setLearningResult('success', `
+                <strong><i class="fas fa-circle-check"></i> Lección completada</strong>
+                Tu consulta devuelve el resultado esperado. ${nextMessage}
+            `);
+            showLearningNext(lesson);
+            showToast('success', 'Lección completada.');
+            return;
+        }
+
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-xmark"></i> Todavía no</strong>
+            ${escapeHtml(learningComparisonMessage(comparison))}
+        `);
+    } catch (error) {
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Error en la consulta</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+        `);
+    }
+}
+
+function nextLearningLesson() {
+    const lessons = getLearningLessons();
+    const index = lessons.findIndex(lesson => lesson.id === currentLearningLessonId);
+    const next = lessons[index + 1];
+    if (next) {
+        selectLearningLesson(next.id);
+    } else {
+        showToast('success', '¡Has llegado al final de la ruta!');
+    }
+}
+
+function showLearningHint() {
+    const hint = document.getElementById('pathHint');
+    const button = document.getElementById('pathHintBtn');
+    if (!hint) return;
+    hint.hidden = !hint.hidden;
+    if (button) {
+        button.innerHTML = hint.hidden
+            ? '<i class="fas fa-lightbulb"></i> Ver pista'
+            : '<i class="fas fa-eye-slash"></i> Ocultar pista';
+    }
+}
+
+function clearLearningEditor() {
+    const editor = document.getElementById('pathEditor');
+    if (!editor) return;
+    editor.value = '';
+    resetLearningResult();
+    editor.focus();
+}
+
+function loadLearningExample() {
+    const lesson = getLearningLessonById(currentLearningLessonId);
+    const editor = document.getElementById('pathEditor');
+    if (!lesson || !editor) return;
+    editor.value = lesson.example;
+    resetLearningResult();
+    editor.focus();
+    showToast('info', 'Ejemplo cargado en el editor.');
+}
+
+function resetLearningProgress() {
+    const profile = getLearningProfile();
+    if (!confirm(`¿Reiniciar tu progreso de la ruta de ${profile.name}?`)) return;
+
+    delete learningPathProgress[getLearningDatasetName()];
+    saveLearningPathProgress();
+    currentLearningLessonId = null;
+    refreshLearningPath({ selectFirst: true });
+    showToast('info', `Progreso de la ruta de ${profile.name} reiniciado.`);
+}
+
+// ============================================
+// RETOS NOSQL EN LA PAGINA DE RETOS
+// ============================================
+
+function getNoSQLActiveDatasetName() {
+    if (typeof window.getNoSQLActiveDataset === 'function') {
+        return window.getNoSQLActiveDataset();
+    }
+    const selector = document.getElementById('nosqlDatasetSelector');
+    return selector?.value || 'escuela';
+}
+
+function getNoSQLHubChallenges() {
+    const datasetName = getNoSQLActiveDatasetName();
+    if (typeof window.getNoSQLChallengesForDataset === 'function') {
+        return window.getNoSQLChallengesForDataset(datasetName);
+    }
+    return Array.isArray(window.NOSQL_CHALLENGES)
+        ? window.NOSQL_CHALLENGES.filter(challenge => challenge.dataset === datasetName)
+        : [];
+}
+
+function isNoSQLHubChallengeCompleted(id) {
+    if (typeof window.isNoSQLChallengeCompleted === 'function') {
+        return window.isNoSQLChallengeCompleted(id);
+    }
+    return false;
+}
+
+function getNoSQLChallengeLevelClass(level) {
+    if (level === 'Básico') return 'basico';
+    if (level === 'Intermedio') return 'intermedio';
+    return 'avanzado';
+}
+
+function renderNoSQLHubPlaceholder() {
+    const detail = document.getElementById('nosqlHubChallengeDetail');
+    if (!detail) return;
+    detail.innerHTML = `
+        <div class="challenge-empty">
+            <i class="fas fa-leaf"></i>
+            <h3>Elige un reto NoSQL</h3>
+            <p>Selecciona un reto de la lista para ver su descripción y abrirlo en el laboratorio.</p>
+        </div>
+    `;
+}
+
+function renderNoSQLHubDetail(challenge) {
+    const detail = document.getElementById('nosqlHubChallengeDetail');
+    if (!detail) return;
+    if (!challenge) {
+        renderNoSQLHubPlaceholder();
+        return;
+    }
+
+    const completed = isNoSQLHubChallengeCompleted(challenge.id);
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <h3>${escapeHtml(challenge.title)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${getNoSQLChallengeLevelClass(challenge.level)}">${escapeHtml(challenge.level)}</span>
+                    <span class="text-muted">${completed ? 'Completado' : 'Validación por resultado'}</span>
+                </div>
+            </div>
+        </div>
+        <div class="challenge-description">${escapeHtml(challenge.description)}</div>
+        <details class="nosql-hint">
+            <summary><i class="fas fa-lightbulb"></i> Ver pista</summary>
+            <p>${escapeHtml(challenge.hint)}</p>
+        </details>
+        <label for="nosqlHubEditor" class="sr-only">Comando NoSQL para el reto</label>
+        <textarea id="nosqlHubEditor" spellcheck="false" placeholder="Escribe un comando NoSQL, por ejemplo: db.productos.find({ stock: { $lte: 10 } })">${escapeHtml(challenge.starter || '')}</textarea>
+        <div class="challenge-actions">
+            <button type="button" id="nosqlHubRunBtn" onclick="runNoSQLHubChallenge()">
+                <i class="fas fa-play"></i> Comprobar reto
+            </button>
+            <button type="button" class="btn-secondary" onclick="clearNoSQLHubEditor()">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+            <button type="button" class="btn-secondary" onclick="solveNoSQLChallengeInLab('${escapeHtml(challenge.id)}')">
+                <i class="fas fa-flask"></i> Abrir en laboratorio
+            </button>
+        </div>
+        <div id="nosqlHubFeedback" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para intentarlo</strong>
+            Escribe un comando NoSQL y pulsa «Comprobar reto».
+        </div>
+    `;
+}
+
+function renderNoSQLHubList() {
+    const list = document.getElementById('nosqlHubChallengeList');
+    const datasetLabel = document.getElementById('nosqlHubDatasetLabel');
+    const progressText = document.getElementById('nosqlHubProgressText');
+    if (!list) return;
+
+    const datasetName = getNoSQLActiveDatasetName();
+    const dataset = window.NOSQL_DATASETS?.[datasetName];
+    if (datasetLabel) {
+        datasetLabel.textContent = `Dataset NoSQL: ${dataset?.name || datasetName}`;
+    }
+
+    const challenges = getNoSQLHubChallenges();
+    const completed = challenges.filter(challenge => isNoSQLHubChallengeCompleted(challenge.id)).length;
+    if (progressText) progressText.textContent = `${completed} de ${challenges.length}`;
+
+    if (!challenges.length) {
+        list.innerHTML = '<p class="text-muted">No hay retos NoSQL para este dataset.</p>';
+        return;
+    }
+
+    list.innerHTML = challenges.map(challenge => {
+        const isCompleted = isNoSQLHubChallengeCompleted(challenge.id);
+        const active = challenge.id === selectedNoSQLChallengeId;
+        return `
+            <button type="button" class="challenge-card${active ? ' active' : ''}" data-nosql-challenge="${escapeHtml(challenge.id)}" aria-pressed="${active}">
+                <span class="challenge-card-title">
+                    ${escapeHtml(challenge.title)}
+                    ${isCompleted ? '<i class="fas fa-circle-check" title="Completado"></i>' : ''}
+                </span>
+                <span class="challenge-card-meta">
+                    <span class="challenge-level ${getNoSQLChallengeLevelClass(challenge.level)}">${escapeHtml(challenge.level)}</span>
+                    ${isCompleted ? '<span>Completado</span>' : '<span>Pendiente</span>'}
+                </span>
+            </button>
+        `;
+    }).join('');
+
+    list.querySelectorAll('[data-nosql-challenge]').forEach(button => {
+        button.addEventListener('click', () => openNoSQLHubChallenge(button.dataset.nosqlChallenge));
+    });
+}
+
+function renderNoSQLChallengeHub() {
+    renderNoSQLHubList();
+    const challenges = getNoSQLHubChallenges();
+    const selectedChallenge = challenges.find(challenge => challenge.id === selectedNoSQLChallengeId);
+    if (!selectedChallenge) {
+        selectedNoSQLChallengeId = null;
+        renderNoSQLHubPlaceholder();
+    } else {
+        renderNoSQLHubDetail(selectedChallenge);
+    }
+}
+
+function openNoSQLHubChallenge(id) {
+    const challenge = getNoSQLHubChallenges().find(item => item.id === id);
+    if (!challenge) return;
+    selectedNoSQLChallengeId = id;
+    if (typeof window.loadNoSQLChallenge === 'function') {
+        window.loadNoSQLChallenge(id, { focus: false });
+    }
+    renderNoSQLChallengeHub();
+}
+
+function runNoSQLHubChallenge() {
+    const editor = document.getElementById('nosqlHubEditor');
+    if (!editor) return;
+    if (typeof window.runNoSQLChallengeCommand !== 'function') {
+        showToast('warning', 'El motor NoSQL todavía no está disponible.');
+        return;
+    }
+
+    const feedback = window.runNoSQLChallengeCommand(editor.value);
+    if (!feedback) return;
+
+    const container = document.getElementById('nosqlHubFeedback');
+    if (container) {
+        container.className = `challenge-result ${feedback.ok ? 'success' : 'error'}`;
+        const solutionButton = feedback.canRevealSolution
+            ? `<div class="challenge-result-actions">
+                    <button type="button" class="btn-secondary" onclick="revealNoSQLHubSolution()">
+                        <i class="fas fa-eye"></i> Ver solución
+                    </button>
+                </div>`
+            : '';
+        container.innerHTML = `<strong>${feedback.ok ? 'Reto completado' : 'Todavía no'}</strong><p>${escapeHtml(feedback.message)}</p>${solutionButton}`;
+    }
+
+    if (feedback.ok) {
+        renderNoSQLHubList();
+        const meta = document.querySelector('#nosqlHubChallengeDetail .challenge-detail-meta .text-muted');
+        if (meta) meta.textContent = 'Completado';
+    }
+}
+
+function revealNoSQLHubSolution() {
+    const editor = document.getElementById('nosqlHubEditor');
+    const challenge = getNoSQLHubChallenges().find(item => item.id === selectedNoSQLChallengeId);
+    if (!editor || !challenge) return;
+    editor.value = challenge.solution;
+    editor.focus();
+    showToast('info', 'Solución cargada. Pulsa «Comprobar reto» para validarla.');
+}
+
+function clearNoSQLHubEditor() {
+    const editor = document.getElementById('nosqlHubEditor');
+    if (!editor) return;
+    editor.value = '';
+    editor.focus();
+}
+
+function solveNoSQLChallengeInLab(id) {
+    if (typeof window.loadNoSQLChallenge !== 'function') {
+        showToast('warning', 'El laboratorio NoSQL todavía no está disponible.');
+        return;
+    }
+    window.loadNoSQLChallenge(id, { focus: false });
+    activateSection('nosql');
+    const editor = document.getElementById('nosqlEditor');
+    if (editor) editor.focus();
+    showToast('info', 'Reto cargado en el laboratorio NoSQL.');
+}
+
+function openNoSQLLab() {
+    activateSection('nosql');
+}
+
+function activateChallengeTab(tabName) {
+    const tabs = Array.from(document.querySelectorAll('.challenge-tab'));
+    const panels = {
+        sql: document.getElementById('sqlChallengesPanel'),
+        nosql: document.getElementById('nosqlChallengesPanel'),
+        debug: document.getElementById('debugChallengesPanel')
+    };
+    const nextTab = ['sql', 'nosql', 'debug'].includes(tabName) ? tabName : 'sql';
+
+    tabs.forEach(tab => {
+        const active = tab.dataset.challengeTab === nextTab;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+    });
+
+    Object.entries(panels).forEach(([name, panel]) => {
+        if (!panel) return;
+        const active = name === nextTab;
+        panel.hidden = !active;
+        panel.classList.toggle('active', active);
+    });
+
+    if (nextTab === 'nosql') {
+        renderNoSQLChallengeHub();
+    } else if (nextTab === 'debug') {
+        renderDebugChallengeList();
+    }
+}
+
+function openNoSQLChallengesHub() {
+    activateSection('challenges');
+    activateChallengeTab('nosql');
+}
+
+function activateSection(sectionName) {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        const active = btn.dataset.section === sectionName;
+        btn.classList.toggle('active', active);
+        if (active) {
+            btn.setAttribute('aria-current', 'page');
+        } else {
+            btn.removeAttribute('aria-current');
+        }
+    });
+
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
+
+    const target = document.getElementById('section-' + sectionName);
+    if (target) {
+        target.classList.add('active');
+    }
+
+    if (sectionName === 'challenges') {
+        const activeTab = document.querySelector('.challenge-tab.active')?.dataset.challengeTab || 'sql';
+        activateChallengeTab(activeTab);
+    }
 }
 
 // NAVEGACIÓN ENTRE SECCIONES
@@ -3608,32 +7337,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         btn.addEventListener('click', function() {
-            // Remover active de todos los botones
-            document.querySelectorAll('.nav-btn').forEach(b => {
-                b.classList.remove('active');
-                b.removeAttribute('aria-current');
-            });
-            this.classList.add('active');
-            this.setAttribute('aria-current', 'page');
-            
-            // Ocultar todas las secciones
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            
-            // Mostrar la sección correspondiente
-            const sectionId = 'section-' + this.dataset.section;
-            const targetSection = document.getElementById(sectionId);
-            if (targetSection) {
-                targetSection.classList.add('active');
-            }
+            activateSection(this.dataset.section);
         });
     });
-    
+
+    document.querySelectorAll('.challenge-tab').forEach(tab => {
+        tab.addEventListener('click', () => activateChallengeTab(tab.dataset.challengeTab));
+    });
+    activateChallengeTab('sql');
+
+    const nosqlDatasetSelector = document.getElementById('nosqlDatasetSelector');
+    if (nosqlDatasetSelector) {
+        nosqlDatasetSelector.addEventListener('change', () => {
+            if (document.getElementById('nosqlChallengesPanel')?.classList.contains('active')) {
+                selectedNoSQLChallengeId = null;
+                setTimeout(renderNoSQLChallengeHub, 0);
+            }
+        });
+    }
+
     // Preferencias e historial guardados en el navegador.
     loadPreferences();
     applyPreferences();
     loadHistoryFromStorage();
     updateHistoryDisplay();
+    renderCategorySelector();
+    initLearnLibrary();
     initChallenges();
+    initLearningPath();
+    initAnalyzeExplorerControls();
+    updateAnalyzeExplorerModeUI();
 
     // Inicializar base de datos (restaura la copia local si existe).
     initDatabase();
@@ -4154,6 +7887,7 @@ function previousGuideStep() {
 }
 
 // EXPONER FUNCIONES GLOBALES
+window.getSQLModule = () => SQLModule;
 window.runQuery = runQuery;
 window.resetDatabase = resetDatabase;
 window.loadDataset = loadDataset;
@@ -4165,7 +7899,16 @@ window.importDatabase = importDatabase;
 window.loadTableEditor = loadTableEditor;
 window.deleteRow = deleteRow;
 window.addRow = addRow;
-window.updateCharts = updateCharts;
+window.setAnalyzeExplorerMode = setAnalyzeExplorerMode;
+window.refreshAnalyzeTableEditor = refreshAnalyzeTableEditor;
+window.restoreAnalyzeDatasetData = restoreAnalyzeDatasetData;
+window.hasUnsavedTableEditorChanges = hasUnsavedTableEditorChanges;
+window.renderAnalyzePanel = renderAnalyzePanel;
+window.selectAnalyzeTable = selectAnalyzeTable;
+window.getAnalyzeSummary = getAnalyzeSummary;
+window.buildAnalyzeQualityChecks = buildAnalyzeQualityChecks;
+window.copyAnalyzeSelect = copyAnalyzeSelect;
+window.practiceAnalyzeTable = practiceAnalyzeTable;
 window.clearEditor = clearEditor;
 window.toggleSafeMode = toggleSafeMode;
 window.toggleTheme = toggleTheme;
@@ -4184,6 +7927,14 @@ window.showChallengeSolution = showChallengeSolution;
 window.clearChallengeEditor = clearChallengeEditor;
 window.nextChallenge = nextChallenge;
 window.resetChallengeProgress = resetChallengeProgress;
+window.getDebugChallengeCatalog = getDebugChallengeCatalog;
+window.openDebugChallenge = openDebugChallenge;
+window.runDebugChallenge = runDebugChallenge;
+window.showDebugHint = showDebugHint;
+window.showDebugSolution = showDebugSolution;
+window.resetDebugQuery = resetDebugQuery;
+window.nextDebugChallenge = nextDebugChallenge;
+window.resetDebugChallengeProgress = resetDebugChallengeProgress;
 window.saveTableChanges = saveTableChanges;
 window.generateDiagram = generateDiagram;
 window.toggleDiagramView = toggleDiagramView;
