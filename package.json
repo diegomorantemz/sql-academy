@@ -1,6 +1,6 @@
 {
   "name": "sql-academy",
-  "version": "1.7.4",
+  "version": "1.7.5",
   "private": true,
   "description": "Academia interactiva para aprender y practicar SQL y NoSQL en el navegador.",
   "scripts": {

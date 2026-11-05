@@ -394,6 +394,13 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Release Notes
 
+### v1.7.5
+
+- **Distribución de Práctica SQL:** la barra de ejemplos ahora vive en la columna del editor, igual que en el laboratorio NoSQL.
+- **Mejor jerarquía:** ejemplos, editor, historial y resultados comparten la misma columna; las tablas quedan en la barra lateral.
+- **Responsive:** en pantallas estrechas se mantiene el orden de NoSQL: barra lateral y después editor con ejemplos.
+- **Caché PWA:** actualizada para el nuevo layout.
+
 ### v1.7.4
 
 - **Limpiar en NoSQL:** el botón «Limpiar» del editor ahora vacía el comando, igual que en SQL.

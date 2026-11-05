@@ -712,33 +712,6 @@
                 <p>Escribe consultas SQL y ve los resultados en tiempo real</p>
             </div>
 
-            <div class="example-bar" aria-label="Ejemplos guiados SQL">
-                <div class="example-bar-copy">
-                    <span class="example-bar-eyebrow"><i class="fas fa-wand-magic-sparkles"></i> Ejemplos guiados</span>
-                    <p>Elige una categoría y la consulta se cargará en el editor. Pulsa «Ejecutar» para ver los resultados.</p>
-                </div>
-                <div class="example-bar-controls">
-                    <select id="categorySelector" onchange="showExampleByCategory()" aria-label="Categoría de ejemplos SQL del dataset activo">
-                        <option value="basicos">Básicos</option>
-                        <option value="filtros">Filtros</option>
-                        <option value="orden">Ordenamiento</option>
-                        <option value="agregacion">Agregaciones</option>
-                        <option value="groupby">Agrupaciones</option>
-                        <option value="having">HAVING</option>
-                        <option value="join" selected>JOIN</option>
-                        <option value="subconsultas">Subconsultas</option>
-                        <option value="operadores">Operadores</option>
-                        <option value="avanzado">Avanzadas</option>
-                        <option value="modificacion">Modificación</option>
-                        <option value="aleatorio">Aleatorio</option>
-                    </select>
-                    <button type="button" onclick="showExampleByCategory()" class="btn-primary">
-                        <i class="fas fa-bolt"></i> Siguiente ejemplo
-                    </button>
-                </div>
-                <span id="sqlExampleStatus" class="example-status" role="status" aria-live="polite">Elige una categoría para empezar</span>
-            </div>
-
             <div class="practice-layout">
                 <!-- Panel izquierdo: Info -->
                 <div class="practice-sidebar">
@@ -752,6 +725,33 @@
 
                 <!-- Panel derecho: Editor y resultados -->
                 <div class="practice-main">
+                    <div class="example-bar" aria-label="Ejemplos guiados SQL">
+                        <div class="example-bar-copy">
+                            <span class="example-bar-eyebrow"><i class="fas fa-wand-magic-sparkles"></i> Ejemplos guiados</span>
+                            <p>Elige una categoría y la consulta se cargará en el editor. Pulsa «Ejecutar» para ver los resultados.</p>
+                        </div>
+                        <div class="example-bar-controls">
+                            <select id="categorySelector" onchange="showExampleByCategory()" aria-label="Categoría de ejemplos SQL del dataset activo">
+                                <option value="basicos">Básicos</option>
+                                <option value="filtros">Filtros</option>
+                                <option value="orden">Ordenamiento</option>
+                                <option value="agregacion">Agregaciones</option>
+                                <option value="groupby">Agrupaciones</option>
+                                <option value="having">HAVING</option>
+                                <option value="join" selected>JOIN</option>
+                                <option value="subconsultas">Subconsultas</option>
+                                <option value="operadores">Operadores</option>
+                                <option value="avanzado">Avanzadas</option>
+                                <option value="modificacion">Modificación</option>
+                                <option value="aleatorio">Aleatorio</option>
+                            </select>
+                            <button type="button" onclick="showExampleByCategory()" class="btn-primary">
+                                <i class="fas fa-bolt"></i> Siguiente ejemplo
+                            </button>
+                        </div>
+                        <span id="sqlExampleStatus" class="example-status" role="status" aria-live="polite">Elige una categoría para empezar</span>
+                    </div>
+
                     <div class="editor-wrapper">
                         <textarea id="sqlEditor" rows="6" aria-label="Editor de consultas SQL" spellcheck="false"
                             placeholder="Escribe una consulta o elige un ejemplo para empezar"></textarea>
