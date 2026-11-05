@@ -6308,6 +6308,7 @@ function previousGuideStep() {
 }
 
 // EXPONER FUNCIONES GLOBALES
+window.getSQLModule = () => SQLModule;
 window.runQuery = runQuery;
 window.resetDatabase = resetDatabase;
 window.loadDataset = loadDataset;

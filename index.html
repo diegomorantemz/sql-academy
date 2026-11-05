@@ -47,6 +47,9 @@
                     <button class="nav-btn" data-section="path">
                         <i class="fas fa-route"></i> Ruta
                     </button>
+                    <button class="nav-btn" data-section="game">
+                        <i class="fas fa-gamepad"></i> Juego
+                    </button>
                     <button class="nav-btn" data-section="practice">
                         <i class="fas fa-laptop-code"></i> Practicar
                     </button>
@@ -340,6 +343,107 @@
 
             <div id="pathProgressPanel" class="path-tab-panel" role="tabpanel" aria-labelledby="pathProgressTab" hidden>
                 <div id="learningProgressDashboard"></div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: JUEGO ===== -->
+        <section id="section-game" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-gamepad"></i> Torre de Datos</h2>
+                <p>Construye consultas SQL con cartas, supera los pisos y amplía tu mazo</p>
+            </div>
+
+            <div class="deckbuilder-layout">
+                <aside class="deckbuilder-sidebar">
+                    <div class="game-hud">
+                        <div class="game-hud-item">
+                            <span>Piso</span>
+                            <strong id="gameFloorLabel">1 / 6</strong>
+                        </div>
+                        <div class="game-hud-item">
+                            <span>Puntuación</span>
+                            <strong id="gameScoreLabel">0</strong>
+                        </div>
+                        <div class="game-hud-item">
+                            <span>Recompensas</span>
+                            <strong id="gameDeckLabel">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="game-panel">
+                        <div class="game-panel-head">
+                            <h3>La torre</h3>
+                            <span class="game-panel-tag">6 pisos</span>
+                        </div>
+                        <div id="gameTower" class="game-tower"></div>
+                    </div>
+
+                    <button type="button" class="btn-secondary game-reset-btn" data-game-focus onclick="Deckbuilder.resetGame()">
+                        <i class="fas fa-rotate-left"></i> Reiniciar partida
+                    </button>
+
+                    <div class="game-panel game-help-panel">
+                        <div class="game-panel-head">
+                            <h3>Cómo jugar</h3>
+                        </div>
+                        <p>Coloca cartas en orden para formar una consulta SQL. Si el resultado coincide con el objetivo, superas el piso.</p>
+                        <ul class="game-controls-list">
+                            <li><span>Ratón</span> clic en cartas y botones</li>
+                            <li><span>Teclado</span> <kbd>Tab</kbd> / <kbd>Enter</kbd> · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> ejecutar · <kbd>Backspace</kbd> deshacer</li>
+                            <li><span>Mando</span> D-pad/stick para moverte · <kbd>A</kbd> elegir · <kbd>B</kbd> deshacer · <kbd>X</kbd> ejecutar · <kbd>Y</kbd> pista</li>
+                        </ul>
+                    </div>
+
+                    <div id="gamepadStatus" class="gamepad-status" hidden>
+                        <i class="fas fa-gamepad"></i> Mando conectado
+                    </div>
+                </aside>
+
+                <div class="deckbuilder-main">
+                    <div id="gameEncounter" class="game-encounter">
+                        <div class="game-encounter-empty">
+                            <i class="fas fa-hourglass-half"></i>
+                            <h3>Cargando la torre...</h3>
+                            <p>Preparando el motor de datos.</p>
+                        </div>
+                    </div>
+
+                    <div id="gameQueryPanel" class="game-query-panel">
+                        <div class="game-panel-head">
+                            <h3><i class="fas fa-code"></i> Tu consulta</h3>
+                            <span id="gameQueryStatus">0 cartas</span>
+                        </div>
+                        <div id="gameQueryBoard" class="game-query-board"></div>
+                        <div id="gameQueryPreview" class="game-query-preview">Selecciona cartas para construir tu consulta.</div>
+                    </div>
+
+                    <div id="gameFeedback" class="game-feedback" role="status" aria-live="polite" hidden></div>
+
+                    <div id="gameActions" class="game-actions">
+                        <button type="button" id="gameRunBtn" class="btn-primary" data-game-focus onclick="Deckbuilder.runQuery()">
+                            <i class="fas fa-play"></i> Ejecutar consulta
+                        </button>
+                        <button type="button" class="btn-secondary" data-game-focus onclick="Deckbuilder.undo()">
+                            <i class="fas fa-rotate-left"></i> Deshacer
+                        </button>
+                        <button type="button" class="btn-secondary" data-game-focus onclick="Deckbuilder.clearQuery()">
+                            <i class="fas fa-eraser"></i> Limpiar
+                        </button>
+                        <button type="button" class="btn-secondary" data-game-focus onclick="Deckbuilder.showHint()">
+                            <i class="fas fa-lightbulb"></i> Ver pista
+                        </button>
+                    </div>
+
+                    <div id="gameReward" class="game-reward" hidden></div>
+
+                    <div id="gameHandPanel" class="game-hand-panel">
+                        <div class="game-panel-head">
+                            <h3><i class="fas fa-layer-group"></i> Cartas disponibles</h3>
+                            <span id="gameHandCount">0 cartas</span>
+                        </div>
+                        <div id="gameHand" class="game-hand"></div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -998,6 +1102,7 @@
     <script src="script.js"></script>
     <script src="nosql.js"></script>
     <script src="autocomplete.js"></script>
+    <script src="deckbuilder.js"></script>
 </body>
 
 </html>

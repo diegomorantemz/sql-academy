@@ -18,6 +18,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
 - Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
 - Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
+- **Torre de Datos:** minijuego deckbuilder con 6 pisos, cartas SQL, recompensas y soporte para teclado, ratón y mando.
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
@@ -30,6 +31,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - SQLite en el navegador con `sql.js`.
 - Motor documental propio para el laboratorio NoSQL, sin `eval`.
 - Font Awesome para los iconos.
+- Gamepad API para el control del minijuego con mando.
 - IndexedDB y `localStorage` para persistencia.
 - Service Worker y Web App Manifest para la PWA.
 - Netlify Functions como proxy seguro para el asistente IA.
@@ -84,6 +86,7 @@ sql-academy/
 ├── style.css                   # Estilos responsive, componentes y modo oscuro
 ├── script.js                   # Lógica de la app, persistencia, retos, IA y editor
 ├── autocomplete.js             # Sugerencias contextuales para los editores SQL y NoSQL
+├── deckbuilder.js              # Minijuego Torre de Datos y soporte de mando
 ├── nosql-engine.js             # Motor documental seguro inspirado en MongoDB
 ├── nosql-datasets.js           # Documentos, ejemplos y retos NoSQL
 ├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
@@ -100,6 +103,7 @@ sql-academy/
 │   ├── core.test.mjs           # Utilidades del frontend con jsdom
 │   ├── autocomplete.test.mjs   # Sugerencias contextuales SQL y NoSQL
 │   ├── path.test.mjs           # Lecciones, progreso y validación de la ruta
+│   ├── deckbuilder.test.mjs    # Torre de Datos, cartas y validación de pisos
 │   ├── nosql.test.mjs          # Motor documental, filtros, CRUD y agregaciones
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
@@ -214,6 +218,16 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Navegación guiada:** botón para pasar a la siguiente lección y opción de reiniciar la ruta.
 - **Panel Mi progreso:** dominio por concepto, avance por dataset, actividad reciente y siguiente paso recomendado.
 - **Recomendaciones accionables:** el panel propone continuar una lección, practicar un reto o cambiar de dataset.
+
+### Torre de Datos (minijuego)
+
+- **Deckbuilder SQL:** construye consultas seleccionando cartas de cláusulas, tablas, columnas, valores y funciones.
+- **6 pisos progresivos:** `SELECT`, `WHERE`, orden y límite, `JOIN`, agrupaciones y un jefe final con `HAVING`.
+- **Validación real:** cada consulta se ejecuta contra una base SQLite propia del juego y se compara con el resultado objetivo.
+- **Recompensas:** al superar un piso eliges una carta nueva para tu mazo (`DISTINCT`, `LEFT JOIN`, `AVG`, etc.).
+- **Puntuación y progreso:** puntos por piso, penalización suave por pistas o intentos y guardado en `localStorage`.
+- **Controles:** ratón, teclado y mando mediante Gamepad API. El juego muestra el estado del mando y resalta el elemento enfocado.
+- **Base independiente:** la torre usa su propio esquema y datos, sin modificar la base de práctica del usuario.
 
 ### Retos
 
@@ -336,6 +350,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
 - `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
+- `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
 - `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL y la navegación al laboratorio.
@@ -365,6 +380,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.6.0
+
+- **Torre de Datos:** nuevo minijuego deckbuilder con 6 pisos, cartas SQL y una base de datos propia.
+- **Construcción de consultas con cartas:** cláusulas, tablas, columnas, valores, funciones y operadores.
+- **Deckbuilding:** después de cada piso eliges una recompensa que se añade a tu mazo para los siguientes niveles.
+- **Controles para todos:** ratón, teclado y mando con Gamepad API (stick/D-pad, A, B, X, Y).
+- **Progreso de juego:** puntuación, pistas, intentos, pisos completados y recompensas guardadas en `localStorage`.
+- **Validación real:** cada piso se comprueba ejecutando la consulta contra SQLite y comparando el resultado.
+- **Calidad:** pruebas de la base del juego, las soluciones de los pisos, las recompensas y el flujo de juego.
 
 ### v1.5.9
 

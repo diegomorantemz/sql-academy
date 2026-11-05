@@ -1689,7 +1689,17 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 
+    .header-content {
+        height: auto;
+        flex-wrap: wrap;
+        padding: 10px 0;
+    }
+
     .main-nav {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
         gap: 2px;
     }
 
@@ -5440,4 +5450,787 @@ button:disabled {
 
 .progress-summary .analyze-metric-value {
     font-variant-numeric: tabular-nums;
+}
+
+/* ===== TORRE DE DATOS (DECKBUILDER) ===== */
+.deckbuilder-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.deckbuilder-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.deckbuilder-main {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.game-hud {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.game-hud-item {
+    padding: 10px 8px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+    box-shadow: var(--shadow-sm);
+}
+
+.game-hud-item span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.game-hud-item strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-size: 1.05em;
+    font-variant-numeric: tabular-nums;
+}
+
+.game-panel,
+.game-encounter,
+.game-query-panel,
+.game-hand-panel,
+.game-reward {
+    padding: 15px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.game-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.game-panel-head h3 {
+    color: var(--text-strong);
+    font-size: 0.95em;
+    margin: 0;
+}
+
+.game-panel-head h3 i {
+    color: var(--postgres-blue);
+    margin-right: 5px;
+}
+
+.game-panel-head > span {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.game-panel-tag,
+.game-floor-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.game-tower {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.game-floor {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-left: 3px solid transparent;
+    border-radius: 8px;
+}
+
+.game-floor-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--surface-strong);
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.game-floor-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.game-floor-copy strong {
+    display: block;
+    overflow: hidden;
+    color: var(--text-strong);
+    font-size: 11.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.game-floor-copy span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 9.5px;
+}
+
+.game-floor > i {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.game-floor.is-current {
+    background: var(--accent-soft);
+    border-left-color: var(--postgres-blue);
+}
+
+.game-floor.is-current .game-floor-index {
+    background: var(--postgres-blue);
+    color: #fff;
+}
+
+.game-floor.is-current > i {
+    color: var(--postgres-blue);
+}
+
+.game-floor.is-complete {
+    border-left-color: #28a745;
+}
+
+.game-floor.is-complete .game-floor-index {
+    background: #28a745;
+    color: #fff;
+}
+
+.game-floor.is-complete > i {
+    color: #28a745;
+}
+
+.game-floor.is-locked {
+    opacity: 0.62;
+}
+
+.game-reset-btn {
+    justify-content: center;
+    width: 100%;
+}
+
+.game-help-panel p {
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.game-controls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 9px;
+    list-style: none;
+}
+
+.game-controls-list li {
+    color: var(--text-muted);
+    font-size: 10.5px;
+    line-height: 1.4;
+}
+
+.game-controls-list li > span {
+    display: inline-block;
+    min-width: 54px;
+    color: var(--text-strong);
+    font-weight: 700;
+}
+
+.game-controls-list kbd {
+    display: inline-block;
+    padding: 1px 4px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 3px;
+    background: var(--surface-muted);
+    color: var(--text-strong);
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.gamepad-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    background: #e8f7ee;
+    border: 1px solid #b7e4c7;
+    border-radius: 8px;
+    color: #1e7e34;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.gamepad-status[hidden] {
+    display: none;
+}
+
+.game-encounter {
+    position: relative;
+    overflow: hidden;
+}
+
+.game-encounter::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--postgres-blue), #6c5ce7);
+}
+
+.game-encounter-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 7px;
+}
+
+.game-encounter-code {
+    color: var(--text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+}
+
+.game-encounter h3 {
+    color: var(--text-strong);
+    font-size: 1.25em;
+    margin-bottom: 3px;
+}
+
+.game-story {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.game-objective {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--accent-soft);
+    border-left: 3px solid var(--postgres-blue);
+    border-radius: 8px;
+}
+
+.game-objective span {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--postgres-blue);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.game-objective p {
+    color: var(--text-strong);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.game-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 9px 11px;
+    background: #fff8e1;
+    border: 1px dashed #e0a800;
+    border-radius: 8px;
+    color: #7a5a00;
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.game-hint i {
+    margin-top: 2px;
+}
+
+.game-query-board {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 6px;
+    min-height: 62px;
+    padding: 10px;
+    background: var(--surface-muted);
+    border: 1px dashed var(--postgres-border);
+    border-radius: 8px;
+}
+
+.game-empty {
+    width: 100%;
+    margin: 0;
+    padding: 10px;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    text-align: center;
+}
+
+.game-query-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 8px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+    color: var(--text-strong);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.game-query-token:hover {
+    border-color: var(--postgres-blue);
+    color: var(--postgres-blue);
+}
+
+.game-query-token i {
+    color: var(--text-muted);
+    font-size: 9px;
+}
+
+.game-query-preview {
+    min-height: 36px;
+    margin-top: 8px;
+    padding: 9px 10px;
+    overflow-x: auto;
+    background: #0f172a;
+    border-radius: 7px;
+    color: #dbeafe;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 11.5px;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.game-query-preview code {
+    color: inherit;
+    font-family: inherit;
+}
+
+.game-feedback {
+    padding: 11px 13px;
+    border-left: 3px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.game-feedback[hidden] {
+    display: none;
+}
+
+.game-feedback strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-strong);
+}
+
+.game-feedback p {
+    margin: 0;
+}
+
+.game-feedback-success {
+    background: #f0fff4;
+    border-left-color: #28a745;
+    color: #1e6b37;
+}
+
+.game-feedback-error {
+    background: #fff5f5;
+    border-left-color: #dc3545;
+    color: #8b1e1e;
+}
+
+.game-feedback-warning {
+    background: #fff9e8;
+    border-left-color: #e0a800;
+    color: #7a5a00;
+}
+
+.game-feedback-info {
+    background: var(--accent-soft);
+    border-left-color: var(--postgres-blue);
+    color: var(--text-muted);
+}
+
+.game-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.game-hand {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+    gap: 8px;
+}
+
+.game-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-height: 64px;
+    padding: 9px 10px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-left: 3px solid var(--postgres-border);
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.game-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--postgres-blue);
+    box-shadow: var(--shadow-sm);
+}
+
+.game-card:active {
+    transform: scale(0.98);
+}
+
+.game-card-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.game-card-type i {
+    font-size: 8px;
+}
+
+.game-card strong {
+    overflow-wrap: anywhere;
+    color: var(--text-strong);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 12.5px;
+    line-height: 1.3;
+}
+
+.game-card small {
+    color: var(--text-muted);
+    font-size: 9.5px;
+    line-height: 1.35;
+}
+
+.game-card-keyword { border-left-color: var(--postgres-blue); }
+.game-card-keyword .game-card-type i { color: var(--postgres-blue); }
+.game-card-table { border-left-color: #764ba2; }
+.game-card-table .game-card-type i { color: #764ba2; }
+.game-card-column { border-left-color: #0f766e; }
+.game-card-column .game-card-type i { color: #0f766e; }
+.game-card-value { border-left-color: #b45309; }
+.game-card-value .game-card-type i { color: #b45309; }
+.game-card-function { border-left-color: #c2410c; }
+.game-card-function .game-card-type i { color: #c2410c; }
+.game-card-operator { border-left-color: #475569; }
+.game-card-operator .game-card-type i { color: #475569; }
+.game-card-punctuation { border-left-color: #64748b; }
+.game-card-punctuation .game-card-type i { color: #64748b; }
+.game-card-reward { border-left-color: #d946ef; }
+.game-card-reward .game-card-type i { color: #d946ef; }
+
+.game-card-offer {
+    min-height: 112px;
+    justify-content: space-between;
+    padding: 12px;
+}
+
+.game-reward {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.game-reward[hidden] {
+    display: none;
+}
+
+.game-reward-head h3 {
+    color: var(--text-strong);
+    font-size: 1.2em;
+    margin: 5px 0 2px;
+}
+
+.game-reward-head p {
+    color: var(--text-muted);
+    font-size: 11.5px;
+}
+
+.game-reward-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+}
+
+.game-reward-chosen {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+    border-radius: 9px;
+}
+
+.game-reward-chosen > i {
+    color: #d946ef;
+    font-size: 20px;
+}
+
+.game-reward-chosen strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 14px;
+}
+
+.game-reward-chosen p {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.game-victory {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 26px 16px;
+    text-align: center;
+}
+
+.game-victory-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: #fff7db;
+    color: #b45309;
+    font-size: 28px;
+}
+
+.game-victory h3 {
+    color: var(--text-strong);
+    font-size: 1.45em;
+}
+
+.game-victory p {
+    max-width: 480px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.game-encounter-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 34px 16px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.game-encounter-empty i {
+    color: var(--postgres-blue);
+    font-size: 2em;
+}
+
+.game-encounter-empty h3 {
+    color: var(--text-strong);
+}
+
+.game-encounter-empty p {
+    font-size: 12px;
+}
+
+.is-gamepad-focused {
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.7) !important;
+}
+
+[data-theme="dark"] .gamepad-status {
+    background: #064e3b;
+    border-color: #065f46;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .game-hint {
+    background: #3b2f14;
+    border-color: #a16207;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .game-feedback-success {
+    background: #052e1a;
+    color: #86efac;
+}
+
+[data-theme="dark"] .game-feedback-error {
+    background: #3f1313;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .game-feedback-warning {
+    background: #3b2f14;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .game-feedback-info {
+    background: #172554;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .game-reward-chosen {
+    background: #2e1065;
+    border-color: #581c87;
+}
+
+[data-theme="dark"] .game-reward-chosen strong {
+    color: #f5f3ff;
+}
+
+[data-theme="dark"] .game-victory-icon {
+    background: #3b2f14;
+    color: #fde68a;
+}
+
+@media (max-width: 1100px) {
+    .deckbuilder-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .deckbuilder-sidebar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+    }
+
+    .game-hud,
+    .game-reset-btn,
+    .gamepad-status {
+        grid-column: 1 / -1;
+    }
+
+    .game-help-panel {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 700px) {
+    .deckbuilder-sidebar {
+        grid-template-columns: 1fr;
+    }
+
+    .game-hand {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .game-actions button {
+        flex: 1 1 auto;
+    }
+
+    .game-reward-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-hand {
+        grid-template-columns: 1fr;
+    }
+
+    .game-encounter,
+    .game-query-panel,
+    .game-hand-panel,
+    .game-reward {
+        padding: 13px;
+    }
+
+    .game-hud {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .game-hud-item:last-child {
+        grid-column: 1 / -1;
+    }
+}
+
+.game-query-panel[hidden],
+.game-actions[hidden],
+.game-hand-panel[hidden] {
+    display: none;
+}
+
+@media (max-width: 1100px) {
+    .deckbuilder-sidebar > .game-panel {
+        grid-column: 1 / -1;
+    }
+}
+
+.game-card:focus-visible,
+.game-query-token:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
 }
