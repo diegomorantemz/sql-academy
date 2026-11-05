@@ -441,6 +441,9 @@ function closeModal(modal) {
 
 /** Refresca todos los paneles que dependen de la base de datos. */
 function refreshAll() {
+    if (window.SQLAcademyAutocomplete?.invalidateSchema) {
+        window.SQLAcademyAutocomplete.invalidateSchema();
+    }
     refreshTableSelector();
     showTablesInfo();
     loadTableEditor();

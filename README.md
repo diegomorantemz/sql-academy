@@ -16,6 +16,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga y ejecuta automáticamente.
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
+- Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
 - Aplicación instalable (PWA), modo oscuro y mejoras de accesibilidad.
@@ -80,6 +81,7 @@ sql-academy/
 ├── index.html                  # Interfaz, secciones, modales y metadatos PWA
 ├── style.css                   # Estilos responsive, componentes y modo oscuro
 ├── script.js                   # Lógica de la app, persistencia, retos, IA y editor
+├── autocomplete.js             # Sugerencias contextuales para los editores SQL y NoSQL
 ├── nosql-engine.js             # Motor documental seguro inspirado en MongoDB
 ├── nosql-datasets.js           # Documentos, ejemplos y retos NoSQL
 ├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
@@ -94,6 +96,7 @@ sql-academy/
 │       └── explain.mjs         # Proxy seguro hacia Gemini
 ├── tests/
 │   ├── core.test.mjs           # Utilidades del frontend con jsdom
+│   ├── autocomplete.test.mjs   # Sugerencias contextuales SQL y NoSQL
 │   ├── nosql.test.mjs          # Motor documental, filtros, CRUD y agregaciones
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
@@ -226,6 +229,8 @@ El modo se valida en el backend con una allowlist. El frontend envía la consult
 - Ejecución con `Ctrl+Enter`.
 - Si hay texto seleccionado, se ejecuta solo esa selección.
 - **Formatear** consulta con el botón o con `Ctrl+Shift+F`; también formatea solo la selección.
+- **Autocompletado contextual:** sugiere tablas después de `FROM`/`JOIN`, columnas después de un alias o en cláusulas como `SELECT`, `WHERE` y `ORDER BY`, además de palabras clave y funciones.
+- Navegación con `↑`/`↓`, `Enter` o `Tab` para aceptar y `Esc` para cerrar.
 - Historial persistente con recarga de consultas.
 - Ejemplos guiados por categoría.
 - Editor visual de tablas con alta, baja y edición de filas.
@@ -239,6 +244,7 @@ Selector con tres bases de práctica. Al cambiar de dataset se reemplaza la base
 El laboratorio NoSQL es un simulador documental educativo, no una instancia real de MongoDB. Los documentos se guardan como JSON y se ejecutan en el navegador con un motor propio que no usa `eval`.
 
 - Colecciones y documentos con `_id` de texto.
+- Autocompletado de colecciones, métodos, campos y operadores al escribir comandos.
 - Consola simplificada de Mongo shell:
   ```js
   db.estudiantes.find({ edad: { $gt: 18 } }).sort({ promedio: -1 }).limit(5)
@@ -279,6 +285,9 @@ La sintaxis está limitada a un subconjunto seguro: no se aceptan funciones, lla
 | `Ctrl + L` | Limpiar el editor |
 | `Ctrl + E` | Mostrar un ejemplo aleatorio |
 | `Ctrl + Shift + R` | Reiniciar la base de datos |
+| `↑` / `↓` | Navegar por las sugerencias de autocompletado |
+| `Enter` / `Tab` | Aceptar la sugerencia seleccionada |
+| `Esc` | Cerrar las sugerencias |
 
 ## Asistente IA (opcional)
 
@@ -310,6 +319,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 ## Tests, CI y seguridad
 
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
+- `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
 - `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL y la navegación al laboratorio.
@@ -339,6 +349,14 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.5.7
+
+- **Autocompletado contextual:** sugerencias de tablas, columnas, palabras clave y funciones en SQL; colecciones, métodos, campos y operadores en NoSQL.
+- **Sugerencias inteligentes:** resuelve alias de tablas, califica columnas cuando hay varias tablas y evita activarse dentro de cadenas o comentarios.
+- **Navegación por teclado:** `↑`/`↓` para moverse, `Enter` o `Tab` para aceptar y `Esc` para cerrar.
+- **Integrado en todos los editores:** práctica SQL, retos SQL, laboratorio NoSQL y retos NoSQL de la página Retos.
+- **Calidad:** pruebas de sugerencias SQL/NoSQL, alias, cadenas y aplicación con teclado.
 
 ### v1.5.6
 

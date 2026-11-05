@@ -4445,3 +4445,91 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 }
+
+/* ===== AUTOCOMPLETADO ===== */
+.autocomplete-popover {
+    position: fixed;
+    z-index: 4000;
+    width: min(330px, calc(100vw - 16px));
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 5px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18), 0 3px 10px rgba(15, 23, 42, 0.08);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+}
+
+.autocomplete-popover[hidden] {
+    display: none;
+}
+
+.autocomplete-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.autocomplete-option:hover,
+.autocomplete-option[aria-selected="true"] {
+    background: var(--accent-soft);
+}
+
+.autocomplete-option-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.autocomplete-option-main i {
+    width: 13px;
+    flex: 0 0 auto;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    text-align: center;
+}
+
+.autocomplete-option-label {
+    overflow: hidden;
+    color: var(--text-strong);
+    font-size: 12.5px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.autocomplete-option-detail {
+    flex: 0 0 auto;
+    overflow: hidden;
+    max-width: 115px;
+    color: var(--text-muted);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .autocomplete-popover {
+    background: #111827;
+    border-color: #334155;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .autocomplete-option:hover,
+[data-theme="dark"] .autocomplete-option[aria-selected="true"] {
+    background: #172554;
+}
+
+[data-theme="dark"] .autocomplete-option-label {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .autocomplete-option-detail {
+    color: #94a3b8;
+}

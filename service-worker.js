@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sql-academy-v9';
+const CACHE_VERSION = 'sql-academy-v10';
 const APP_SHELL = [
     './',
     './index.html',
@@ -8,6 +8,7 @@ const APP_SHELL = [
     './nosql-engine.js',
     './script.js',
     './nosql.js',
+    './autocomplete.js',
     './manifest.webmanifest',
     './icons/icon-192.png',
     './icons/icon-512.png',

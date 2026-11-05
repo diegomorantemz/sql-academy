@@ -34,6 +34,23 @@
         return document.getElementById(id);
     }
 
+    function getAutocompleteSchema() {
+        if (!state || !state.collections) return [];
+        return Object.entries(state.collections).map(([name, documents]) => {
+            const fields = new Set();
+            (documents || []).slice(0, 50).forEach(document => {
+                Object.keys(document || {}).forEach(field => fields.add(field));
+            });
+            return { name, fields: Array.from(fields).slice(0, 50) };
+        });
+    }
+
+    function invalidateAutocompleteSchema() {
+        if (global.SQLAcademyAutocomplete?.invalidateSchema) {
+            global.SQLAcademyAutocomplete.invalidateSchema();
+        }
+    }
+
     function escapeHtml(value) {
         if (typeof global.escapeHtml === 'function') return global.escapeHtml(String(value));
         return String(value)
@@ -225,6 +242,7 @@
         const summary = getElement('nosqlCollectionSummary');
         if (!container || !state) return;
 
+        invalidateAutocompleteSchema();
         const collections = global.NoSQL.getCollectionSummary(state);
         if (summary) {
             summary.textContent = `${state.name} · ${collections.length} colecciones`;
@@ -873,6 +891,7 @@
     global.revealNoSQLSolution = revealSolution;
     global.resetNoSQLChallengeProgress = resetChallengeProgress;
     global.getNoSQLActiveDataset = () => datasetName;
+    global.getNoSQLAutocompleteSchema = getAutocompleteSchema;
     global.getNoSQLActiveChallenges = getActiveChallenges;
     global.getNoSQLChallengeProgress = () => ({ ...challengeProgress });
     global.isNoSQLChallengeCompleted = id => Boolean(challengeProgress[id]);
