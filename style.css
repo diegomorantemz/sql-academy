@@ -1333,7 +1333,8 @@ button:disabled {
 }
 
 #challengeProgressBar,
-#pathProgressBar {
+#pathProgressBar,
+#conceptProgressBar {
     height: 100%;
     width: 0%;
     border-radius: 999px;
@@ -6233,4 +6234,962 @@ button:disabled {
 .game-query-token:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
+}
+
+/* ===== BIBLIOTECA DE APRENDIZAJE ===== */
+.learn-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--postgres-border);
+}
+
+.learn-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.learn-tab:hover {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.learn-tab.active {
+    background: var(--postgres-blue);
+    border-color: var(--postgres-blue);
+    color: #fff;
+}
+
+.learn-tab:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.learn-tab-panel[hidden] {
+    display: none;
+}
+
+.library-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.library-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 260px;
+    min-width: 0;
+    padding: 8px 11px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+    color: var(--text-muted);
+}
+
+.library-search:focus-within {
+    border-color: var(--postgres-blue);
+    box-shadow: var(--focus-ring);
+}
+
+.library-search input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-strong);
+    font-family: inherit;
+    font-size: 12.5px;
+}
+
+.library-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.library-filters {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.library-filter {
+    padding: 6px 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.library-filter:hover {
+    border-color: var(--postgres-blue);
+    color: var(--postgres-blue);
+}
+
+.library-filter.active {
+    background: var(--accent-soft);
+    border-color: var(--postgres-blue);
+    color: var(--postgres-blue);
+}
+
+.library-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    margin: 12px 0;
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--surface-muted);
+    border: 1px dashed var(--postgres-border);
+    border-radius: 9px;
+    font-size: 12px;
+}
+
+.library-empty[hidden] {
+    display: none;
+}
+
+.library-empty i {
+    color: var(--postgres-blue);
+    font-size: 1.5em;
+}
+
+.learn-card[hidden],
+.comparison-wrapper[hidden],
+.db-group[hidden],
+.concept-card[hidden] {
+    display: none;
+}
+
+.motor-finder {
+    margin-bottom: 24px;
+    padding: 17px 18px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(47, 111, 159, 0.22);
+    border-left: 3px solid var(--postgres-blue);
+    border-radius: var(--radius-md);
+}
+
+.motor-finder-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.motor-finder-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.motor-finder h3 {
+    color: var(--text-strong);
+    font-size: 1.1em;
+    margin-bottom: 2px;
+}
+
+.motor-finder-head p {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.motor-finder-body[hidden],
+.motor-finder-result[hidden] {
+    display: none;
+}
+
+.motor-finder-body {
+    margin-top: 15px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(47, 111, 159, 0.18);
+}
+
+.motor-finder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.motor-finder-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--text-strong);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.motor-finder-grid select {
+    width: 100%;
+    padding: 8px 9px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--text-strong);
+    font-family: inherit;
+    font-size: 12px;
+    text-transform: none;
+}
+
+.motor-finder-result {
+    margin-top: 13px;
+}
+
+.motor-result-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+}
+
+.motor-result-card img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+}
+
+.motor-result-copy {
+    flex: 1 1 260px;
+    min-width: 0;
+}
+
+.motor-result-eyebrow {
+    display: block;
+    color: var(--postgres-blue);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.motor-result-copy h3 {
+    color: var(--text-strong);
+    font-size: 1.1em;
+    margin: 1px 0 3px;
+}
+
+.motor-result-copy p {
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.motor-result-avoid {
+    margin-top: 3px;
+}
+
+.motor-result-avoid strong {
+    color: var(--text-strong);
+}
+
+.concept-progress {
+    margin-bottom: 18px;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.concept-progress-hint {
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.concept-card {
+    position: relative;
+}
+
+.concept-card.is-completed {
+    border-color: rgba(40, 167, 69, 0.45);
+    background: linear-gradient(180deg, rgba(40, 167, 69, 0.04), var(--surface));
+}
+
+.concept-complete-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #e8f7ee;
+    color: #1e7e34;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.concept-complete-badge[hidden] {
+    display: none;
+}
+
+.concept-level-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    background: var(--surface-strong);
+    color: var(--text-muted);
+    font-size: 0.66em;
+    font-weight: 700;
+}
+
+/* ===== MODAL DE CONCEPTO ===== */
+.concept-modal-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.concept-modal-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    color: var(--text-muted);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.concept-modal-status.is-complete {
+    background: #e8f7ee;
+    border-color: #b7e4c7;
+    color: #1e7e34;
+}
+
+.concept-modal-description {
+    font-size: 1.02em !important;
+    color: var(--text-strong) !important;
+    line-height: 1.7 !important;
+}
+
+.concept-diagram-wrap {
+    margin: 14px 0;
+    padding: 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+}
+
+.concept-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-height: 70px;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    text-align: center;
+}
+
+.diagram-mer {
+    gap: 12px;
+}
+
+.diagram-entity,
+.diagram-panel {
+    min-width: 120px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    text-align: left;
+}
+
+.diagram-entity strong,
+.diagram-panel strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 12px;
+}
+
+.diagram-entity span,
+.diagram-panel span,
+.diagram-panel small {
+    display: block;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.diagram-relation {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.diagram-normalization {
+    gap: 12px;
+}
+
+.diagram-arrow {
+    color: var(--postgres-blue);
+}
+
+.diagram-keys {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.diagram-key-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 11px;
+}
+
+.diagram-pk,
+.diagram-fk,
+.diagram-unique {
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.diagram-pk { background: rgba(47, 111, 159, 0.14); color: var(--postgres-blue); }
+.diagram-fk { background: rgba(118, 75, 162, 0.14); color: #764ba2; }
+.diagram-unique { background: rgba(40, 167, 69, 0.14); color: #1e7e34; }
+
+.diagram-sql-groups,
+.diagram-nosql-types {
+    gap: 7px;
+}
+
+.diagram-chip,
+.diagram-nosql-types span {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 9.5px;
+    font-weight: 800;
+}
+
+.chip-blue { background: rgba(47, 111, 159, 0.14); color: var(--postgres-blue); }
+.chip-green { background: rgba(40, 167, 69, 0.14); color: #1e7e34; }
+.chip-amber { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+.chip-violet { background: rgba(118, 75, 162, 0.14); color: #764ba2; }
+.diagram-nosql-types span { background: var(--surface); border: 1px solid var(--postgres-border); color: var(--text-strong); }
+
+.diagram-acid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(70px, 1fr));
+    width: 100%;
+    gap: 7px;
+}
+
+.diagram-acid > div {
+    padding: 9px 7px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+}
+
+.diagram-acid strong {
+    display: block;
+    color: var(--postgres-blue);
+    font-size: 18px;
+}
+
+.diagram-acid span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 9px;
+}
+
+.diagram-index {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+}
+
+.diagram-index-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 10px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+}
+
+.diagram-index-row strong {
+    color: var(--postgres-blue);
+    font-size: 11px;
+}
+
+.diagram-join {
+    flex-direction: column;
+    gap: 5px;
+}
+
+.diagram-join-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 90px;
+    height: 54px;
+    border: 2px solid var(--postgres-blue);
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-weight: 800;
+}
+
+.diagram-join-circle span:last-child {
+    margin-left: -8px;
+    color: #764ba2;
+}
+
+.diagram-join p,
+.diagram-cap p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.diagram-json {
+    width: 100%;
+}
+
+.diagram-json pre {
+    margin: 0;
+    padding: 10px 12px;
+    overflow-x: auto;
+    background: #0f172a;
+    border-radius: 7px;
+    color: #dbeafe;
+    font-size: 11px;
+    text-align: left;
+}
+
+.diagram-kv {
+    gap: 8px;
+}
+
+.diagram-kv > span,
+.diagram-kv > strong {
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    color: var(--text-strong);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 10.5px;
+}
+
+.diagram-kv i {
+    color: var(--postgres-blue);
+}
+
+.diagram-columns {
+    align-items: stretch;
+}
+
+.diagram-row-view,
+.diagram-column-view {
+    display: grid;
+    gap: 4px;
+    padding: 7px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+    font-size: 9px;
+}
+
+.diagram-row-view { grid-template-columns: repeat(3, 1fr); }
+.diagram-column-view { grid-template-columns: 1fr 1fr; background: var(--accent-soft); }
+
+.diagram-graph {
+    gap: 7px;
+}
+
+.diagram-node {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(47, 111, 159, 0.3);
+    color: var(--postgres-blue);
+    font-weight: 700;
+}
+
+.diagram-edge {
+    color: var(--text-muted);
+    font-size: 9px;
+}
+
+.diagram-realtime {
+    gap: 8px;
+}
+
+.diagram-realtime span {
+    padding: 6px 9px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 6px;
+    font-size: 9.5px;
+}
+
+.diagram-realtime i {
+    color: var(--postgres-blue);
+}
+
+.diagram-cap {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.diagram-cap-triangle {
+    display: flex;
+    gap: 7px;
+}
+
+.diagram-cap-triangle span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    border-radius: 999px;
+    font-weight: 800;
+}
+
+.cap-c { background: rgba(47, 111, 159, 0.14); color: var(--postgres-blue); }
+.cap-a { background: rgba(40, 167, 69, 0.14); color: #1e7e34; }
+.cap-p { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+
+.concept-example {
+    padding: 12px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+}
+
+.concept-example pre {
+    margin: 0 0 9px;
+    overflow-x: auto;
+}
+
+.concept-example code {
+    color: var(--text-strong);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 11.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+}
+
+.concept-mistakes li::marker {
+    color: #b45309;
+}
+
+.concept-modal-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.concept-quiz {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--postgres-border);
+}
+
+.concept-quiz-intro {
+    color: var(--text-muted) !important;
+    font-size: 11.5px !important;
+}
+
+.concept-quiz-form {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.concept-quiz-question {
+    margin: 0;
+    padding: 10px 11px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+}
+
+.concept-quiz-question legend {
+    padding: 0 4px;
+    color: var(--text-strong);
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.concept-quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 4px;
+    padding: 5px 6px;
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.concept-quiz-option:hover {
+    background: var(--accent-soft);
+}
+
+.concept-quiz-option input {
+    accent-color: var(--postgres-blue);
+}
+
+.concept-quiz-result {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.concept-quiz-result:empty {
+    display: none;
+}
+
+.concept-quiz-result strong {
+    display: block;
+    color: var(--text-strong);
+}
+
+.concept-quiz-result p {
+    margin: 2px 0 0 !important;
+    font-size: 11.5px !important;
+}
+
+.concept-quiz-result.is-success {
+    background: #f0fff4;
+    border-left-color: #28a745;
+    color: #1e6b37;
+}
+
+.concept-quiz-result.is-error {
+    background: #fff5f5;
+    border-left-color: #dc3545;
+    color: #8b1e1e;
+}
+
+.concept-quiz-result details {
+    margin-top: 7px;
+}
+
+.concept-quiz-result summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.concept-related {
+    margin-top: 18px;
+    padding-top: 13px;
+    border-top: 1px solid var(--postgres-border);
+}
+
+.concept-related > span {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.concept-related > div {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.concept-related button {
+    padding: 5px 9px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 999px;
+    color: var(--text-strong);
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.concept-related button:hover {
+    border-color: var(--postgres-blue);
+    color: var(--postgres-blue);
+}
+
+.concept-library-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.concept-library-bar {
+    flex: 1 1 220px;
+    height: 8px;
+    overflow: hidden;
+    background: var(--surface-strong);
+    border-radius: 999px;
+}
+
+.concept-library-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--postgres-blue), #6c5ce7);
+}
+
+[data-theme="dark"] .learn-tab {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .learn-tab:hover {
+    background: #1e293b;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .learn-tab.active {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+[data-theme="dark"] .library-filter.active {
+    background: #172554;
+    border-color: #3b82f6;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .concept-complete-badge,
+[data-theme="dark"] .concept-modal-status.is-complete {
+    background: #064e3b;
+    border-color: #065f46;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .concept-card.is-completed {
+    background: linear-gradient(180deg, rgba(40, 167, 69, 0.08), var(--surface));
+}
+
+[data-theme="dark"] .concept-quiz-result.is-success {
+    background: #052e1a;
+    color: #86efac;
+}
+
+[data-theme="dark"] .concept-quiz-result.is-error {
+    background: #3f1313;
+    color: #fca5a5;
+}
+
+@media (max-width: 768px) {
+    .library-toolbar {
+        align-items: stretch;
+    }
+
+    .motor-finder-head {
+        flex-direction: column;
+    }
+
+    .motor-result-card {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 560px) {
+    .diagram-acid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .motor-result-card .btn-secondary,
+    .concept-modal-actions .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .concept-modal-meta {
+        align-items: flex-start;
+    }
+}
+
+.concept-card .fa-link { color: #3498db; }
+.concept-card .fa-circle-nodes { color: #e67e22; }
+
+[data-theme="dark"] .diagram-relation,
+[data-theme="dark"] .diagram-arrow,
+[data-theme="dark"] .diagram-acid strong,
+[data-theme="dark"] .diagram-index-row strong,
+[data-theme="dark"] .diagram-node,
+[data-theme="dark"] .diagram-kv i,
+[data-theme="dark"] .diagram-realtime i,
+[data-theme="dark"] .diagram-pk,
+[data-theme="dark"] .chip-blue,
+[data-theme="dark"] .cap-c {
+    color: #93c5fd;
 }

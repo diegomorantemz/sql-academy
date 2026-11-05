@@ -9,7 +9,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 ## Puntos destacados
 
 - Base de datos SQLite real en el navegador, sin backend para las consultas.
-- Persistencia automática del archivo SQLite en IndexedDB y del historial, preferencias y progreso de retos/ruta en `localStorage`.
+- Persistencia automática del archivo SQLite en IndexedDB y del historial, preferencias y progreso de retos, ruta y conceptos en `localStorage`.
 - Modo seguro activado por defecto para confirmar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, `UPDATE` sin `WHERE` y `ALTER TABLE ... DROP`.
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
 - Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
@@ -17,6 +17,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
 - Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
+- Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
 - Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
 - **Torre de Datos:** minijuego deckbuilder con 6 pisos, cartas SQL, recompensas y soporte para teclado, ratón y mando.
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
@@ -103,6 +104,7 @@ sql-academy/
 │   ├── core.test.mjs           # Utilidades del frontend con jsdom
 │   ├── autocomplete.test.mjs   # Sugerencias contextuales SQL y NoSQL
 │   ├── path.test.mjs           # Lecciones, progreso y validación de la ruta
+│   ├── learn-ui.test.mjs       # Biblioteca, filtros, asistente y mini-quizzes
 │   ├── deckbuilder.test.mjs    # Torre de Datos, cartas y validación de pisos
 │   ├── nosql.test.mjs          # Motor documental, filtros, CRUD y agregaciones
 │   └── explain.test.mjs        # Función de Netlify y prompts
@@ -206,6 +208,16 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Acciones rápidas:** copia un `SELECT` de la tabla o cárgalo en el editor para practicar.
 - **Calidad de datos:** comprobaciones de tablas vacías, claves primarias, integridad referencial, valores nulos y columnas sin tipo declarado.
 - Funciona con los tres datasets SQL y con bases importadas por el usuario.
+
+### Biblioteca de aprendizaje
+
+- **Guías y conceptos en un solo lugar:** pestañas para consultar motores SQL/NoSQL y fichas conceptuales.
+- **Buscador y filtros:** por tecnología, tipo de base de datos, licencia, nivel o tema.
+- **Asistente “¿Qué motor me conviene?”:** cuatro preguntas para recomendar PostgreSQL, MySQL, MongoDB, Redis, Neo4j, Cassandra, Firebase o Elasticsearch.
+- **Fichas de concepto:** diagramas, ideas clave, errores comunes, ejemplo copiable y conceptos relacionados.
+- **Práctica conectada:** cada ficha enlaza con la ruta, el editor SQL, el ERD o el laboratorio NoSQL cuando tiene sentido.
+- **Mini-quiz de 2 preguntas:** al superarlo, el concepto se marca como dominado.
+- **Progreso persistente:** el avance de los conceptos se guarda en `localStorage` y aparece en Mi progreso.
 
 ### Ruta de aprendizaje
 
@@ -349,6 +361,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
+- `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor y el mini-quiz de conceptos.
 - `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
 - `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
@@ -380,6 +393,17 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.7.0
+
+- **Biblioteca de aprendizaje:** Aprender y Conceptos se unifican en una sola sección con pestañas.
+- **Buscador y filtros:** encuentra motores y conceptos por texto, tecnología, nivel o tema.
+- **Asistente de motor:** un cuestionario de cuatro preguntas recomienda el motor más adecuado y explica cuándo evitarlo.
+- **Fichas de concepto mejoradas:** diagramas, errores comunes, ejemplos copiables, conceptos relacionados y acciones de práctica.
+- **Mini-quizzes:** dos preguntas por concepto, respuestas rotadas y progreso persistente.
+- **Mi progreso:** nueva sección de biblioteca de conceptos con avance y acceso directo.
+- **Contenido ampliado:** nuevas fichas de Tipos de JOIN y Teorema CAP, además de textos y tildes revisados.
+- **Calidad:** pruebas de pestañas, filtros, asistente, quiz y progreso.
 
 ### v1.6.0
 
