@@ -44,6 +44,9 @@
                     <button class="nav-btn active" data-section="learn">
                         <i class="fas fa-book"></i> Aprender
                     </button>
+                    <button class="nav-btn" data-section="path">
+                        <i class="fas fa-route"></i> Ruta
+                    </button>
                     <button class="nav-btn" data-section="practice">
                         <i class="fas fa-laptop-code"></i> Practicar
                     </button>
@@ -77,6 +80,17 @@
             <div class="section-header">
                 <h2><i class="fas fa-book"></i> Aprende sobre Bases de Datos</h2>
                 <p>Conoce los gestores SQL y NoSQL, sus conceptos y mejores practicas</p>
+            </div>
+
+            <div class="path-cta">
+                <div>
+                    <span class="path-cta-eyebrow"><i class="fas fa-route"></i> Ruta guiada</span>
+                    <h3>Aprende SQL paso a paso</h3>
+                    <p>8 lecciones cortas con editor, ejemplos, pistas y validación automática.</p>
+                </div>
+                <button type="button" id="pathCtaBtn" class="btn-primary" onclick="activateSection('path')">
+                    Comenzar ruta <i class="fas fa-arrow-right"></i>
+                </button>
             </div>
 
             <!-- ===== GESTORES SQL ===== -->
@@ -269,6 +283,47 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: RUTA DE APRENDIZAJE ===== -->
+        <section id="section-path" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-route"></i> Ruta de Aprendizaje</h2>
+                <p>Aprende SQL paso a paso con lecciones cortas y ejercicios validados</p>
+            </div>
+
+            <div class="challenges-layout">
+                <aside class="challenge-list-panel" aria-label="Lecciones de la ruta">
+                    <div class="challenge-progress">
+                        <div class="challenge-progress-head">
+                            <span>Tu progreso</span>
+                            <strong id="pathProgressText">0 de 8</strong>
+                        </div>
+                        <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de la ruta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pathProgressTrack">
+                            <div id="pathProgressBar"></div>
+                        </div>
+                    </div>
+
+                    <p id="pathDatasetLabel" class="path-dataset-label">Dataset SQL: Escuela</p>
+                    <div id="pathLessonList" class="challenge-list">
+                        <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando ruta...</p>
+                    </div>
+
+                    <button type="button" onclick="resetLearningProgress()" class="btn-secondary challenge-reset-btn">
+                        <i class="fas fa-rotate-left"></i> Reiniciar ruta
+                    </button>
+                </aside>
+
+                <div class="challenge-play-panel">
+                    <div id="pathLessonDetail" class="challenge-detail">
+                        <div class="challenge-empty">
+                            <i class="fas fa-route"></i>
+                            <h3>Cargando ruta...</h3>
+                            <p>Preparando las lecciones para el dataset activo.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

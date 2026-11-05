@@ -9,13 +9,14 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 ## Puntos destacados
 
 - Base de datos SQLite real en el navegador, sin backend para las consultas.
-- Persistencia automática del archivo SQLite en IndexedDB y del historial/preferencias en `localStorage`.
+- Persistencia automática del archivo SQLite en IndexedDB y del historial, preferencias y progreso de retos/ruta en `localStorage`.
 - Modo seguro activado por defecto para confirmar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, `UPDATE` sin `WHERE` y `ALTER TABLE ... DROP`.
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
 - Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga y ejecuta automáticamente.
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
+- Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
@@ -97,6 +98,7 @@ sql-academy/
 ├── tests/
 │   ├── core.test.mjs           # Utilidades del frontend con jsdom
 │   ├── autocomplete.test.mjs   # Sugerencias contextuales SQL y NoSQL
+│   ├── path.test.mjs           # Lecciones, progreso y validación de la ruta
 │   ├── nosql.test.mjs          # Motor documental, filtros, CRUD y agregaciones
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
@@ -200,6 +202,16 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Calidad de datos:** comprobaciones de tablas vacías, claves primarias, integridad referencial, valores nulos y columnas sin tipo declarado.
 - Funciona con los tres datasets SQL y con bases importadas por el usuario.
 
+### Ruta de aprendizaje
+
+- **8 lecciones progresivas:** `SELECT`, `WHERE`, `ORDER BY`, `LIMIT`, `JOIN`, `GROUP BY`, `HAVING` y subconsultas.
+- **Contenido adaptado al dataset activo:** las tablas, columnas y ejercicios cambian para Escuela, Tienda y Biblioteca.
+- **Editor propio por lección:** cada ejercicio se resuelve sin salir de la ruta.
+- **Ayudas:** objetivo, explicación, ejemplo de referencia y pista.
+- **Validación por resultado:** se compara la consulta con el resultado esperado y se indica si faltan filas, columnas o valores.
+- **Progreso persistente:** cada lección completada se guarda por dataset en `localStorage`.
+- **Navegación guiada:** botón para pasar a la siguiente lección y opción de reiniciar la ruta.
+
 ### Retos
 
 - Ejercicios de nivel básico, intermedio y avanzado para cada dataset.
@@ -207,7 +219,7 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - Solo se permiten consultas de lectura (`SELECT` o `WITH`).
 - Pistas, solución después de varios intentos y progreso guardado en `localStorage`.
 - Escuela, Tienda y Biblioteca tienen retos propios; el progreso se guarda por reto y dataset.
-- La página Retos incluye pestañas SQL y NoSQL. Los retos NoSQL se abren en el laboratorio documental y la solución se revela tras dos intentos fallidos.
+- La página Retos incluye pestañas SQL y NoSQL. Los retos NoSQL se resuelven en la propia pestaña con editor y validación por resultados.
 
 ### Asistente IA
 
@@ -229,7 +241,7 @@ El modo se valida en el backend con una allowlist. El frontend envía la consult
 - Ejecución con `Ctrl+Enter`.
 - Si hay texto seleccionado, se ejecuta solo esa selección.
 - **Formatear** consulta con el botón o con `Ctrl+Shift+F`; también formatea solo la selección.
-- **Autocompletado contextual:** sugiere tablas después de `FROM`/`JOIN`, columnas después de un alias o en cláusulas como `SELECT`, `WHERE` y `ORDER BY`, además de palabras clave y funciones.
+- **Autocompletado contextual:** sugiere tablas después de `FROM`/`JOIN`, columnas después de un alias o en cláusulas como `SELECT`, `WHERE` y `ORDER BY`, además de palabras clave y funciones. Funciona en práctica, retos SQL, ruta de aprendizaje y editores NoSQL.
 - Navegación con `↑`/`↓`, `Enter` o `Tab` para aceptar y `Esc` para cerrar.
 - Historial persistente con recarga de consultas.
 - Ejemplos guiados por categoría.
@@ -320,6 +332,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
+- `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso y la validación de ejercicios.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
 - `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL y la navegación al laboratorio.
@@ -349,6 +362,15 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.5.8
+
+- **Ruta de aprendizaje SQL:** 8 lecciones progresivas con editor propio, objetivo, explicación, ejemplo y pista.
+- **Contenido adaptado:** las lecciones cambian según el dataset activo (Escuela, Tienda o Biblioteca).
+- **Validación por resultado:** se comparan columnas, filas y valores de la consulta del usuario con la solución esperada.
+- **Progreso persistente:** cada lección completada se guarda por dataset y se puede reiniciar desde la propia ruta.
+- **Navegación guiada:** botón para continuar con la siguiente lección y acceso directo desde la barra principal.
+- **Calidad:** pruebas de las 8 lecciones en los tres datasets, del progreso y de la validación de ejercicios.
 
 ### v1.5.7
 

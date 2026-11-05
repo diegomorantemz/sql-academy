@@ -12,7 +12,8 @@ let analyzeSelectedTable = null;
 const STORAGE_KEYS = {
     history: 'sql-academy-history-v1',
     preferences: 'sql-academy-preferences-v1',
-    challenges: 'sql-academy-challenges-v1'
+    challenges: 'sql-academy-challenges-v1',
+    learningPath: 'sql-academy-path-v1'
 };
 const PERSIST_DB_NAME = 'sql-academy';
 const PERSIST_DB_VERSION = 1;
@@ -3983,6 +3984,8 @@ let currentChallengeId = null;
 let challengeAttempts = 0;
 let challengeProgress = {};
 let selectedNoSQLChallengeId = null;
+let learningPathProgress = {};
+let currentLearningLessonId = null;
 
 function loadChallengeProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.challenges, {});
@@ -4071,6 +4074,7 @@ function refreshPracticeContentForDataset() {
     challengeAttempts = 0;
     renderChallengeList();
     renderChallengePlaceholder();
+    refreshLearningPath({ selectFirst: true });
 }
 
 function openChallenge(id) {
@@ -4332,6 +4336,586 @@ function resetChallengeProgress() {
     currentChallengeId = null;
     challengeAttempts = 0;
     showToast('info', `Progreso de retos de ${datasetLabel} reiniciado.`);
+}
+
+// ============================================
+// RUTA DE APRENDIZAJE SQL
+// ============================================
+
+const LEARNING_PATH_PROFILES = {
+    escuela: {
+        name: 'Escuela',
+        mainTable: 'estudiantes',
+        labelColumn: 'nombre',
+        filterColumn: 'carrera',
+        filterValue: 'Ingenieria',
+        sortColumn: 'promedio',
+        groupColumn: 'carrera',
+        exampleGroup: { table: 'estudiantes', column: 'ciudad' },
+        join: {
+            left: 'estudiantes',
+            right: 'inscripciones',
+            leftKey: 'id',
+            rightKey: 'estudiante_id',
+            columns: 'estudiantes.nombre, inscripciones.anio, inscripciones.nota',
+            description: 'Cada inscripción pertenece a un estudiante.'
+        }
+    },
+    tienda: {
+        name: 'Tienda',
+        mainTable: 'productos',
+        labelColumn: 'nombre',
+        filterColumn: 'categoria',
+        filterValue: 'Perifericos',
+        sortColumn: 'precio',
+        groupColumn: 'categoria',
+        exampleGroup: { table: 'pedidos', column: 'estado' },
+        join: {
+            left: 'pedidos',
+            right: 'clientes',
+            leftKey: 'cliente_id',
+            rightKey: 'id',
+            columns: 'clientes.nombre, pedidos.fecha, pedidos.estado',
+            description: 'Cada pedido pertenece a un cliente.'
+        }
+    },
+    biblioteca: {
+        name: 'Biblioteca',
+        mainTable: 'libros',
+        labelColumn: 'titulo',
+        filterColumn: 'genero',
+        filterValue: 'Novela',
+        sortColumn: 'anio',
+        groupColumn: 'genero',
+        exampleGroup: { table: 'libros', column: 'disponible' },
+        join: {
+            left: 'libros',
+            right: 'autores',
+            leftKey: 'autor_id',
+            rightKey: 'id',
+            columns: 'libros.titulo, autores.nombre',
+            description: 'Cada libro tiene un autor.'
+        }
+    }
+};
+
+function buildLearningLessons(profile) {
+    const main = profile.mainTable;
+    const label = profile.labelColumn;
+    const filter = profile.filterColumn;
+    const filterValue = profile.filterValue;
+    const sort = profile.sortColumn;
+    const group = profile.groupColumn;
+    const exampleGroup = profile.exampleGroup || { table: main, column: group };
+    const join = profile.join;
+    const joinCondition = `${join.left}.${join.leftKey} = ${join.right}.${join.rightKey}`;
+
+    return [
+        {
+            id: 'select',
+            title: 'Selecciona columnas',
+            level: 'Básico',
+            objective: `Aprende a elegir solo las columnas que necesitas de ${main}.`,
+            explanation: `SELECT * devuelve todas las columnas. En una consulta real conviene pedir solo los datos que vas a usar: ${label} y ${sort}.`,
+            example: `SELECT ${label}\nFROM ${main};`,
+            starter: `SELECT *\nFROM ${main};`,
+            expectedSql: `SELECT ${label}, ${sort}\nFROM ${main};`,
+            hint: `Sustituye * por ${label}, ${sort}.`,
+            ordered: false
+        },
+        {
+            id: 'where',
+            title: 'Filtra con WHERE',
+            level: 'Básico',
+            objective: `Filtra las filas de ${main} donde ${filter} sea '${filterValue}'.`,
+            explanation: 'WHERE se ejecuta sobre cada fila y solo deja pasar las que cumplen la condición. Los textos van entre comillas simples.',
+            example: `SELECT *\nFROM ${main}\nWHERE ${filter} = '${filterValue}';`,
+            starter: `SELECT ${label}, ${filter}\nFROM ${main}\nWHERE ${filter} = '';`,
+            expectedSql: `SELECT ${label}, ${filter}\nFROM ${main}\nWHERE ${filter} = '${filterValue}';`,
+            hint: `Escribe '${filterValue}' entre las comillas simples del WHERE.`,
+            ordered: false
+        },
+        {
+            id: 'order',
+            title: 'Ordena con ORDER BY',
+            level: 'Básico',
+            objective: `Ordena ${main} por ${sort} de mayor a menor. Si hay empate, usa ${label} de forma ascendente.`,
+            explanation: 'ORDER BY ordena el resultado. ASC es ascendente y DESC descendente. Puedes indicar más de un criterio separándolos con comas.',
+            example: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} ASC, ${label} ASC;`,
+            starter: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort};`,
+            expectedSql: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} DESC, ${label} ASC;`,
+            hint: `Añade DESC a ${sort} y un segundo criterio: ${label} ASC.`,
+            ordered: true
+        },
+        {
+            id: 'limit',
+            title: 'Limita resultados',
+            level: 'Básico',
+            objective: `Muestra solo los 5 primeros resultados después de ordenar por ${sort} y desempatar por ${label}.`,
+            explanation: 'LIMIT corta el resultado. Se suele combinar con ORDER BY para obtener el top N.',
+            example: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} DESC, ${label} ASC\nLIMIT 3;`,
+            starter: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} DESC, ${label} ASC\nLIMIT 3;`,
+            expectedSql: `SELECT ${label}, ${sort}\nFROM ${main}\nORDER BY ${sort} DESC, ${label} ASC\nLIMIT 5;`,
+            hint: 'Mantén el orden y cambia LIMIT 3 por LIMIT 5.',
+            ordered: true
+        },
+        {
+            id: 'join',
+            title: 'Combina tablas con JOIN',
+            level: 'Intermedio',
+            objective: `Une ${join.left} con ${join.right} usando su clave.`,
+            explanation: `${join.description} JOIN combina filas de dos tablas y ON indica la condición que las relaciona.`,
+            example: `SELECT *\nFROM ${join.left}\nJOIN ${join.right}\n  ON ${joinCondition};`,
+            starter: `SELECT *\nFROM ${join.left}\nJOIN ${join.right}\n  ON ${joinCondition};`,
+            expectedSql: `SELECT ${join.columns}\nFROM ${join.left}\nJOIN ${join.right}\n  ON ${joinCondition};`,
+            hint: `En el SELECT escribe: ${join.columns}.`,
+            ordered: false
+        },
+        {
+            id: 'group',
+            title: 'Agrupa y cuenta',
+            level: 'Intermedio',
+            objective: `Cuenta cuántas filas hay para cada valor de ${group} y ordena de mayor a menor.`,
+            explanation: 'GROUP BY agrupa filas que comparten un valor. COUNT(*) cuenta cuántas hay en cada grupo.',
+            example: `SELECT ${exampleGroup.column}, COUNT(*)\nFROM ${exampleGroup.table}\nGROUP BY ${exampleGroup.column};`,
+            starter: `SELECT ${group}, COUNT(*)\nFROM ${main};`,
+            expectedSql: `SELECT ${group}, COUNT(*) AS total\nFROM ${main}\nGROUP BY ${group}\nORDER BY total DESC, ${group} ASC;`,
+            hint: `Usa COUNT(*) AS total y ordena por total DESC; si hay empate, por ${group} ASC.`,
+            ordered: true
+        },
+        {
+            id: 'having',
+            title: 'Filtra grupos con HAVING',
+            level: 'Avanzado',
+            objective: `Muestra solo los grupos de ${group} que tienen más de una fila, ordenados por total.`,
+            explanation: 'WHERE filtra filas antes de agrupar; HAVING filtra grupos después de GROUP BY.',
+            example: `SELECT ${exampleGroup.column}, COUNT(*) AS total\nFROM ${exampleGroup.table}\nGROUP BY ${exampleGroup.column}\nHAVING COUNT(*) > 2;`,
+            starter: `SELECT ${group}, COUNT(*) AS total\nFROM ${main}\nGROUP BY ${group};`,
+            expectedSql: `SELECT ${group}, COUNT(*) AS total\nFROM ${main}\nGROUP BY ${group}\nHAVING COUNT(*) > 1\nORDER BY total DESC, ${group} ASC;`,
+            hint: `Añade HAVING COUNT(*) > 1 y ordena por total DESC, ${group} ASC.`,
+            ordered: true
+        },
+        {
+            id: 'subquery',
+            title: 'Usa una subconsulta',
+            level: 'Avanzado',
+            objective: `Compara cada fila con el promedio de ${sort} usando una subconsulta.`,
+            explanation: `Una subconsulta es una consulta dentro de otra. Aquí calcula el promedio de ${sort} y el WHERE lo usa como referencia.`,
+            example: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > 0\nORDER BY ${sort} DESC, ${label} ASC;`,
+            starter: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > 0\nORDER BY ${sort} DESC, ${label} ASC;`,
+            expectedSql: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > (SELECT AVG(${sort}) FROM ${main})\nORDER BY ${sort} DESC, ${label} ASC;`,
+            hint: `Sustituye 0 por (SELECT AVG(${sort}) FROM ${main}) y mantén el orden.`,
+            ordered: true
+        }
+    ];
+}
+
+function getLearningDatasetName() {
+    return LEARNING_PATH_PROFILES[preferences.dataset] ? preferences.dataset : 'escuela';
+}
+
+function getLearningProfile() {
+    return LEARNING_PATH_PROFILES[getLearningDatasetName()];
+}
+
+function getLearningLessonsForDataset(datasetName) {
+    return buildLearningLessons(LEARNING_PATH_PROFILES[datasetName] || LEARNING_PATH_PROFILES.escuela);
+}
+
+function getLearningLessons() {
+    return getLearningLessonsForDataset(getLearningDatasetName());
+}
+
+function getLearningLessonById(id) {
+    return getLearningLessons().find(lesson => lesson.id === id) || null;
+}
+
+function getLearningLevelClass(level) {
+    if (level === 'Básico') return 'basico';
+    if (level === 'Intermedio') return 'intermedio';
+    return 'avanzado';
+}
+
+function loadLearningPathProgress() {
+    const stored = readStoredJSON(STORAGE_KEYS.learningPath, {});
+    learningPathProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+}
+
+function saveLearningPathProgress() {
+    writeStoredJSON(STORAGE_KEYS.learningPath, learningPathProgress);
+}
+
+function getLearningDatasetProgress() {
+    const dataset = getLearningDatasetName();
+    if (!learningPathProgress[dataset] || typeof learningPathProgress[dataset] !== 'object') {
+        learningPathProgress[dataset] = {};
+    }
+    return learningPathProgress[dataset];
+}
+
+function isLearningLessonCompleted(id) {
+    return Boolean(getLearningDatasetProgress()[id]?.completed);
+}
+
+function markLearningLessonCompleted(id) {
+    getLearningDatasetProgress()[id] = {
+        completed: true,
+        completedAt: new Date().toISOString()
+    };
+    saveLearningPathProgress();
+}
+
+function getLearningProgressStats() {
+    const lessons = getLearningLessons();
+    const completed = lessons.filter(lesson => isLearningLessonCompleted(lesson.id)).length;
+    return {
+        total: lessons.length,
+        completed,
+        percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0
+    };
+}
+
+function renderLearningPathList() {
+    const list = document.getElementById('pathLessonList');
+    if (!list) return;
+
+    const lessons = getLearningLessons();
+    const profile = getLearningProfile();
+    const stats = getLearningProgressStats();
+    const progressText = document.getElementById('pathProgressText');
+    const progressBar = document.getElementById('pathProgressBar');
+    const progressTrack = document.getElementById('pathProgressTrack');
+    const datasetLabel = document.getElementById('pathDatasetLabel');
+
+    if (progressText) progressText.textContent = `${stats.completed} de ${stats.total}`;
+    if (progressBar) progressBar.style.width = `${stats.percent}%`;
+    if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(stats.percent));
+    if (datasetLabel) datasetLabel.textContent = `Dataset SQL: ${profile.name}`;
+
+    const ctaButton = document.getElementById('pathCtaBtn');
+    if (ctaButton) {
+        const ctaLabel = stats.completed === stats.total
+            ? 'Repasar ruta'
+            : stats.completed > 0
+                ? 'Continuar ruta'
+                : 'Comenzar ruta';
+        ctaButton.innerHTML = `${ctaLabel} <i class="fas fa-arrow-right"></i>`;
+    }
+
+    if (!lessons.length) {
+        list.innerHTML = '<p class="text-muted">No hay lecciones disponibles.</p>';
+        return;
+    }
+
+    if (!currentLearningLessonId || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
+        const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
+        currentLearningLessonId = next.id;
+    }
+
+    list.innerHTML = lessons.map((lesson, index) => {
+        const completed = isLearningLessonCompleted(lesson.id);
+        const active = lesson.id === currentLearningLessonId;
+        const status = completed ? 'Completada' : (active ? 'En curso' : 'Pendiente');
+        return `
+            <button type="button" class="challenge-card path-step${active ? ' active' : ''}${completed ? ' completed' : ''}" data-learning-lesson="${escapeHtml(lesson.id)}" aria-pressed="${active}">
+                <span class="challenge-card-title">
+                    <span class="path-step-index">${completed ? '<i class="fas fa-check"></i>' : index + 1}</span>
+                    <span class="path-step-title">${escapeHtml(lesson.title)}</span>
+                </span>
+                <span class="challenge-card-meta">
+                    <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
+                    <span>${status}</span>
+                </span>
+            </button>
+        `;
+    }).join('');
+
+    list.querySelectorAll('[data-learning-lesson]').forEach(button => {
+        button.addEventListener('click', () => selectLearningLesson(button.dataset.learningLesson));
+    });
+}
+
+function renderLearningLessonDetail() {
+    const detail = document.getElementById('pathLessonDetail');
+    if (!detail) return;
+
+    const lessons = getLearningLessons();
+    const lesson = getLearningLessonById(currentLearningLessonId);
+    if (!lesson) {
+        detail.innerHTML = `
+            <div class="challenge-empty">
+                <i class="fas fa-route"></i>
+                <h3>Elige una lección</h3>
+                <p>Selecciona un paso de la ruta para empezar a practicar.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const profile = getLearningProfile();
+    const tables = dbInitialized && typeof getUserTables === 'function' ? getUserTables() : [];
+    if (tables.length > 0 && !tables.includes(profile.mainTable)) {
+        detail.innerHTML = `
+            <div class="challenge-empty">
+                <i class="fas fa-database"></i>
+                <h3>Dataset no compatible</h3>
+                <p>La ruta de ${escapeHtml(profile.name)} necesita la tabla <code>${escapeHtml(profile.mainTable)}</code>. Cambia de dataset o reinicia la base para practicar.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const index = lessons.findIndex(item => item.id === lesson.id);
+    const completed = isLearningLessonCompleted(lesson.id);
+    const nextLesson = lessons[index + 1];
+    const stats = getLearningProgressStats();
+    const allComplete = stats.completed === stats.total;
+    const nextMarkup = nextLesson
+        ? `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`
+        : allComplete
+            ? '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>'
+            : '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes.</div>';
+
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <h3>${index + 1}. ${escapeHtml(lesson.title)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
+                    <span class="text-muted">Lección ${index + 1} de ${lessons.length}</span>
+                    <span id="pathLessonStatus" class="path-completed-badge" ${completed ? '' : 'hidden'}><i class="fas fa-check"></i> Completada</span>
+                </div>
+            </div>
+        </div>
+        <div class="path-objective">
+            <span>Objetivo</span>
+            <p>${escapeHtml(lesson.objective)}</p>
+        </div>
+        <div class="challenge-description">${escapeHtml(lesson.explanation)}</div>
+        <div class="path-example">
+            <div class="path-example-head">
+                <span><i class="fas fa-code"></i> Ejemplo</span>
+                <button type="button" class="btn-ghost btn-sm" onclick="loadLearningExample()">
+                    <i class="fas fa-arrow-down"></i> Usar ejemplo
+                </button>
+            </div>
+            <pre><code>${escapeHtml(lesson.example)}</code></pre>
+        </div>
+        <label for="pathEditor" class="sr-only">Consulta SQL para la lección</label>
+        <textarea id="pathEditor" spellcheck="false" placeholder="Escribe tu consulta SQL aquí...">${escapeHtml(lesson.starter)}</textarea>
+        <div class="challenge-actions">
+            <button type="button" id="pathRunBtn" onclick="runLearningLesson()">
+                <i class="fas fa-play"></i> Comprobar lección
+            </button>
+            <button type="button" id="pathHintBtn" class="btn-secondary" onclick="showLearningHint()">
+                <i class="fas fa-lightbulb"></i> Ver pista
+            </button>
+            <button type="button" class="btn-secondary" onclick="clearLearningEditor()">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+        </div>
+        <div id="pathHint" class="challenge-hint" hidden>${escapeHtml(lesson.hint)}</div>
+        <div id="pathResult" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para practicar</strong>
+            Escribe tu consulta y pulsa «Comprobar lección».
+        </div>
+        <div id="pathNext" class="path-next" ${completed ? '' : 'hidden'}>${completed ? nextMarkup : ''}</div>
+    `;
+}
+
+function renderLearningPath() {
+    renderLearningPathList();
+    renderLearningLessonDetail();
+}
+
+function refreshLearningPath(options = {}) {
+    const lessons = getLearningLessons();
+    if (options.selectFirst || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
+        const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
+        currentLearningLessonId = next?.id || null;
+    }
+    renderLearningPath();
+}
+
+function initLearningPath() {
+    loadLearningPathProgress();
+    currentLearningLessonId = null;
+    refreshLearningPath({ selectFirst: true });
+
+    document.addEventListener('keydown', event => {
+        if (event.target?.id !== 'pathEditor') return;
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            event.preventDefault();
+            runLearningLesson();
+        }
+    });
+}
+
+function selectLearningLesson(id) {
+    if (!getLearningLessonById(id)) return;
+    currentLearningLessonId = id;
+    renderLearningPath();
+    const editor = document.getElementById('pathEditor');
+    if (editor) editor.focus();
+}
+
+function setLearningResult(type, html) {
+    const result = document.getElementById('pathResult');
+    if (!result) return;
+    result.className = `challenge-result ${type}`;
+    result.innerHTML = html;
+}
+
+function resetLearningResult() {
+    const result = document.getElementById('pathResult');
+    if (!result) return;
+    result.className = 'challenge-result';
+    result.innerHTML = '<strong><i class="fas fa-circle-info"></i> Listo para practicar</strong> Escribe tu consulta y pulsa «Comprobar lección».';
+}
+
+function learningComparisonMessage(comparison) {
+    if (comparison.reason === 'columns') {
+        return `Se esperaban ${comparison.expectedColumns} columnas y tu consulta devolvió ${comparison.actualColumns}. Revisa el SELECT.`;
+    }
+    if (comparison.reason === 'rows') {
+        return `Se esperaban ${comparison.expectedRows} filas y tu consulta devolvió ${comparison.actualRows}. Revisa el filtro, el JOIN o el LIMIT.`;
+    }
+    if (comparison.reason === 'values') {
+        return 'Las filas y columnas coinciden, pero los valores no. Revisa el orden, los cálculos o las columnas seleccionadas.';
+    }
+    if (comparison.reason === 'no_result') {
+        return 'Tu consulta no devolvió un conjunto de resultados.';
+    }
+    return 'Todavía no coincide con el resultado esperado.';
+}
+
+function showLearningNext(lesson) {
+    const container = document.getElementById('pathNext');
+    if (!container) return;
+    const lessons = getLearningLessons();
+    const index = lessons.findIndex(item => item.id === lesson.id);
+    const nextLesson = lessons[index + 1];
+    const stats = getLearningProgressStats();
+
+    container.hidden = false;
+    if (nextLesson) {
+        container.innerHTML = `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`;
+    } else if (stats.completed === stats.total) {
+        container.innerHTML = '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
+    } else {
+        container.innerHTML = '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes.</div>';
+    }
+}
+
+function runLearningLesson(database = db, initialized = dbInitialized) {
+    const lesson = getLearningLessonById(currentLearningLessonId);
+    const editor = document.getElementById('pathEditor');
+    if (!lesson || !editor) return;
+
+    const query = editor.value.trim();
+    if (!query) {
+        setLearningResult('warning', '<strong><i class="fas fa-circle-exclamation"></i> Falta la consulta</strong> Escribe una consulta antes de comprobarla.');
+        return;
+    }
+    if (!isReadOnlyQuery(query)) {
+        setLearningResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> La ruta solo permite consultas <code>SELECT</code> o <code>WITH</code>.');
+        return;
+    }
+    if (!initialized || !database) {
+        setLearningResult('warning', '<strong><i class="fas fa-hourglass-half"></i> Base de datos no disponible</strong> Espera a que termine de inicializarse e inténtalo de nuevo.');
+        return;
+    }
+
+    try {
+        const expected = database.exec(lesson.expectedSql);
+        const actual = database.exec(query);
+        const comparison = compareChallengeResults(expected, actual, lesson.ordered);
+
+        if (comparison.ok) {
+            markLearningLessonCompleted(lesson.id);
+            renderLearningPathList();
+            const status = document.getElementById('pathLessonStatus');
+            if (status) status.hidden = false;
+            const stats = getLearningProgressStats();
+            const lessons = getLearningLessons();
+            const currentIndex = lessons.findIndex(item => item.id === lesson.id);
+            const hasNext = Boolean(lessons[currentIndex + 1]);
+            const nextMessage = stats.completed === stats.total
+                ? 'Has terminado la ruta.'
+                : hasNext
+                    ? 'Puedes continuar con la siguiente lección.'
+                    : 'Has completado esta lección. Aún quedan pendientes en la ruta.';
+            setLearningResult('success', `
+                <strong><i class="fas fa-circle-check"></i> Lección completada</strong>
+                Tu consulta devuelve el resultado esperado. ${nextMessage}
+            `);
+            showLearningNext(lesson);
+            showToast('success', 'Lección completada.');
+            return;
+        }
+
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-xmark"></i> Todavía no</strong>
+            ${escapeHtml(learningComparisonMessage(comparison))}
+        `);
+    } catch (error) {
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Error en la consulta</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+        `);
+    }
+}
+
+function nextLearningLesson() {
+    const lessons = getLearningLessons();
+    const index = lessons.findIndex(lesson => lesson.id === currentLearningLessonId);
+    const next = lessons[index + 1];
+    if (next) {
+        selectLearningLesson(next.id);
+    } else {
+        showToast('success', '¡Has llegado al final de la ruta!');
+    }
+}
+
+function showLearningHint() {
+    const hint = document.getElementById('pathHint');
+    const button = document.getElementById('pathHintBtn');
+    if (!hint) return;
+    hint.hidden = !hint.hidden;
+    if (button) {
+        button.innerHTML = hint.hidden
+            ? '<i class="fas fa-lightbulb"></i> Ver pista'
+            : '<i class="fas fa-eye-slash"></i> Ocultar pista';
+    }
+}
+
+function clearLearningEditor() {
+    const editor = document.getElementById('pathEditor');
+    if (!editor) return;
+    editor.value = '';
+    resetLearningResult();
+    editor.focus();
+}
+
+function loadLearningExample() {
+    const lesson = getLearningLessonById(currentLearningLessonId);
+    const editor = document.getElementById('pathEditor');
+    if (!lesson || !editor) return;
+    editor.value = lesson.example;
+    resetLearningResult();
+    editor.focus();
+    showToast('info', 'Ejemplo cargado en el editor.');
+}
+
+function resetLearningProgress() {
+    const profile = getLearningProfile();
+    if (!confirm(`¿Reiniciar tu progreso de la ruta de ${profile.name}?`)) return;
+
+    delete learningPathProgress[getLearningDatasetName()];
+    saveLearningPathProgress();
+    currentLearningLessonId = null;
+    refreshLearningPath({ selectFirst: true });
+    showToast('info', `Progreso de la ruta de ${profile.name} reiniciado.`);
 }
 
 // ============================================
@@ -4646,6 +5230,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateHistoryDisplay();
     renderCategorySelector();
     initChallenges();
+    initLearningPath();
 
     // Inicializar base de datos (restaura la copia local si existe).
     initDatabase();
