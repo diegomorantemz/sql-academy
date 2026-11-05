@@ -401,6 +401,13 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Release Notes
 
+### v1.7.10
+
+- **QR centrado:** el modal de donaciones usa una columna centrada, sin el espacio vacío lateral.
+- **Interfaz más compacta:** el QR, las instrucciones y el monto libre comparten el mismo eje visual.
+- **Sin emojis:** se retiraron los emojis de las frases y el icono de corazón de la donación.
+- **Caché PWA:** actualizada para el nuevo layout.
+
 ### v1.7.9
 
 - **Donación más directa:** el modal reduce el texto a una frase de introducción, el QR y una línea de monto libre.

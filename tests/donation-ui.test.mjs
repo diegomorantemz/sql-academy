@@ -61,6 +61,8 @@ test('el modal de donaciones abre en Yape y muestra las opciones actuales', () =
     assert.match(body.textContent, /Hosting, dominio y mantenimiento/);
     assert.equal(body.querySelectorAll('.donation-method-tab').length, 2);
     assert.equal(body.querySelectorAll('.donation-steps, .donation-transparency').length, 0);
+    assert.equal(body.querySelector('.fa-heart'), null);
+    assert.doesNotMatch(body.textContent, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
     assert.match(body.textContent, /Yape/);
     assert.match(body.textContent, /Plin/);
     assert.doesNotMatch(body.textContent, /PayPal/);

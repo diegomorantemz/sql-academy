@@ -3390,21 +3390,21 @@ const DONATION_METHODS = {
 };
 
 const DONATION_QUOTES = [
-    'Este código no se va a escribir solo... bueno, a veces sí, pero con café es más rápido ☕',
-    'Tu donación es como un buen índice: hace que todo sea más rápido 🚀',
-    'Con esto compro café para seguir soñando con código limpio 🧠',
-    'Apoya a un programador, evita que tenga que usar Excel 🐛',
-    'El servidor también tiene sentimientos (y necesita café) ❤️',
-    'Las donaciones son como las transacciones ACID: confiables y necesarias 🔑',
-    'Gracias a ti, este proyecto no muere en el olvido 🤖',
-    'Tu aporte es más rápido que un SELECT sin WHERE 😎',
-    'Así como las bases de datos necesitan índices, yo necesito café 📊',
-    'Cada café es un commit más en mi vida ☕💻',
-    'Las donaciones son el motor que mueve este proyecto 🚀',
-    'Programar sin café es como SQL sin JOIN: incompleto 😅',
-    'Tu donación me da energía para seguir debugueando 🔍',
-    'Café + código = felicidad (y bases de datos funcionales) ☕💻',
-    'No es una donación, es una inversión en código de calidad 📈'
+    'Este código no se va a escribir solo... bueno, a veces sí.',
+    'Tu donación es como un buen índice: hace que todo sea más rápido.',
+    'Con esto compro café para seguir soñando con código limpio.',
+    'Apoya a un programador, evita que tenga que usar Excel.',
+    'El servidor también tiene sentimientos (y necesita café).',
+    'Las donaciones son como las transacciones ACID: confiables y necesarias.',
+    'Gracias a ti, este proyecto no muere en el olvido.',
+    'Tu aporte es más rápido que un SELECT sin WHERE.',
+    'Así como las bases de datos necesitan índices, yo necesito café.',
+    'Cada café es un commit más en mi vida.',
+    'Las donaciones son el motor que mueve este proyecto.',
+    'Programar sin café es como SQL sin JOIN: incompleto.',
+    'Tu donación me da energía para seguir debugueando.',
+    'Café + código = felicidad.',
+    'No es una donación, es una inversión en código de calidad.'
 ];
 
 function getEnabledDonationMethods() {
@@ -3502,7 +3502,7 @@ function showDonationQR(type = 'yape') {
             <div class="donation-quote">“${escapeHtml(quote)}”</div>
 
             <div class="donation-voluntary">
-                <i class="fas fa-heart"></i> 100% voluntario · No bloquea nada.
+                100% voluntario · No bloquea nada.
             </div>
             <p class="donation-footnote"><i class="fas fa-server"></i> Hosting, dominio y mantenimiento.</p>
         </div>
