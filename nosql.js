@@ -509,6 +509,16 @@
         `;
     }
 
+    function clearQuery() {
+        const editor = getElement('nosqlEditor');
+        if (!editor) return;
+        if (editor.value.trim() === '') return;
+        editor.value = '';
+        editor.selectionStart = editor.selectionEnd = 0;
+        editor.focus();
+        showToast('warning', 'Editor NoSQL limpiado.');
+    }
+
     function validateChallenge(result) {
         if (!activeChallengeId) return null;
         const challenge = getActiveChallenges().find(item => item.id === activeChallengeId);
@@ -880,6 +890,7 @@
     global.runNoSQLQuery = runQuery;
     global.clearNoSQLHistory = clearHistory;
     global.clearNoSQLResult = clearResult;
+    global.clearNoSQLQuery = clearQuery;
     global.loadNoSQLExample = loadExample;
     global.loadNextNoSQLExample = loadNextExample;
     global.loadNoSQLCollection = loadCollection;

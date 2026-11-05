@@ -121,6 +121,27 @@ test('los ejemplos y retos cargan el contenido del dataset activo', () => {
     assert.match(escuelaFeedback.textContent, /Reto completado/);
 });
 
+test('limpiar el editor NoSQL no borra el historial ni los resultados', () => {
+    const editor = window.document.querySelector('#nosqlEditor');
+    const history = window.document.querySelector('#nosqlHistoryList');
+    editor.value = 'db.estudiantes.find({})';
+    history.innerHTML = '<li>consulta guardada</li>';
+
+    window.clearNoSQLQuery();
+
+    assert.equal(editor.value, '');
+    assert.match(history.textContent, /consulta guardada/);
+});
+
+test('limpiar resultados NoSQL muestra el placeholder', () => {
+    const output = window.document.querySelector('#nosqlResultOutput');
+    output.innerHTML = '<p>resultado anterior</p>';
+
+    window.clearNoSQLResult();
+
+    assert.match(output.textContent, /Ejecuta un comando/);
+});
+
 test('runNoSQLChallengeCommand valida un reto sin el editor del laboratorio', () => {
     window.changeNoSQLDataset('tienda', { silent: true });
     const challenge = getChallenge('nosql-tienda-stock');

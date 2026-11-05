@@ -394,6 +394,13 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Release Notes
 
+### v1.7.4
+
+- **Limpiar en NoSQL:** el botón «Limpiar» del editor ahora vacía el comando, igual que en SQL.
+- **Limpiar resultados:** se añadió una acción independiente en el panel de resultados.
+- **Historial intacto:** limpiar el editor ya no afecta al historial ni a los resultados.
+- **Calidad:** pruebas de limpieza de editor y de resultados NoSQL.
+
 ### v1.7.3
 
 - **Ejemplos sin auto-ejecución:** al elegir un ejemplo SQL o NoSQL, la consulta se carga en el editor pero no se ejecuta.
