@@ -25,12 +25,20 @@ const dom = new JSDOM(
         <section id="section-challenges" class="section">
             <button id="sqlChallengesTab" class="challenge-tab active" data-challenge-tab="sql"></button>
             <button id="nosqlChallengesTab" class="challenge-tab" data-challenge-tab="nosql"></button>
+            <button id="debugChallengesTab" class="challenge-tab" data-challenge-tab="debug"></button>
             <div id="sqlChallengesPanel" class="challenge-tab-panel active"></div>
             <div id="nosqlChallengesPanel" class="challenge-tab-panel" hidden>
                 <p id="nosqlHubDatasetLabel"></p>
                 <strong id="nosqlHubProgressText"></strong>
                 <div id="nosqlHubChallengeList"></div>
                 <div id="nosqlHubChallengeDetail"></div>
+            </div>
+            <div id="debugChallengesPanel" class="challenge-tab-panel" hidden>
+                <strong id="debugProgressText"></strong>
+                <div id="debugProgressBar"></div>
+                <div id="debugProgressTrack"></div>
+                <div id="debugChallengeList"></div>
+                <div id="debugChallengeDetail"></div>
             </div>
         </section>
         <textarea id="sqlEditor"></textarea>
@@ -150,4 +158,85 @@ test('el laboratorio NoSQL ya no muestra el panel de reto activo', () => {
     const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     assert.doesNotMatch(html, /Reto NoSQL activo/);
     assert.doesNotMatch(html, /id="nosqlChallengeDetail"/);
+});
+
+test('la pestaña Depuración muestra los retos del dataset activo', () => {
+    window.localStorage.setItem(
+        'sql-academy-preferences-v1',
+        JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
+    );
+    window.loadPreferences();
+    window.refreshPracticeContentForDataset();
+
+    window.activateChallengeTab('debug');
+
+    const panel = window.document.getElementById('debugChallengesPanel');
+    const list = window.document.getElementById('debugChallengeList');
+    assert.equal(window.document.getElementById('sqlChallengesPanel').hidden, true);
+    assert.equal(window.document.getElementById('nosqlChallengesPanel').hidden, true);
+    assert.equal(panel.hidden, false);
+    assert.equal(list.querySelectorAll('.challenge-card').length, 4);
+    assert.match(list.textContent, /Filtra estados después de agrupar/);
+    assert.equal(window.document.getElementById('debugProgressText').textContent, '0 de 4');
+    assert.equal(window.document.getElementById('debugChallengesTab').getAttribute('aria-selected'), 'true');
+});
+
+test('un reto de depuración muestra consulta rota, síntoma, editor, pista y solución', () => {
+    window.openDebugChallenge('debug-tienda-join');
+
+    const detail = window.document.getElementById('debugChallengeDetail');
+    const challenge = window.getDebugChallengeById('debug-tienda-join');
+    assert.ok(challenge, 'El reto debe existir en el catálogo activo');
+    assert.match(detail.textContent, /Pedidos y clientes sin relación/);
+    assert.match(detail.textContent, /Qué ocurre/);
+    assert.match(detail.textContent, /JOIN no tiene condición ON/);
+    assert.match(detail.textContent, /Comprobar corrección/);
+
+    const editor = detail.querySelector('#debugEditor');
+    assert.ok(editor, 'El detalle debe incluir un editor de corrección');
+    assert.equal(editor.value, challenge.brokenSql);
+
+    const hint = detail.querySelector('#debugHint');
+    assert.equal(hint.hidden, true);
+    window.showDebugHint();
+    assert.equal(hint.hidden, false);
+    assert.match(hint.textContent, /ON p\.cliente_id = c\.id/);
+
+    editor.value = 'SELECT 1';
+    window.resetDebugQuery();
+    assert.equal(editor.value, challenge.brokenSql);
+
+    window.showDebugSolution();
+    assert.equal(editor.value, challenge.sqlEsperado);
+});
+
+test('el progreso de depuración se guarda y se reinicia sin tocar los retos SQL', () => {
+    const storageKey = 'sql-academy-challenges-v1';
+    window.localStorage.setItem(storageKey, JSON.stringify({
+        'debug-tienda-join': { completed: true, completedAt: '2024-01-01T00:00:00.000Z' },
+        'tienda-stock-01': { completed: true, completedAt: '2024-01-01T00:00:00.000Z' }
+    }));
+
+    window.loadChallengeProgress();
+    window.renderDebugChallengeList();
+
+    assert.equal(window.document.getElementById('debugProgressText').textContent, '1 de 4');
+    assert.match(window.document.getElementById('debugChallengeList').textContent, /Completado/);
+
+    window.resetDebugChallengeProgress();
+
+    const stored = JSON.parse(window.localStorage.getItem(storageKey));
+    assert.equal(stored['debug-tienda-join'], undefined);
+    assert.ok(stored['tienda-stock-01'], 'El reinicio de depuración no debe borrar los retos SQL');
+    assert.equal(window.document.getElementById('debugProgressText').textContent, '0 de 4');
+    assert.match(window.document.getElementById('debugChallengeDetail').textContent, /Encuentra el error/);
+});
+
+test('index.html incluye la tercera pestaña y el panel de depuración', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    assert.match(html, /data-challenge-tab="debug"/);
+    assert.match(html, /id="debugChallengesPanel"/);
+    assert.match(html, /id="debugChallengeList"/);
+    assert.match(html, /id="debugChallengeDetail"/);
+    assert.match(html, /Tu progreso de depuración/);
 });

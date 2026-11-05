@@ -13,6 +13,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Modo seguro activado por defecto para confirmar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, `UPDATE` sin `WHERE` y `ALTER TABLE ... DROP`.
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
 - Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
+- Retos de depuración **Encuentra el error**: consulta rota, síntoma, pista, editor de corrección y validación por resultado en los tres datasets SQL.
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
@@ -390,9 +391,20 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - El editor visual asume que la tabla tiene una clave primaria. Para tablas sin clave primaria, usa consultas SQL.
 - `sql.js` implementa SQLite, por lo que algunas funciones específicas de PostgreSQL, MySQL u Oracle no están disponibles.
 - La PWA necesita HTTPS (Netlify lo proporciona). El asistente IA requiere conexión y la Netlify Function desplegada.
-- En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
+- En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.7.6
+
+- **Retos de depuración:** nueva pestaña **Depuración** en Retos con 4 ejercicios **Encuentra el error** por dataset.
+- **Aprendizaje aplicado:** cada reto muestra una consulta rota, el síntoma, una pista y un editor para corregirla.
+- **Validación por resultado:** la corrección se compara con la solución esperada; no importa el texto exacto.
+- **Progreso propio:** avance, reinicio y solución después de dos intentos fallidos, sin afectar a los retos SQL.
+- **Tres datasets:** Escuela, Tienda y Biblioteca, con errores de `JOIN`, `GROUP BY`, `HAVING` y subconsultas.
+- **Autocompletado:** el editor de depuración sugiere tablas, columnas y palabras clave.
+- **Calidad:** pruebas de catálogo, ejecución de soluciones, consultas rotas y flujo de la pestaña.
+- **Caché PWA:** actualizada para el nuevo contenido.
 
 ### v1.7.5
 

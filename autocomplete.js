@@ -5,9 +5,9 @@
 (function (global) {
     'use strict';
 
-    const SQL_EDITOR_IDS = new Set(['sqlEditor', 'challengeEditor', 'pathEditor']);
+    const SQL_EDITOR_IDS = new Set(['sqlEditor', 'challengeEditor', 'debugEditor', 'pathEditor']);
     const NOSQL_EDITOR_IDS = new Set(['nosqlEditor', 'nosqlHubEditor']);
-    const EDITOR_SELECTOR = '#sqlEditor, #challengeEditor, #pathEditor, #nosqlEditor, #nosqlHubEditor';
+    const EDITOR_SELECTOR = '#sqlEditor, #challengeEditor, #debugEditor, #pathEditor, #nosqlEditor, #nosqlHubEditor';
     const SCHEMA_TTL_MS = 1500;
 
     const SQL_KEYWORDS = [

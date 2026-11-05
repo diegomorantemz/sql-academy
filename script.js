@@ -4613,6 +4613,232 @@ const challengeCatalog = [
     }
 ];
 
+
+const debugChallengeCatalogByDataset = {
+    escuela: [
+        {
+            id: 'debug-escuela-having',
+            titulo: 'Filtra grupos, no filas',
+            nivel: 'intermedio',
+            descripcion: 'Muestra las carreras con 5 o más estudiantes y su total. Ordena por total descendente y luego por carrera ascendente.',
+            brokenSql: `SELECT carrera, COUNT(*) AS total
+FROM estudiantes
+GROUP BY carrera
+WHERE COUNT(*) >= 5
+ORDER BY total DESC, carrera ASC;`,
+            problema: 'SQLite lanza un error de sintaxis: WHERE no puede filtrar el resultado de COUNT(*) porque se ejecuta antes de agrupar.',
+            pista: 'Cambia WHERE por HAVING.',
+            sqlEsperado: `SELECT carrera, COUNT(*) AS total
+FROM estudiantes
+GROUP BY carrera
+HAVING COUNT(*) >= 5
+ORDER BY total DESC, carrera ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-escuela-join',
+            titulo: 'El JOIN sin condición',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el nombre del estudiante, el nombre del curso y la nota de cada inscripción. Ordena por estudiante y curso.',
+            brokenSql: `SELECT e.nombre AS estudiante, c.nombre AS curso, i.nota
+FROM estudiantes e
+JOIN inscripciones i
+JOIN cursos c
+ORDER BY e.nombre ASC, c.nombre ASC;`,
+            problema: 'La consulta devuelve muchísimas combinaciones: los JOIN no tienen condición ON y se está generando un producto cartesiano.',
+            pista: 'Añade ON e.id = i.estudiante_id y ON i.curso_id = c.id.',
+            sqlEsperado: `SELECT e.nombre AS estudiante, c.nombre AS curso, i.nota
+FROM estudiantes e
+JOIN inscripciones i ON e.id = i.estudiante_id
+JOIN cursos c ON i.curso_id = c.id
+ORDER BY e.nombre ASC, c.nombre ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-escuela-group',
+            titulo: 'Falta una columna en GROUP BY',
+            nivel: 'avanzado',
+            descripcion: 'Cuenta cuántos estudiantes hay por carrera y ciudad. Ordena por total descendente y luego por carrera y ciudad.',
+            brokenSql: `SELECT carrera, ciudad, COUNT(*) AS total
+FROM estudiantes
+GROUP BY carrera
+ORDER BY total DESC, carrera ASC, ciudad ASC;`,
+            problema: 'La consulta se ejecuta, pero muestra una ciudad arbitraria por carrera porque ciudad no está en GROUP BY.',
+            pista: 'Agrupa por carrera y ciudad.',
+            sqlEsperado: `SELECT carrera, ciudad, COUNT(*) AS total
+FROM estudiantes
+GROUP BY carrera, ciudad
+ORDER BY total DESC, carrera ASC, ciudad ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-escuela-subquery',
+            titulo: 'Un agregado dentro de WHERE',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los estudiantes con promedio superior al promedio general. Ordena por promedio descendente y nombre ascendente.',
+            brokenSql: `SELECT nombre, promedio
+FROM estudiantes
+WHERE promedio > AVG(promedio)
+ORDER BY promedio DESC, nombre ASC;`,
+            problema: 'SQLite lanza misuse of aggregate function AVG(): no se puede usar AVG() directamente en un WHERE.',
+            pista: 'Compara promedio con una subconsulta: (SELECT AVG(promedio) FROM estudiantes).',
+            sqlEsperado: `SELECT nombre, promedio
+FROM estudiantes
+WHERE promedio > (SELECT AVG(promedio) FROM estudiantes)
+ORDER BY promedio DESC, nombre ASC;`,
+            ordenada: true
+        }
+    ],
+    tienda: [
+        {
+            id: 'debug-tienda-having',
+            titulo: 'Filtra estados después de agrupar',
+            nivel: 'intermedio',
+            descripcion: 'Muestra los estados de pedido con más de dos pedidos y su total. Ordena por total descendente y estado ascendente.',
+            brokenSql: `SELECT estado, COUNT(*) AS total
+FROM pedidos
+GROUP BY estado
+WHERE COUNT(*) > 2
+ORDER BY total DESC, estado ASC;`,
+            problema: 'SQLite lanza un error de sintaxis: WHERE no puede filtrar COUNT(*).',
+            pista: 'Cambia WHERE por HAVING.',
+            sqlEsperado: `SELECT estado, COUNT(*) AS total
+FROM pedidos
+GROUP BY estado
+HAVING COUNT(*) > 2
+ORDER BY total DESC, estado ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-tienda-join',
+            titulo: 'Pedidos y clientes sin relación',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el nombre del cliente, la fecha y el estado de cada pedido. Ordena por fecha.',
+            brokenSql: `SELECT c.nombre, p.fecha, p.estado
+FROM pedidos p
+JOIN clientes c
+ORDER BY p.fecha ASC;`,
+            problema: 'La consulta devuelve combinaciones que no existen: el JOIN no tiene condición ON.',
+            pista: 'Añade ON p.cliente_id = c.id.',
+            sqlEsperado: `SELECT c.nombre, p.fecha, p.estado
+FROM pedidos p
+JOIN clientes c ON p.cliente_id = c.id
+ORDER BY p.fecha ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-tienda-sum',
+            titulo: 'Cuenta filas o suma unidades',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los 3 productos con más unidades vendidas. Ordena por unidades descendente y nombre ascendente.',
+            brokenSql: `SELECT pr.nombre, COUNT(d.cantidad) AS unidades
+FROM detalle_pedidos d
+JOIN productos pr ON pr.id = d.producto_id
+GROUP BY pr.id, pr.nombre
+ORDER BY unidades DESC, pr.nombre ASC
+LIMIT 3;`,
+            problema: 'COUNT cuenta líneas de pedido, no la cantidad de unidades vendidas.',
+            pista: 'Cambia COUNT por SUM.',
+            sqlEsperado: `SELECT pr.nombre, SUM(d.cantidad) AS unidades
+FROM detalle_pedidos d
+JOIN productos pr ON pr.id = d.producto_id
+GROUP BY pr.id, pr.nombre
+ORDER BY unidades DESC, pr.nombre ASC
+LIMIT 3;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-tienda-group',
+            titulo: 'Producto arbitrario por categoría',
+            nivel: 'avanzado',
+            descripcion: 'Cuenta cuántos productos hay por categoría y nombre. Ordena por total descendente y luego por categoría y nombre.',
+            brokenSql: `SELECT categoria, nombre, COUNT(*) AS total
+FROM productos
+GROUP BY categoria
+ORDER BY total DESC, categoria ASC, nombre ASC;`,
+            problema: 'La consulta se ejecuta, pero muestra un producto arbitrario por categoría porque nombre no está en GROUP BY.',
+            pista: 'Agrupa por categoria y nombre.',
+            sqlEsperado: `SELECT categoria, nombre, COUNT(*) AS total
+FROM productos
+GROUP BY categoria, nombre
+ORDER BY total DESC, categoria ASC, nombre ASC;`,
+            ordenada: true
+        }
+    ],
+    biblioteca: [
+        {
+            id: 'debug-biblioteca-having',
+            titulo: 'Filtra géneros después de agrupar',
+            nivel: 'intermedio',
+            descripcion: 'Muestra los géneros con más de un libro y su total. Ordena por total descendente y género ascendente.',
+            brokenSql: `SELECT genero, COUNT(*) AS total
+FROM libros
+GROUP BY genero
+WHERE COUNT(*) > 1
+ORDER BY total DESC, genero ASC;`,
+            problema: 'SQLite lanza un error de sintaxis: WHERE no puede filtrar COUNT(*).',
+            pista: 'Cambia WHERE por HAVING.',
+            sqlEsperado: `SELECT genero, COUNT(*) AS total
+FROM libros
+GROUP BY genero
+HAVING COUNT(*) > 1
+ORDER BY total DESC, genero ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-biblioteca-join',
+            titulo: 'Libros y autores sin relación',
+            nivel: 'intermedio',
+            descripcion: 'Muestra el título de cada libro y el nombre de su autor. Ordena por título.',
+            brokenSql: `SELECT l.titulo, a.nombre
+FROM libros l
+JOIN autores a
+ORDER BY l.titulo ASC;`,
+            problema: 'La consulta devuelve combinaciones que no existen: el JOIN no tiene condición ON.',
+            pista: 'Añade ON l.autor_id = a.id.',
+            sqlEsperado: `SELECT l.titulo, a.nombre
+FROM libros l
+JOIN autores a ON l.autor_id = a.id
+ORDER BY l.titulo ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-biblioteca-subquery',
+            titulo: 'Promedio dentro de WHERE',
+            nivel: 'avanzado',
+            descripcion: 'Muestra los libros publicados después del año medio. Ordena por año descendente y título ascendente.',
+            brokenSql: `SELECT titulo, anio
+FROM libros
+WHERE anio > AVG(anio)
+ORDER BY anio DESC, titulo ASC;`,
+            problema: 'SQLite lanza misuse of aggregate function AVG(): no se puede usar AVG() directamente en un WHERE.',
+            pista: 'Usa una subconsulta: (SELECT AVG(anio) FROM libros).',
+            sqlEsperado: `SELECT titulo, anio
+FROM libros
+WHERE anio > (SELECT AVG(anio) FROM libros)
+ORDER BY anio DESC, titulo ASC;`,
+            ordenada: true
+        },
+        {
+            id: 'debug-biblioteca-group',
+            titulo: 'Disponibilidad arbitraria por género',
+            nivel: 'avanzado',
+            descripcion: 'Cuenta cuántos libros hay por género y disponibilidad. Ordena por total descendente y luego por género y disponibilidad.',
+            brokenSql: `SELECT genero, disponible, COUNT(*) AS total
+FROM libros
+GROUP BY genero
+ORDER BY total DESC, genero ASC, disponible ASC;`,
+            problema: 'La consulta se ejecuta, pero muestra un valor arbitrario de disponible por género porque disponible no está en GROUP BY.',
+            pista: 'Agrupa por genero y disponible.',
+            sqlEsperado: `SELECT genero, disponible, COUNT(*) AS total
+FROM libros
+GROUP BY genero, disponible
+ORDER BY total DESC, genero ASC, disponible ASC;`,
+            ordenada: true
+        }
+    ]
+};
+
 const challengeCatalogByDataset = {
     escuela: challengeCatalog,
     tienda: [
@@ -4817,6 +5043,8 @@ function initChallenges() {
     loadChallengeProgress();
     renderChallengeList();
     renderChallengePlaceholder();
+    renderDebugChallengeList();
+    renderDebugChallengePlaceholder();
 }
 
 function refreshPracticeContentForDataset() {
@@ -4832,6 +5060,12 @@ function refreshPracticeContentForDataset() {
     challengeAttempts = 0;
     renderChallengeList();
     renderChallengePlaceholder();
+
+    currentDebugChallengeId = null;
+    debugChallengeAttempts = 0;
+    renderDebugChallengeList();
+    renderDebugChallengePlaceholder();
+
     refreshLearningPath({ selectFirst: true });
 }
 
@@ -5096,6 +5330,295 @@ function resetChallengeProgress() {
     challengeAttempts = 0;
     renderLearningProgressDashboard();
     showToast('info', `Progreso de retos de ${datasetLabel} reiniciado.`);
+}
+
+
+// ============================================
+// RETOS DE DEPURACION SQL
+// ============================================
+
+let currentDebugChallengeId = null;
+let debugChallengeAttempts = 0;
+
+function getDebugChallengeCatalog(datasetName = preferences.dataset) {
+    return debugChallengeCatalogByDataset[datasetName] || debugChallengeCatalogByDataset.escuela;
+}
+
+function getActiveDebugChallengeCatalog() {
+    return getDebugChallengeCatalog();
+}
+
+function getDebugChallengeById(id) {
+    return getActiveDebugChallengeCatalog().find(challenge => challenge.id === id) || null;
+}
+
+function getCompletedDebugChallengeCount() {
+    return getActiveDebugChallengeCatalog().filter(challenge => challengeProgress[challenge.id]?.completed).length;
+}
+
+function renderDebugChallengeProgress() {
+    const catalog = getActiveDebugChallengeCatalog();
+    const completed = getCompletedDebugChallengeCount();
+    const percent = catalog.length ? Math.round((completed / catalog.length) * 100) : 0;
+    const text = document.getElementById('debugProgressText');
+    const bar = document.getElementById('debugProgressBar');
+    const track = document.getElementById('debugProgressTrack');
+    if (text) text.textContent = `${completed} de ${catalog.length}`;
+    if (bar) bar.style.width = `${percent}%`;
+    if (track) track.setAttribute('aria-valuenow', String(percent));
+}
+
+function renderDebugChallengeList() {
+    const list = document.getElementById('debugChallengeList');
+    if (!list) return;
+
+    const catalog = getActiveDebugChallengeCatalog();
+    if (!catalog.length) {
+        list.innerHTML = '<p class="text-muted">No hay retos de depuración para este dataset.</p>';
+        renderDebugChallengeProgress();
+        return;
+    }
+
+    list.innerHTML = catalog.map(challenge => {
+        const completed = Boolean(challengeProgress[challenge.id]?.completed);
+        const active = challenge.id === currentDebugChallengeId;
+        return `
+            <button type="button" class="challenge-card${completed ? ' completed' : ''}${active ? ' active' : ''}" onclick="openDebugChallenge('${escapeHtml(challenge.id)}')" aria-pressed="${active}">
+                <span class="challenge-card-title">
+                    ${escapeHtml(challenge.titulo)}
+                    ${completed ? '<i class="fas fa-circle-check" title="Completado"></i>' : ''}
+                </span>
+                <span class="challenge-card-meta">
+                    <span class="challenge-level ${escapeHtml(challenge.nivel)}">${escapeHtml(challenge.nivel)}</span>
+                    <span>${completed ? 'Completado' : 'Pendiente'}</span>
+                </span>
+            </button>
+        `;
+    }).join('');
+
+    renderDebugChallengeProgress();
+}
+
+function renderDebugChallengePlaceholder() {
+    const detail = document.getElementById('debugChallengeDetail');
+    if (!detail) return;
+    detail.innerHTML = `
+        <div class="challenge-empty">
+            <i class="fas fa-bug"></i>
+            <h3>Encuentra el error</h3>
+            <p>Elige un reto de depuración para revisar una consulta rota, entender qué falla y corregirla.</p>
+        </div>
+    `;
+}
+
+function describeDebugComparison(comparison) {
+    if (comparison.reason === 'columns') {
+        return `Se esperaban ${comparison.expectedColumns} columnas y tu corrección devolvió ${comparison.actualColumns}.`;
+    }
+    if (comparison.reason === 'rows') {
+        return `Se esperaban ${comparison.expectedRows} filas y tu corrección devolvió ${comparison.actualRows}.`;
+    }
+    if (comparison.reason === 'values') {
+        return 'Las columnas y el número de filas coinciden, pero los valores o el orden no son los esperados.';
+    }
+    if (comparison.reason === 'no_result') {
+        return 'La consulta no devolvió un conjunto de resultados.';
+    }
+    return 'La consulta todavía no devuelve el resultado esperado.';
+}
+
+function openDebugChallenge(id) {
+    const challenge = getDebugChallengeById(id);
+    const detail = document.getElementById('debugChallengeDetail');
+    if (!challenge || !detail) return;
+
+    currentDebugChallengeId = id;
+    debugChallengeAttempts = 0;
+    renderDebugChallengeList();
+
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <h3>${escapeHtml(challenge.titulo)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${escapeHtml(challenge.nivel)}">${escapeHtml(challenge.nivel)}</span>
+                    <span class="text-muted">Depuración · validación por resultado</span>
+                </div>
+            </div>
+        </div>
+        <div class="challenge-description">${escapeHtml(challenge.descripcion)}</div>
+
+        <div class="debug-broken-block">
+            <div class="debug-block-head">
+                <span><i class="fas fa-bug"></i> Consulta con el error</span>
+                <button type="button" class="btn-ghost btn-sm" onclick="resetDebugQuery()">
+                    <i class="fas fa-rotate-left"></i> Restaurar
+                </button>
+            </div>
+            <pre><code>${escapeHtml(challenge.brokenSql)}</code></pre>
+        </div>
+
+        <div class="debug-symptom">
+            <span>Qué ocurre</span>
+            <p>${escapeHtml(challenge.problema)}</p>
+        </div>
+
+        <label for="debugEditor" class="sr-only">Consulta SQL corregida para el reto de depuración</label>
+        <textarea id="debugEditor" spellcheck="false" placeholder="Corrige la consulta aquí...">${escapeHtml(challenge.brokenSql)}</textarea>
+        <div class="challenge-actions">
+            <button type="button" onclick="runDebugChallenge()">
+                <i class="fas fa-play"></i> Comprobar corrección
+            </button>
+            <button type="button" class="btn-secondary" onclick="showDebugHint()">
+                <i class="fas fa-lightbulb"></i> Ver pista
+            </button>
+            <button type="button" class="btn-secondary" onclick="resetDebugQuery()">
+                <i class="fas fa-rotate-left"></i> Restaurar consulta rota
+            </button>
+        </div>
+        <div id="debugHint" class="challenge-hint" hidden>${escapeHtml(challenge.pista)}</div>
+        <div id="debugResult" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para depurar</strong>
+            Corrige la consulta y pulsa «Comprobar corrección».
+        </div>
+        <div id="debugNext" class="path-next" hidden></div>
+    `;
+
+    const editor = document.getElementById('debugEditor');
+    if (editor) editor.focus();
+}
+
+function markDebugChallengeComplete(challenge) {
+    challengeProgress[challenge.id] = {
+        completed: true,
+        completedAt: new Date().toISOString()
+    };
+    saveChallengeProgress();
+    renderDebugChallengeList();
+}
+
+function showDebugNext(challenge) {
+    const container = document.getElementById('debugNext');
+    if (!container) return;
+    const catalog = getActiveDebugChallengeCatalog();
+    const index = catalog.findIndex(item => item.id === challenge.id);
+    const next = catalog[index + 1];
+    container.hidden = false;
+    container.innerHTML = next
+        ? `<button type="button" class="btn-primary" onclick="nextDebugChallenge()">Siguiente depuración: ${escapeHtml(next.titulo)} <i class="fas fa-arrow-right"></i></button>`
+        : '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Has completado las depuraciones de este dataset!</div>';
+}
+
+function runDebugChallenge() {
+    const challenge = getDebugChallengeById(currentDebugChallengeId);
+    const editor = document.getElementById('debugEditor');
+    if (!challenge || !editor) return;
+
+    const query = editor.value.trim();
+    if (!query) {
+        showDebugResult('warning', '<strong><i class="fas fa-circle-exclamation"></i> Falta la consulta</strong> Escribe una corrección antes de comprobarla.');
+        return;
+    }
+    if (!isReadOnlyQuery(query)) {
+        showDebugResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> La depuración solo permite consultas <code>SELECT</code> o <code>WITH</code>.');
+        return;
+    }
+    if (!dbInitialized || !db) {
+        showDebugResult('warning', '<strong><i class="fas fa-hourglass-half"></i> Base de datos no disponible</strong> Espera a que termine de inicializarse.');
+        return;
+    }
+
+    try {
+        const expected = db.exec(challenge.sqlEsperado);
+        const actual = db.exec(query);
+        const comparison = compareChallengeResults(expected, actual, challenge.ordenada);
+
+        if (comparison.ok) {
+            const wasCompleted = Boolean(challengeProgress[challenge.id]?.completed);
+            markDebugChallengeComplete(challenge);
+            showDebugResult('success', `
+                <strong><i class="fas fa-circle-check"></i> ¡Consulta corregida!</strong>
+                ${wasCompleted ? 'Ya tenías este reto completado.' : 'El resultado coincide con la solución esperada.'}
+            `);
+            showDebugNext(challenge);
+            showToast('success', 'Reto de depuración completado.');
+            return;
+        }
+
+        debugChallengeAttempts += 1;
+        const solutionButton = debugChallengeAttempts >= 2
+            ? '<div class="challenge-result-actions"><button type="button" class="btn-secondary" onclick="showDebugSolution()"><i class="fas fa-eye"></i> Ver solución</button></div>'
+            : '';
+        showDebugResult('error', `
+            <strong><i class="fas fa-circle-xmark"></i> Todavía no</strong>
+            ${escapeHtml(describeDebugComparison(comparison))}
+            ${solutionButton}
+        `);
+    } catch (error) {
+        debugChallengeAttempts += 1;
+        const solutionButton = debugChallengeAttempts >= 2
+            ? '<div class="challenge-result-actions"><button type="button" class="btn-secondary" onclick="showDebugSolution()"><i class="fas fa-eye"></i> Ver solución</button></div>'
+            : '';
+        showDebugResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Error en la consulta</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+            ${solutionButton}
+        `);
+    }
+}
+
+function showDebugResult(type, html) {
+    const result = document.getElementById('debugResult');
+    if (!result) return;
+    result.className = `challenge-result ${type}`;
+    result.innerHTML = html;
+}
+
+function showDebugHint() {
+    const hint = document.getElementById('debugHint');
+    if (!hint) return;
+    hint.hidden = !hint.hidden;
+}
+
+function showDebugSolution() {
+    const challenge = getDebugChallengeById(currentDebugChallengeId);
+    const editor = document.getElementById('debugEditor');
+    if (!challenge || !editor) return;
+    editor.value = challenge.sqlEsperado;
+    editor.focus();
+    showToast('info', 'Solución cargada. Ejecútala para comprobar el resultado.');
+}
+
+function resetDebugQuery() {
+    const challenge = getDebugChallengeById(currentDebugChallengeId);
+    const editor = document.getElementById('debugEditor');
+    if (!challenge || !editor) return;
+    editor.value = challenge.brokenSql;
+    editor.focus();
+}
+
+function nextDebugChallenge() {
+    const catalog = getActiveDebugChallengeCatalog();
+    const index = catalog.findIndex(challenge => challenge.id === currentDebugChallengeId);
+    const next = catalog[index + 1];
+    if (next) {
+        openDebugChallenge(next.id);
+    } else {
+        showToast('success', '¡Has llegado al final de las depuraciones de este dataset!');
+    }
+}
+
+function resetDebugChallengeProgress() {
+    if (!confirm('¿Reiniciar el progreso de los retos de depuración de este dataset?')) return;
+    getActiveDebugChallengeCatalog().forEach(challenge => {
+        delete challengeProgress[challenge.id];
+    });
+    saveChallengeProgress();
+    currentDebugChallengeId = null;
+    debugChallengeAttempts = 0;
+    renderDebugChallengeList();
+    renderDebugChallengePlaceholder();
+    showToast('info', 'Progreso de depuración reiniciado.');
 }
 
 // ============================================
@@ -6474,9 +6997,10 @@ function activateChallengeTab(tabName) {
     const tabs = Array.from(document.querySelectorAll('.challenge-tab'));
     const panels = {
         sql: document.getElementById('sqlChallengesPanel'),
-        nosql: document.getElementById('nosqlChallengesPanel')
+        nosql: document.getElementById('nosqlChallengesPanel'),
+        debug: document.getElementById('debugChallengesPanel')
     };
-    const nextTab = tabName === 'nosql' ? 'nosql' : 'sql';
+    const nextTab = ['sql', 'nosql', 'debug'].includes(tabName) ? tabName : 'sql';
 
     tabs.forEach(tab => {
         const active = tab.dataset.challengeTab === nextTab;
@@ -6494,6 +7018,8 @@ function activateChallengeTab(tabName) {
 
     if (nextTab === 'nosql') {
         renderNoSQLChallengeHub();
+    } else if (nextTab === 'debug') {
+        renderDebugChallengeList();
     }
 }
 
@@ -7121,6 +7647,14 @@ window.showChallengeSolution = showChallengeSolution;
 window.clearChallengeEditor = clearChallengeEditor;
 window.nextChallenge = nextChallenge;
 window.resetChallengeProgress = resetChallengeProgress;
+window.getDebugChallengeCatalog = getDebugChallengeCatalog;
+window.openDebugChallenge = openDebugChallenge;
+window.runDebugChallenge = runDebugChallenge;
+window.showDebugHint = showDebugHint;
+window.showDebugSolution = showDebugSolution;
+window.resetDebugQuery = resetDebugQuery;
+window.nextDebugChallenge = nextDebugChallenge;
+window.resetDebugChallengeProgress = resetDebugChallengeProgress;
 window.saveTableChanges = saveTableChanges;
 window.generateDiagram = generateDiagram;
 window.toggleDiagramView = toggleDiagramView;

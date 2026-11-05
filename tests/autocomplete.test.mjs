@@ -6,6 +6,8 @@ import { JSDOM } from 'jsdom';
 const dom = new JSDOM(
     `<!doctype html><html><body>
         <textarea id="sqlEditor"></textarea>
+        <textarea id="challengeEditor"></textarea>
+        <textarea id="debugEditor"></textarea>
         <textarea id="pathEditor"></textarea>
         <textarea id="nosqlEditor"></textarea>
     </body></html>`,
@@ -143,6 +145,20 @@ test('el popup funciona también en el editor de la ruta', () => {
     window.getTableColumns = () => [{ name: 'id' }, { name: 'nombre' }];
 
     const textarea = document.getElementById('pathEditor');
+    textarea.value = 'SELECT * FROM est';
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    textarea.dispatchEvent(new window.Event('input', { bubbles: true }));
+
+    const popup = document.getElementById('autocompletePopover');
+    assert.equal(popup.hidden, false);
+    assert.match(popup.textContent, /estudiantes/);
+});
+
+test('el popup funciona también en el editor de depuración', () => {
+    window.getUserTables = () => ['estudiantes'];
+    window.getTableColumns = () => [{ name: 'id' }, { name: 'nombre' }];
+
+    const textarea = document.getElementById('debugEditor');
     textarea.value = 'SELECT * FROM est';
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     textarea.dispatchEvent(new window.Event('input', { bubbles: true }));

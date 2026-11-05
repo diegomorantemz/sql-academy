@@ -1333,6 +1333,7 @@ button:disabled {
 }
 
 #challengeProgressBar,
+#debugProgressBar,
 #pathProgressBar,
 #conceptProgressBar {
     height: 100%;
@@ -1493,6 +1494,99 @@ button:disabled {
     padding: 1px 5px;
     border-radius: 4px;
     font-size: 0.9em;
+}
+
+#debugChallengeDetail .challenge-empty > i {
+    color: #dc3545;
+}
+
+.debug-broken-block {
+    margin-bottom: 12px;
+    border: 1px solid #f0c2c2;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #fffafa;
+}
+
+.debug-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    background: #fdeaea;
+    border-bottom: 1px solid #f0c2c2;
+    color: #a12828;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.debug-block-head > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.debug-broken-block pre {
+    margin: 0;
+    padding: 12px 14px;
+    overflow-x: auto;
+    background: #fffafa;
+    color: #7f1d1d;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.debug-broken-block code {
+    font-family: inherit;
+    white-space: pre;
+}
+
+.debug-symptom {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border-left: 4px solid #e0a800;
+    border-radius: 8px;
+    background: #fff9e8;
+    color: #7a5a00;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.debug-symptom span {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.debug-symptom p {
+    margin: 0;
+}
+
+#debugEditor {
+    width: 100%;
+    min-height: 150px;
+    padding: 12px 14px;
+    border: 2px solid var(--postgres-border);
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    background: white;
+    color: var(--postgres-text);
+    box-sizing: border-box;
+}
+
+#debugEditor:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 3px rgba(51, 103, 145, 0.15);
 }
 
 #challengeEditor {
@@ -3592,6 +3686,7 @@ button:disabled {
 [data-theme="dark"] #sqlEditor,
 [data-theme="dark"] #nosqlEditor,
 [data-theme="dark"] #challengeEditor,
+[data-theme="dark"] #debugEditor,
 [data-theme="dark"] #nosqlHubEditor,
 [data-theme="dark"] .example-selector select,
 [data-theme="dark"] .example-bar select,
@@ -3826,6 +3921,36 @@ button:disabled {
 [data-theme="dark"] .challenge-description code {
     background: #0f172a;
     color: #fca5a5;
+}
+
+[data-theme="dark"] #debugChallengeDetail .challenge-empty > i {
+    color: #f87171;
+}
+
+[data-theme="dark"] .debug-broken-block {
+    background: #1b1216;
+    border-color: #7f1d1d;
+}
+
+[data-theme="dark"] .debug-block-head {
+    background: #3f1d1d;
+    border-bottom-color: #7f1d1d;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .debug-broken-block pre {
+    background: #0f0b0d;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .debug-symptom {
+    background: #3b2f14;
+    color: #fde68a;
+    border-left-color: #a16207;
+}
+
+[data-theme="dark"] .debug-symptom span {
+    color: #fbbf24;
 }
 
 [data-theme="dark"] .challenge-tabs {

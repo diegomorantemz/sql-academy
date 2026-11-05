@@ -226,6 +226,84 @@ test('los ejemplos y retos SQL de Tienda y Biblioteca se ejecutan', () => {
     }
 });
 
+function createDebugDatabase(datasetName) {
+    if (datasetName !== 'escuela') {
+        const database = new DatabaseSync(':memory:');
+        database.exec(window.SQL_ACADEMY_DATASETS[datasetName].sql);
+        return database;
+    }
+
+    // Escuela se crea directamente en script.js. Extraemos sus sentencias
+    // estáticas para probar los retos contra el esquema real.
+    const scriptSource = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
+    const statements = [...scriptSource.matchAll(/db\.run\(`([\s\S]*?)`\);/g)]
+        .map(match => match[1])
+        .filter(sql => !sql.includes('${') && /^\s*(CREATE TABLE|INSERT INTO)/i.test(sql));
+
+    const database = new DatabaseSync(':memory:');
+    for (const statement of statements) database.exec(statement);
+    return database;
+}
+
+test('los retos de depuración cubren los tres datasets con contenido completo', () => {
+    const ids = new Set();
+
+    for (const datasetName of ['escuela', 'tienda', 'biblioteca']) {
+        const challenges = window.getDebugChallengeCatalog(datasetName);
+        assert.equal(challenges.length, 4, `${datasetName} necesita 4 retos de depuración`);
+
+        for (const challenge of challenges) {
+            assert.match(challenge.id, /^debug-/);
+            assert.equal(ids.has(challenge.id), false, `ID de depuración duplicado: ${challenge.id}`);
+            ids.add(challenge.id);
+
+            assert.ok(challenge.titulo.length > 3, `${challenge.id} necesita título`);
+            assert.ok(['basico', 'intermedio', 'avanzado'].includes(challenge.nivel));
+            assert.ok(challenge.descripcion.length > 20, `${challenge.id} necesita descripción`);
+            assert.match(challenge.brokenSql, /^SELECT\b/i);
+            assert.match(challenge.sqlEsperado, /^SELECT\b/i);
+            assert.notEqual(challenge.brokenSql, challenge.sqlEsperado);
+            assert.ok(challenge.problema.length > 20, `${challenge.id} necesita explicar el síntoma`);
+            assert.ok(challenge.pista.length > 5, `${challenge.id} necesita pista`);
+            assert.equal(challenge.ordenada, true);
+        }
+    }
+
+    assert.equal(ids.size, 12);
+});
+
+test('las soluciones y consultas rotas de depuración se comportan como se describe', () => {
+    for (const datasetName of ['escuela', 'tienda', 'biblioteca']) {
+        const database = createDebugDatabase(datasetName);
+        try {
+            for (const challenge of window.getDebugChallengeCatalog(datasetName)) {
+                let expected;
+                try {
+                    expected = database.prepare(challenge.sqlEsperado).all();
+                } catch (error) {
+                    assert.fail(`${datasetName}/${challenge.id}/solución: ${error.message}`);
+                }
+                assert.ok(expected.length > 0, `${datasetName}/${challenge.id} no devuelve filas`);
+
+                let brokenRows = null;
+                let brokenError = null;
+                try {
+                    brokenRows = database.prepare(challenge.brokenSql).all();
+                } catch (error) {
+                    brokenError = error;
+                }
+
+                assert.ok(
+                    brokenError || JSON.stringify(brokenRows) !== JSON.stringify(expected),
+                    `${datasetName}/${challenge.id} debería fallar o devolver un resultado distinto`
+                );
+            }
+        } finally {
+            database.close();
+        }
+    }
+});
+
 test('los ejemplos SQL cargan tablas del dataset activo', () => {
     const cases = [
         ['tienda', /FROM (clientes|productos|pedidos|detalle_pedidos)\b/i],

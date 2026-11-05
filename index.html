@@ -980,7 +980,7 @@
         <section id="section-challenges" class="section">
             <div class="section-header">
                 <h2><i class="fas fa-trophy"></i> Retos</h2>
-                <p>Practica con consultas SQL o con el laboratorio NoSQL y comprueba tu resultado</p>
+                <p>Practica con consultas SQL, el laboratorio NoSQL o encuentra el error en una consulta rota</p>
             </div>
 
             <div class="challenge-tabs" role="tablist" aria-label="Tipo de retos">
@@ -989,6 +989,9 @@
                 </button>
                 <button type="button" id="nosqlChallengesTab" class="challenge-tab" data-challenge-tab="nosql" role="tab" aria-selected="false" aria-controls="nosqlChallengesPanel">
                     <i class="fas fa-leaf"></i> Retos NoSQL
+                </button>
+                <button type="button" id="debugChallengesTab" class="challenge-tab" data-challenge-tab="debug" role="tab" aria-selected="false" aria-controls="debugChallengesPanel">
+                    <i class="fas fa-bug"></i> Depuración
                 </button>
             </div>
 
@@ -1056,6 +1059,40 @@
                                 <i class="fas fa-leaf"></i>
                                 <h3>Elige un reto NoSQL</h3>
                                 <p>Selecciona un reto de la lista para ver su descripción y abrirlo en el laboratorio.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="debugChallengesPanel" class="challenge-tab-panel" role="tabpanel" aria-labelledby="debugChallengesTab" hidden>
+                <div class="challenges-layout">
+                    <aside class="challenge-list-panel" aria-label="Lista de retos de depuración">
+                        <div class="challenge-progress">
+                            <div class="challenge-progress-head">
+                                <span>Tu progreso de depuración</span>
+                                <strong id="debugProgressText">0 de 0</strong>
+                            </div>
+                            <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de retos de depuración" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="debugProgressTrack">
+                                <div id="debugProgressBar"></div>
+                            </div>
+                        </div>
+
+                        <div id="debugChallengeList" class="challenge-list">
+                            <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando depuraciones...</p>
+                        </div>
+
+                        <button type="button" onclick="resetDebugChallengeProgress()" class="btn-secondary challenge-reset-btn">
+                            <i class="fas fa-rotate-left"></i> Reiniciar progreso de depuración
+                        </button>
+                    </aside>
+
+                    <div class="challenge-play-panel">
+                        <div id="debugChallengeDetail" class="challenge-detail">
+                            <div class="challenge-empty">
+                                <i class="fas fa-bug"></i>
+                                <h3>Encuentra el error</h3>
+                                <p>Elige una consulta rota, revisa el síntoma y corrige el SQL. La validación compara el resultado, no el texto exacto.</p>
                             </div>
                         </div>
                     </div>
