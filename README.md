@@ -13,7 +13,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Modo seguro activado por defecto para confirmar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, `UPDATE` sin `WHERE` y `ALTER TABLE ... DROP`.
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
 - Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
-- Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga y ejecuta automáticamente.
+- Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
 - Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
@@ -393,6 +393,13 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.7.3
+
+- **Ejemplos sin auto-ejecución:** al elegir un ejemplo SQL o NoSQL, la consulta se carga en el editor pero no se ejecuta.
+- **Botón Ejecutar útil:** ahora puedes revisar, editar o formatear el ejemplo antes de lanzarlo.
+- **Resultados claros:** el panel muestra «Ejemplo cargado. Pulsa Ejecutar» en lugar de dejar resultados antiguos.
+- **Textos actualizados:** las barras de ejemplos explican el nuevo flujo.
 
 ### v1.7.2
 

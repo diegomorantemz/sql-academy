@@ -77,13 +77,13 @@ test('los ejemplos y retos cargan el contenido del dataset activo', () => {
     const editor = window.document.querySelector('#nosqlEditor');
     const exampleStatus = window.document.querySelector('#nosqlExampleStatus');
     assert.match(editor.value, /^db\.productos\.find/);
-    assert.match(exampleStatus.textContent, /^Ejemplo: /);
-    assert.match(window.document.querySelector('#nosqlResultOutput').textContent, /documentos/);
+    assert.match(exampleStatus.textContent, /^Ejemplo cargado: /);
+    assert.match(window.document.querySelector('#nosqlResultOutput').textContent, /Pulsa «Ejecutar»/);
 
     const firstExample = editor.value;
     window.loadNextNoSQLExample();
     assert.notEqual(editor.value, firstExample, 'Siguiente ejemplo debe cambiar el comando');
-    assert.match(exampleStatus.textContent, /^Ejemplo: /);
+    assert.match(exampleStatus.textContent, /^Ejemplo cargado: /);
     const challenge = getChallenge('nosql-tienda-stock');
 
     window.loadNoSQLChallenge(challenge.id);

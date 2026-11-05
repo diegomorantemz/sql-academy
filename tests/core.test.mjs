@@ -246,11 +246,11 @@ test('los ejemplos SQL cargan tablas del dataset activo', () => {
         assert.match(editor.value, tablePattern);
         assert.match(
             window.document.getElementById('sqlExampleStatus').textContent,
-            /^Ejemplo: /
+            /^Ejemplo cargado: /
         );
         assert.match(
             window.document.getElementById('resultOutput').textContent,
-            /Esperando que la base de datos/
+            /Pulsa «Ejecutar»/
         );
 
         const firstExample = editor.value;

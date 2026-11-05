@@ -357,6 +357,23 @@ function parseColumnValue(rawValue, column) {
     return raw;
 }
 
+/** Deja el panel de resultados listo para ejecutar una consulta. */
+function resetSqlResultPanel(message = 'Ejemplo cargado. Pulsa «Ejecutar» para ver los resultados.') {
+    lastResultSets = [];
+    lastQueryMeta = { durationMs: 0, executedAt: null };
+    resultRowLimits = [];
+    resultSortState = [];
+    lastQueryError = null;
+
+    const output = document.getElementById('resultOutput');
+    if (!output) return;
+    output.className = 'result-placeholder';
+    output.innerHTML = `
+        <i class="fas fa-play placeholder-icon"></i>
+        <p>${escapeHtml(message)}</p>
+    `;
+}
+
 /** Muestra un mensaje estandarizado en el panel de resultados. */
 function showMessage(type, title, detail) {
     const icons = {
@@ -3108,7 +3125,7 @@ function renderCategorySelector() {
     }
 }
 
-// MOSTRAR Y EJECUTAR EJEMPLO POR CATEGORIA
+// CARGAR EJEMPLO POR CATEGORIA
 let lastSqlExample = null;
 
 function showExampleByCategory() {
@@ -3157,10 +3174,11 @@ function showExampleByCategory() {
 
     const status = document.getElementById('sqlExampleStatus');
     if (status) {
-        status.textContent = `Ejemplo: ${ejemplo.titulo}`;
+        status.textContent = `Ejemplo cargado: ${ejemplo.titulo}`;
     }
 
-    runQuery();
+    resetSqlResultPanel();
+    if (editor) editor.focus();
 }
 
 function showExamples() {

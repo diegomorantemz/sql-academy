@@ -331,7 +331,7 @@
         select.innerHTML = examples.map((example, index) => (
             `<option value="${index}">${escapeHtml(example.category)} · ${escapeHtml(example.title)}</option>`
         )).join('');
-        if (status) status.textContent = 'Elige un ejemplo para ejecutarlo al instante';
+        if (status) status.textContent = 'Elige un ejemplo para cargarlo en el editor';
     }
 
     function loadExample() {
@@ -353,9 +353,10 @@
         editor.focus();
 
         const status = getElement('nosqlExampleStatus');
-        if (status) status.textContent = `Ejemplo: ${example.title}`;
+        if (status) status.textContent = `Ejemplo cargado: ${example.title}`;
 
-        runQuery();
+        clearResult('Ejemplo cargado. Pulsa «Ejecutar» para ver los documentos.');
+        editor.focus();
     }
 
     function loadNextExample() {
@@ -498,13 +499,13 @@
         `;
     }
 
-    function clearResult() {
+    function clearResult(message = 'Ejecuta un comando para ver los documentos') {
         const output = getElement('nosqlResultOutput');
         if (!output) return;
         output.className = 'result-placeholder';
         output.innerHTML = `
-            <i class="fas fa-lightbulb placeholder-icon"></i>
-            <p>Ejecuta un comando o elige un ejemplo para ver los documentos</p>
+            <i class="fas fa-play placeholder-icon"></i>
+            <p>${escapeHtml(message)}</p>
         `;
     }
 
