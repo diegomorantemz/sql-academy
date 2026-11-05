@@ -3359,7 +3359,7 @@ const DONATION_METHODS = {
         icon: 'fa-mobile-screen-button',
         enabled: true,
         type: 'qr',
-        image: 'images/qr-yape.png',
+        image: 'assets/images/qr-yape.png',
         alt: 'QR de Yape para donar a SQL Academy'
     },
     plin: {
@@ -3368,7 +3368,7 @@ const DONATION_METHODS = {
         icon: 'fa-bolt',
         enabled: true,
         type: 'qr',
-        image: 'images/qr-plin.png',
+        image: 'assets/images/qr-plin.png',
         alt: 'QR de Plin para donar a SQL Academy'
     },
     paypal: {
@@ -3524,7 +3524,7 @@ function closeDonationModal() {
 const dbInfo = {
     'postgresql': {
         title: 'PostgreSQL',
-        logo: 'logos/postgresql.png',
+        logo: 'assets/logos/postgresql.png',
         description: 'PostgreSQL es un sistema de gestion de bases de datos relacional orientado a objetos y de codigo abierto, considerado el mas avanzado del mundo.',
         type: 'Relacional (SQL)',
         licencia: 'Open Source',
@@ -3545,8 +3545,8 @@ const dbInfo = {
     },
     'mysql': {
         title: 'MySQL',
-        logo: 'logos/mysql.png',
-        logoDark: 'logos/mysql-dark.png',
+        logo: 'assets/logos/mysql.png',
+        logoDark: 'assets/logos/mysql-dark.png',
         description: 'MySQL es el sistema de gestion de bases de datos relacional mas popular del mundo. Es conocido por su velocidad, facilidad de uso y amplia adopcion en aplicaciones web.',
         type: 'Relacional (SQL)',
         licencia: 'Open Source',
@@ -3567,7 +3567,7 @@ const dbInfo = {
     },
     'sqlserver': {
         title: 'SQL Server',
-        logo: 'logos/sqlserver.png',
+        logo: 'assets/logos/sqlserver.png',
         description: 'Microsoft SQL Server es un sistema de gestion de bases de datos relacional desarrollado por Microsoft. Es ampliamente utilizado en entornos empresariales.',
         type: 'Relacional (SQL)',
         licencia: 'Comercial',
@@ -3588,7 +3588,7 @@ const dbInfo = {
     },
     'oracle': {
         title: 'Oracle Database',
-        logo: 'logos/oracle.png',
+        logo: 'assets/logos/oracle.png',
         description: 'Oracle Database es el sistema de gestion de bases de datos relacional mas utilizado en grandes corporaciones. Es conocido por su robustez y seguridad.',
         type: 'Relacional (SQL)',
         licencia: 'Comercial',
@@ -3609,7 +3609,7 @@ const dbInfo = {
     },
     'mariadb': {
         title: 'MariaDB',
-        logo: 'logos/mariadb.png',
+        logo: 'assets/logos/mariadb.png',
         description: 'MariaDB es un fork de MySQL creado por los desarrolladores originales. Ofrece mejoras de rendimiento y nuevas funcionalidades.',
         type: 'Relacional (SQL)',
         licencia: 'Open Source',
@@ -3630,8 +3630,8 @@ const dbInfo = {
     },
     'sqlite': {
         title: 'SQLite',
-        logo: 'logos/sqlite.png',
-        logoDark: 'logos/sqlite-dark.png',
+        logo: 'assets/logos/sqlite.png',
+        logoDark: 'assets/logos/sqlite-dark.png',
         description: 'SQLite es una biblioteca que proporciona un motor de base de datos SQL ligero y sin servidor. Es la base de datos mas utilizada del mundo.',
         type: 'Relacional (SQL)',
         licencia: 'Dominio Publico',
@@ -3653,7 +3653,7 @@ const dbInfo = {
     // ===== GESTORES NoSQL =====
 'mongodb': {
     title: 'MongoDB',
-    logo: 'logos/mongodb.png',
+    logo: 'assets/logos/mongodb.png',
     description: 'MongoDB es la base de datos NoSQL documental más popular. Almacena datos en documentos JSON flexibles, ideales para aplicaciones modernas y datos semiestructurados.',
     type: 'NoSQL (Documental)',
     licencia: 'Open Source (SSPL) / Comercial',
@@ -3674,7 +3674,7 @@ const dbInfo = {
 },
 'firebase': {
     title: 'Firebase',
-    logo: 'logos/firebase.png',
+    logo: 'assets/logos/firebase.png',
     description: 'Firebase es la plataforma de Google que incluye una base de datos NoSQL en tiempo real. Es ideal para aplicaciones móviles y web con sincronización instantánea.',
     type: 'NoSQL (Tiempo Real)',
     licencia: 'Comercial (Google)',
@@ -3695,7 +3695,7 @@ const dbInfo = {
 },
 'redis': {
     title: 'Redis',
-    logo: 'logos/redis.png',
+    logo: 'assets/logos/redis.png',
     description: 'Redis es la base de datos clave-valor más rápida del mundo. Es ampliamente utilizada como caché, para sesiones de usuario y para aplicaciones que requieren baja latencia.',
     type: 'NoSQL (Clave-Valor)',
     licencia: 'Open Source (BSD)',
@@ -3716,7 +3716,7 @@ const dbInfo = {
 },
 'cassandra': {
     title: 'Cassandra',
-    logo: 'logos/cassandra.png',
+    logo: 'assets/logos/cassandra.png',
     description: 'Apache Cassandra es una base de datos NoSQL columnar diseñada para manejar grandes volúmenes de datos distribuidos en múltiples servidores. No tiene puntos de fallo.',
     type: 'NoSQL (Columnar)',
     licencia: 'Open Source (Apache 2.0)',
@@ -3737,7 +3737,7 @@ const dbInfo = {
 },
 'neo4j': {
     title: 'Neo4j',
-    logo: 'logos/neo4j.png',
+    logo: 'assets/logos/neo4j.png',
     description: 'Neo4j es la base de datos de grafos más utilizada del mundo. Permite modelar y consultar relaciones complejas de manera eficiente y natural.',
     type: 'NoSQL (Grafos)',
     licencia: 'Open Source (GPL) / Comercial',
@@ -3758,7 +3758,7 @@ const dbInfo = {
 },
 'elasticsearch': {
     title: 'Elasticsearch',
-    logo: 'logos/elasticsearch.png',
+    logo: 'assets/logos/elasticsearch.png',
     description: 'Elasticsearch es el motor de búsqueda y análisis de datos más popular. Está basado en Lucene y permite consultas full-text en tiempo real.',
     type: 'NoSQL (Busqueda)',
     licencia: 'Open Source (Apache 2.0)',
@@ -4454,15 +4454,15 @@ function recommendMotor() {
     };
     const recommendation = getMotorRecommendation(answers);
     const darkLogos = {
-        mysql: 'logos/mysql-dark.png',
-        sqlite: 'logos/sqlite-dark.png'
+        mysql: 'assets/logos/mysql-dark.png',
+        sqlite: 'assets/logos/sqlite-dark.png'
     };
     const darkLogo = darkLogos[recommendation.id] || '';
     result.hidden = false;
     result.innerHTML = `
         <div class="motor-result-card">
             <span class="motor-result-logo${darkLogo ? ' has-dark-logo' : ''}">
-                <img class="db-logo-light" src="logos/${recommendation.id}.png" alt="${escapeHtml(recommendation.name)}">
+                <img class="db-logo-light" src="assets/logos/${recommendation.id}.png" alt="${escapeHtml(recommendation.name)}">
                 ${darkLogo ? `<img class="db-logo-dark" src="${darkLogo}" alt="" aria-hidden="true">` : ''}
             </span>
             <div class="motor-result-copy">

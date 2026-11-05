@@ -1,6 +1,6 @@
 {
   "name": "sql-academy",
-  "version": "1.7.10",
+  "version": "1.8.0",
   "private": true,
   "description": "Academia interactiva para aprender y practicar SQL y NoSQL en el navegador.",
   "scripts": {
@@ -18,7 +18,7 @@
     "netlify"
   ],
   "author": "MNTWARE",
-  "license": "MIT",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "devDependencies": {
     "jsdom": "^30.1.3"
   }

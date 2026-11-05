@@ -91,8 +91,8 @@ test('MySQL y SQLite tienen variantes de logo para modo claro y oscuro', () => {
         assert.ok(card.querySelector('.db-logo-dark'));
     }
 
-    assert.ok(fs.existsSync(new URL('../logos/mysql-dark.png', import.meta.url)));
-    assert.ok(fs.existsSync(new URL('../logos/sqlite-dark.png', import.meta.url)));
+    assert.ok(fs.existsSync(new URL('../assets/logos/mysql-dark.png', import.meta.url)));
+    assert.ok(fs.existsSync(new URL('../assets/logos/sqlite-dark.png', import.meta.url)));
 
     window.openDBInfo('mysql');
     assert.ok(document.querySelector('#modalBody .db-logo-large.has-dark-logo'));

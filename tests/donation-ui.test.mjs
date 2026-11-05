@@ -107,6 +107,6 @@ test('el footer y el título usan el enfoque voluntario acordado', () => {
 });
 
 test('los QR de Yape y Plin existen en el proyecto', () => {
-    assert.equal(fs.existsSync(new URL('../images/qr-yape.png', import.meta.url)), true);
-    assert.equal(fs.existsSync(new URL('../images/qr-plin.png', import.meta.url)), true);
+    assert.equal(fs.existsSync(new URL('../assets/images/qr-yape.png', import.meta.url)), true);
+    assert.equal(fs.existsSync(new URL('../assets/images/qr-plin.png', import.meta.url)), true);
 });

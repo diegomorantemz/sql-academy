@@ -96,7 +96,10 @@ sql-academy/
 ├── datasets.js                 # Datasets Tienda y Biblioteca
 ├── service-worker.js           # Caché PWA y estrategia de red
 ├── manifest.webmanifest        # Configuración de la aplicación instalable
-├── icons/                      # Iconos PWA
+├── assets/
+│   ├── icons/                  # Iconos PWA
+│   ├── images/                 # QR de donaciones Yape y Plin
+│   └── logos/                  # Logos de gestores SQL y NoSQL
 ├── netlify.toml                # Publicación, función, redirect e ignore de builds
 ├── _headers                    # Cabeceras de seguridad de Netlify
 ├── netlify/
@@ -109,6 +112,11 @@ sql-academy/
 │   ├── learn-ui.test.mjs       # Biblioteca, filtros, asistente y mini-quizzes
 │   ├── deckbuilder.test.mjs    # Torre de Datos, cartas y validación de pisos
 │   ├── nosql.test.mjs          # Motor documental, filtros, CRUD y agregaciones
+│   ├── nosql-ui.test.mjs       # Interfaz y revelado progresivo NoSQL
+│   ├── challenges-ui.test.mjs  # Pestañas SQL, NoSQL y Depuración
+│   ├── table-editor-ui.test.mjs # Vista y edición de tablas
+│   ├── donation-ui.test.mjs    # Modal de donaciones
+│   ├── license.test.mjs        # Licencia y rutas de assets
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
 ├── .gitleaks.toml              # Configuración del escaneo de secretos
@@ -116,10 +124,6 @@ sql-academy/
 ├── package.json
 ├── package-lock.json
 ├── LICENSE
-├── images/
-│   ├── qr-yape.png             # QR de donaciones por Yape
-│   └── qr-plin.png             # QR de donaciones por Plin
-├── logos/                      # Logos de gestores SQL y NoSQL
 └── README.md
 ```
 
@@ -374,6 +378,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL/Depuración y la navegación al laboratorio.
 - `tests/table-editor-ui.test.mjs` cubre los modos Vista/Editar del explorador, el aviso de cambios sin guardar, el bloqueo sin clave primaria y el límite de filas.
 - `tests/donation-ui.test.mjs` cubre el modal de donaciones, el cambio Yape/Plin, la ausencia de números y la presencia de los QR.
+- `tests/license.test.mjs` cubre la licencia noncommercial, la nota de copyright y las rutas de los assets de la PWA.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
 - `_headers` añade `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS y cachés específicas.
@@ -400,6 +405,15 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.8.0
+
+- **Licencia noncommercial:** el proyecto pasa a PolyForm Noncommercial 1.0.0; el uso comercial requiere permiso escrito.
+- **Licencia comercial:** se añade la vía de contacto para empresas, academias y bootcamps.
+- **Marca:** se aclara que MNTWARE y SQL Academy no pueden usarse para promocionar derivados sin permiso.
+- **Assets ordenados:** iconos PWA, QR de donaciones y logos quedan dentro de `assets/`.
+- **Repositorio más limpio:** se eliminaron dos logos sin uso y archivos `.gitkeep` innecesarios.
+- **Caché PWA:** actualizada para las nuevas rutas de assets.
 
 ### v1.7.10
 
@@ -644,4 +658,15 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Licencia
 
-MIT. Consulta el archivo `LICENSE`.
+Este proyecto usa la **PolyForm Noncommercial License 1.0.0**. Consulta el archivo `LICENSE`.
+
+- **Permitido:** uso personal, educativo, investigación y proyectos no comerciales.
+- **No permitido sin permiso escrito:** vender el proyecto, revenderlo, ofrecerlo como servicio de pago o incluirlo en un producto comercial.
+- **Licencia comercial:** si necesitas usar SQL Academy con fines comerciales, contacta con MNTWARE a través de [GitHub](https://github.com/diegomorantemz).
+- La licencia cubre el código y el contenido original del proyecto.
+- Las versiones publicadas antes de la v1.8.0 se distribuyeron bajo licencia MIT.
+- Las dependencias y recursos de terceros conservan sus propias licencias.
+
+## Marca
+
+MNTWARE y SQL Academy son nombres del autor. No se permite usar sus nombres o logos para promocionar productos derivados sin permiso previo.
