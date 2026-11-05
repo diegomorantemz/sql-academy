@@ -7193,3 +7193,27 @@ button:disabled {
 [data-theme="dark"] .cap-c {
     color: #93c5fd;
 }
+
+/* ===== LOGOS CON VARIANTE OSCURA ===== */
+.has-dark-logo .db-logo-dark {
+    display: none;
+}
+
+[data-theme="dark"] .has-dark-logo .db-logo-light {
+    display: none;
+}
+
+[data-theme="dark"] .has-dark-logo .db-logo-dark {
+    display: block;
+    margin: 0 auto;
+}
+
+.learn-card-icon.has-dark-logo img {
+    max-width: 96px;
+}
+
+.motor-result-logo {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}

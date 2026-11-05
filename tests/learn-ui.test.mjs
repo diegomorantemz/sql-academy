@@ -81,6 +81,25 @@ test('la búsqueda y los filtros de conceptos funcionan', () => {
     window.setConceptFilter('all');
 });
 
+test('MySQL y SQLite tienen variantes de logo para modo claro y oscuro', () => {
+    for (const name of ['MySQL', 'SQLite']) {
+        const card = [...document.querySelectorAll('.learn-card')]
+            .find(item => item.querySelector('h3')?.textContent === name);
+        assert.ok(card, `No se encontró la tarjeta de ${name}`);
+        assert.ok(card.querySelector('.learn-card-icon.has-dark-logo'));
+        assert.ok(card.querySelector('.db-logo-light'));
+        assert.ok(card.querySelector('.db-logo-dark'));
+    }
+
+    assert.ok(fs.existsSync(new URL('../logos/mysql-dark.png', import.meta.url)));
+    assert.ok(fs.existsSync(new URL('../logos/sqlite-dark.png', import.meta.url)));
+
+    window.openDBInfo('mysql');
+    assert.ok(document.querySelector('#modalBody .db-logo-large.has-dark-logo'));
+    assert.equal(document.querySelectorAll('#modalBody .db-logo-large img').length, 2);
+    window.closeDBModal();
+});
+
 test('el asistente recomienda motores según las respuestas', () => {
     window.toggleMotorFinder();
     assert.equal(document.getElementById('motorFinderBody').hidden, false);
@@ -101,6 +120,13 @@ test('el asistente recomienda motores según las respuestas', () => {
     document.getElementById('motorFinderTransactions').value = 'yes';
     window.recommendMotor();
     assert.match(document.getElementById('motorFinderResult').textContent, /PostgreSQL/);
+
+    document.getElementById('motorFinderTransactions').value = 'no';
+    document.getElementById('motorFinderScale').value = 'no';
+    window.recommendMotor();
+    assert.match(document.getElementById('motorFinderResult').textContent, /MySQL/);
+    assert.ok(document.querySelector('#motorFinderResult .motor-result-logo.has-dark-logo'));
+    assert.equal(document.querySelectorAll('#motorFinderResult .motor-result-logo img').length, 2);
 });
 
 test('el mini-quiz marca un concepto como dominado y actualiza el progreso', () => {

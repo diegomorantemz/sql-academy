@@ -3257,6 +3257,7 @@ const dbInfo = {
     'mysql': {
         title: 'MySQL',
         logo: 'logos/mysql.png',
+        logoDark: 'logos/mysql-dark.png',
         description: 'MySQL es el sistema de gestion de bases de datos relacional mas popular del mundo. Es conocido por su velocidad, facilidad de uso y amplia adopcion en aplicaciones web.',
         type: 'Relacional (SQL)',
         licencia: 'Open Source',
@@ -3341,6 +3342,7 @@ const dbInfo = {
     'sqlite': {
         title: 'SQLite',
         logo: 'logos/sqlite.png',
+        logoDark: 'logos/sqlite-dark.png',
         description: 'SQLite es una biblioteca que proporciona un motor de base de datos SQL ligero y sin servidor. Es la base de datos mas utilizada del mundo.',
         type: 'Relacional (SQL)',
         licencia: 'Dominio Publico',
@@ -3500,8 +3502,9 @@ function openDBInfo(dbKey) {
     title.innerHTML = `<i class="fas fa-database"></i> ${info.title}`;
     
     let html = `
-        <div class="db-logo-large">
-            <img src="${info.logo}" alt="${info.title}">
+        <div class="db-logo-large${info.logoDark ? ' has-dark-logo' : ''}">
+            <img class="db-logo-light" src="${info.logo}" alt="${info.title}">
+            ${info.logoDark ? `<img class="db-logo-dark" src="${info.logoDark}" alt="" aria-hidden="true">` : ''}
         </div>
         
         <p style="font-size:1.05em; color:#444; line-height:1.7;">${info.description}</p>
@@ -4161,10 +4164,18 @@ function recommendMotor() {
         realtime: document.getElementById('motorFinderRealtime')?.value || 'no'
     };
     const recommendation = getMotorRecommendation(answers);
+    const darkLogos = {
+        mysql: 'logos/mysql-dark.png',
+        sqlite: 'logos/sqlite-dark.png'
+    };
+    const darkLogo = darkLogos[recommendation.id] || '';
     result.hidden = false;
     result.innerHTML = `
         <div class="motor-result-card">
-            <img src="logos/${recommendation.id}.png" alt="${escapeHtml(recommendation.name)}">
+            <span class="motor-result-logo${darkLogo ? ' has-dark-logo' : ''}">
+                <img class="db-logo-light" src="logos/${recommendation.id}.png" alt="${escapeHtml(recommendation.name)}">
+                ${darkLogo ? `<img class="db-logo-dark" src="${darkLogo}" alt="" aria-hidden="true">` : ''}
+            </span>
             <div class="motor-result-copy">
                 <span class="motor-result-eyebrow">Recomendación</span>
                 <h3>${escapeHtml(recommendation.name)}</h3>

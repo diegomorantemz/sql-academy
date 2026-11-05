@@ -394,6 +394,13 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Release Notes
 
+### v1.7.1
+
+- **Modo oscuro:** los logos de MySQL y SQLite ya no muestran el fondo blanco.
+- **Variantes de logo:** se añadieron versiones transparentes y variantes con texto claro para fondos oscuros.
+- **Biblioteca y fichas:** el cambio se aplica tanto a las tarjetas de Aprender como al modal de cada motor.
+- **Caché PWA:** actualizada para servir los nuevos recursos.
+
 ### v1.7.0
 
 - **Biblioteca de aprendizaje:** Aprender y Conceptos se unifican en una sola sección con pestañas.
