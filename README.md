@@ -25,6 +25,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
 - Aplicación instalable (PWA), modo oscuro y mejoras de accesibilidad.
+- Donaciones voluntarias con Yape y Plin desde S/1, sin montos obligatorios ni funciones bloqueadas.
 - Tests automatizados, CI y escaneo de secretos con Gitleaks.
 
 ## Tecnologías
@@ -116,7 +117,8 @@ sql-academy/
 ├── package-lock.json
 ├── LICENSE
 ├── images/
-│   └── qr-yape.png             # QR de donaciones
+│   ├── qr-yape.png             # QR de donaciones por Yape
+│   └── qr-plin.png             # QR de donaciones por Plin
 ├── logos/                      # Logos de gestores SQL y NoSQL
 └── README.md
 ```
@@ -371,6 +373,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL/Depuración y la navegación al laboratorio.
 - `tests/table-editor-ui.test.mjs` cubre los modos Vista/Editar del explorador, el aviso de cambios sin guardar, el bloqueo sin clave primaria y el límite de filas.
+- `tests/donation-ui.test.mjs` cubre el modal de donaciones, el cambio Yape/Plin, la ausencia de números y la presencia de los QR.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
 - `_headers` añade `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS y cachés específicas.
@@ -397,6 +400,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.7.8
+
+- **Donaciones voluntarias:** nuevo modal **Apoyar SQL Academy** con Yape y Plin, sin exponer números de teléfono.
+- **Monto libre:** se puede donar desde S/1 sin montos fijos ni obligación.
+- **Más confianza:** explicación del destino del apoyo, QR ampliable y mensaje de agradecimiento.
+- **Enfoque transparente:** se aclara que la donación no desbloquea funciones ni certificados.
+- **Preparado para crecer:** PayPal y Ko-fi quedan definidos en el código, ocultos hasta que se activen.
+- **Calidad:** pruebas del modal, cambio de método, ausencia de números y presencia de ambos QR.
+- **Caché PWA:** actualizada para los nuevos estilos y el QR de Plin.
 
 ### v1.7.7
 

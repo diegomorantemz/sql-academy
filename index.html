@@ -1204,8 +1204,8 @@
                         <span class="coffee-message">
                             <i class="fas fa-mug-hot"></i> ¿Me invitas un café?
                         </span>
-                        <button onclick="showDonationQR('yape')" class="btn-donation-sm yape">
-                            <i class="fas fa-coins"></i> Yape
+                        <button onclick="showDonationQR()" class="btn-donation-sm support" title="Donación voluntaria">
+                            <i class="fas fa-heart"></i> Apoyar el proyecto
                         </button>
                     </div>
                 </div>
@@ -1238,10 +1238,10 @@
 
     <!-- ===== MODAL DE DONACIONES ===== -->
     <div id="donationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="donationModalTitle">
-        <div class="modal-content" style="max-width: 420px;">
+        <div class="modal-content donation-modal-content">
             <div class="modal-header">
-                <h2 id="donationModalTitle"><i class="fas fa-laptop-code" style="color:#dc3545;"></i> Apoya el proyecto</h2>
-                <button onclick="closeDonationModal()" class="modal-close">&times;</button>
+                <h2 id="donationModalTitle"><i class="fas fa-mug-hot" style="color:#f39c12;"></i> Apoyar SQL Academy</h2>
+                <button onclick="closeDonationModal()" class="modal-close" aria-label="Cerrar apoyo">&times;</button>
             </div>
             <div class="modal-body" id="donationModalBody"></div>
         </div>
