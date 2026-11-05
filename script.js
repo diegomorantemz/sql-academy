@@ -3986,6 +3986,7 @@ let challengeProgress = {};
 let selectedNoSQLChallengeId = null;
 let learningPathProgress = {};
 let currentLearningLessonId = null;
+let learningPathEventsBound = false;
 
 function loadChallengeProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.challenges, {});
@@ -4226,6 +4227,7 @@ function markChallengeComplete(challenge) {
     };
     saveChallengeProgress();
     renderChallengeList();
+    renderLearningProgressDashboard();
 }
 
 function runChallenge() {
@@ -4335,6 +4337,7 @@ function resetChallengeProgress() {
     renderChallengePlaceholder();
     currentChallengeId = null;
     challengeAttempts = 0;
+    renderLearningProgressDashboard();
     showToast('info', `Progreso de retos de ${datasetLabel} reiniciado.`);
 }
 
@@ -4398,6 +4401,56 @@ const LEARNING_PATH_PROFILES = {
         }
     }
 };
+
+const LEARNING_CONCEPTS = [
+    { id: 'select', label: 'Seleccionar', icon: 'fa-table-columns', description: 'Elegir columnas y filas.' },
+    { id: 'where', label: 'Filtros', icon: 'fa-filter', description: 'Filtrar con WHERE.' },
+    { id: 'order', label: 'Ordenar', icon: 'fa-arrow-down-wide-short', description: 'Ordenar resultados.' },
+    { id: 'limit', label: 'Limitar', icon: 'fa-scissors', description: 'Quedarte con el top N.' },
+    { id: 'join', label: 'JOIN', icon: 'fa-link', description: 'Combinar tablas relacionadas.' },
+    { id: 'group', label: 'Agrupar', icon: 'fa-layer-group', description: 'GROUP BY y COUNT.' },
+    { id: 'having', label: 'HAVING', icon: 'fa-list-check', description: 'Filtrar grupos.' },
+    { id: 'subquery', label: 'Subconsultas', icon: 'fa-code-branch', description: 'Consultas dentro de otras.' }
+];
+
+const CHALLENGE_CONCEPT_BY_ID = {
+    'basico-01': 'select',
+    'filtro-01': 'where',
+    'orden-01': 'order',
+    'agregacion-01': 'group',
+    'join-01': 'join',
+    'join-02': 'join',
+    'subconsulta-01': 'subquery',
+    'having-01': 'having',
+    'tienda-stock-01': 'where',
+    'tienda-clientes-01': 'where',
+    'tienda-estados-01': 'group',
+    'tienda-detalle-01': 'join',
+    'tienda-top-01': 'join',
+    'tienda-having-01': 'having',
+    'biblioteca-disponibles-01': 'where',
+    'biblioteca-activos-01': 'where',
+    'biblioteca-generos-01': 'group',
+    'biblioteca-autores-01': 'join',
+    'biblioteca-having-01': 'having',
+    'biblioteca-top-01': 'join'
+};
+
+function getChallengeConceptId(challenge) {
+    if (CHALLENGE_CONCEPT_BY_ID[challenge.id]) return CHALLENGE_CONCEPT_BY_ID[challenge.id];
+    const text = `${challenge.titulo || ''} ${challenge.descripcion || ''}`.toLowerCase();
+    if (text.includes('having')) return 'having';
+    if (text.includes('join')) return 'join';
+    if (text.includes('subconsulta')) return 'subquery';
+    if (text.includes('agrup') || text.includes('cuenta')) return 'group';
+    if (text.includes('orden')) return 'order';
+    if (text.includes('filtra') || text.includes('where')) return 'where';
+    return 'select';
+}
+
+function getConceptLabel(conceptId) {
+    return LEARNING_CONCEPTS.find(concept => concept.id === conceptId)?.label || conceptId;
+}
 
 function buildLearningLessons(profile) {
     const main = profile.mainTable;
@@ -4553,8 +4606,12 @@ function getLearningDatasetProgress() {
     return learningPathProgress[dataset];
 }
 
+function isLearningLessonCompletedForDataset(id, datasetName) {
+    return Boolean(learningPathProgress[datasetName]?.[id]?.completed);
+}
+
 function isLearningLessonCompleted(id) {
-    return Boolean(getLearningDatasetProgress()[id]?.completed);
+    return isLearningLessonCompletedForDataset(id, getLearningDatasetName());
 }
 
 function markLearningLessonCompleted(id) {
@@ -4563,6 +4620,7 @@ function markLearningLessonCompleted(id) {
         completedAt: new Date().toISOString()
     };
     saveLearningPathProgress();
+    renderLearningProgressDashboard();
 }
 
 function getLearningProgressStats() {
@@ -4573,6 +4631,207 @@ function getLearningProgressStats() {
         completed,
         percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0
     };
+}
+
+function getLearningDatasetStats(datasetName) {
+    const lessons = getLearningLessonsForDataset(datasetName);
+    const challenges = getChallengeCatalog(datasetName);
+    const lessonsCompleted = lessons.filter(lesson => (
+        isLearningLessonCompletedForDataset(lesson.id, datasetName)
+    )).length;
+    const challengesCompleted = challenges.filter(challenge => (
+        Boolean(challengeProgress[challenge.id]?.completed)
+    )).length;
+    const total = lessons.length + challenges.length;
+    const completed = lessonsCompleted + challengesCompleted;
+
+    return {
+        datasetName,
+        name: LEARNING_PATH_PROFILES[datasetName]?.name || datasetName,
+        lessonsTotal: lessons.length,
+        lessonsCompleted,
+        challengesTotal: challenges.length,
+        challengesCompleted,
+        total,
+        completed,
+        percent: total ? Math.round((completed / total) * 100) : 0
+    };
+}
+
+function getLearningGlobalStats() {
+    const datasetStats = Object.keys(LEARNING_PATH_PROFILES).map(getLearningDatasetStats);
+    const totals = datasetStats.reduce((accumulator, stat) => ({
+        lessonsTotal: accumulator.lessonsTotal + stat.lessonsTotal,
+        lessonsCompleted: accumulator.lessonsCompleted + stat.lessonsCompleted,
+        challengesTotal: accumulator.challengesTotal + stat.challengesTotal,
+        challengesCompleted: accumulator.challengesCompleted + stat.challengesCompleted,
+        total: accumulator.total + stat.total,
+        completed: accumulator.completed + stat.completed
+    }), {
+        lessonsTotal: 0,
+        lessonsCompleted: 0,
+        challengesTotal: 0,
+        challengesCompleted: 0,
+        total: 0,
+        completed: 0
+    });
+
+    return {
+        ...totals,
+        percent: totals.total ? Math.round((totals.completed / totals.total) * 100) : 0,
+        datasetStats
+    };
+}
+
+function getLearningConceptStats() {
+    return LEARNING_CONCEPTS.map(concept => {
+        const stats = {
+            lessonsTotal: 0,
+            lessonsCompleted: 0,
+            challengesTotal: 0,
+            challengesCompleted: 0
+        };
+
+        Object.keys(LEARNING_PATH_PROFILES).forEach(datasetName => {
+            const lessons = getLearningLessonsForDataset(datasetName)
+                .filter(lesson => lesson.id === concept.id);
+            stats.lessonsTotal += lessons.length;
+            stats.lessonsCompleted += lessons.filter(lesson => (
+                isLearningLessonCompletedForDataset(lesson.id, datasetName)
+            )).length;
+
+            const challenges = getChallengeCatalog(datasetName)
+                .filter(challenge => getChallengeConceptId(challenge) === concept.id);
+            stats.challengesTotal += challenges.length;
+            stats.challengesCompleted += challenges.filter(challenge => (
+                Boolean(challengeProgress[challenge.id]?.completed)
+            )).length;
+        });
+
+        const total = stats.lessonsTotal + stats.challengesTotal;
+        const completed = stats.lessonsCompleted + stats.challengesCompleted;
+        return {
+            ...concept,
+            ...stats,
+            total,
+            completed,
+            percent: total ? Math.round((completed / total) * 100) : 0
+        };
+    });
+}
+
+function getRecentLearningActivity() {
+    const activity = [];
+
+    Object.entries(learningPathProgress).forEach(([datasetName, progress]) => {
+        Object.entries(progress || {}).forEach(([lessonId, data]) => {
+            if (!data?.completedAt) return;
+            const lesson = getLearningLessonsForDataset(datasetName)
+                .find(item => item.id === lessonId);
+            if (!lesson) return;
+            activity.push({
+                type: 'Lección',
+                title: lesson.title,
+                datasetName,
+                icon: 'fa-route',
+                completedAt: data.completedAt
+            });
+        });
+    });
+
+    Object.entries(challengeProgress).forEach(([challengeId, data]) => {
+        if (!data?.completedAt) return;
+        const datasetName = Object.keys(LEARNING_PATH_PROFILES).find(name => (
+            getChallengeCatalog(name).some(challenge => challenge.id === challengeId)
+        ));
+        if (!datasetName) return;
+        const challenge = getChallengeCatalog(datasetName)
+            .find(item => item.id === challengeId);
+        if (!challenge) return;
+        activity.push({
+            type: 'Reto',
+            title: challenge.titulo,
+            datasetName,
+            icon: 'fa-trophy',
+            completedAt: data.completedAt
+        });
+    });
+
+    return activity
+        .sort((left, right) => new Date(right.completedAt) - new Date(left.completedAt))
+        .slice(0, 4);
+}
+
+function getLearningRecommendation() {
+    const datasetName = getLearningDatasetName();
+    const profile = LEARNING_PATH_PROFILES[datasetName];
+    const lessons = getLearningLessonsForDataset(datasetName);
+    const nextLesson = lessons.find(lesson => (
+        !isLearningLessonCompletedForDataset(lesson.id, datasetName)
+    ));
+    if (nextLesson) {
+        const completedLessons = lessons.filter(lesson => (
+            isLearningLessonCompletedForDataset(lesson.id, datasetName)
+        )).length;
+        return {
+            kind: 'lesson',
+            title: nextLesson.title,
+            message: completedLessons > 0
+                ? `Continúa la ruta de ${profile.name} con la lección ${lessons.indexOf(nextLesson) + 1}.`
+                : `Empieza la ruta de ${profile.name} con la lección ${lessons.indexOf(nextLesson) + 1}.`,
+            action: completedLessons > 0 ? 'Continuar lección' : 'Comenzar lección',
+            onclick: `continueLearningLesson('${nextLesson.id}')`,
+            icon: 'fa-route'
+        };
+    }
+
+    const challenges = getChallengeCatalog(datasetName);
+    const nextChallenge = challenges.find(challenge => !challengeProgress[challenge.id]?.completed);
+    if (nextChallenge) {
+        return {
+            kind: 'challenge',
+            title: nextChallenge.titulo,
+            message: `Practica ${getConceptLabel(getChallengeConceptId(nextChallenge))} con un reto de ${profile.name}.`,
+            action: 'Practicar reto',
+            onclick: `practiceLearningChallenge('${nextChallenge.id}')`,
+            icon: 'fa-trophy'
+        };
+    }
+
+    const otherDataset = Object.keys(LEARNING_PATH_PROFILES).find(name => {
+        if (name === datasetName) return false;
+        return getLearningLessonsForDataset(name).some(lesson => (
+            !isLearningLessonCompletedForDataset(lesson.id, name)
+        )) || getChallengeCatalog(name).some(challenge => !challengeProgress[challenge.id]?.completed);
+    });
+
+    if (otherDataset) {
+        return {
+            kind: 'dataset',
+            title: `Ruta de ${profile.name} completada`,
+            message: `Ya completaste este dataset. Cambia a ${LEARNING_PATH_PROFILES[otherDataset].name} desde Practicar para seguir avanzando.`,
+            action: 'Ir a Practicar',
+            onclick: "activateSection('practice')",
+            icon: 'fa-arrow-right'
+        };
+    }
+
+    return {
+        kind: 'done',
+        title: '¡Todo completado!',
+        message: 'Has terminado las lecciones y retos de todos los datasets. Repasa o explora el laboratorio NoSQL.',
+        action: 'Ir a Retos',
+        onclick: 'openSQLChallenges()',
+        icon: 'fa-trophy'
+    };
+}
+
+function formatLearningActivityDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) return 'Hoy';
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
 }
 
 function renderLearningPathList() {
@@ -4633,6 +4892,285 @@ function renderLearningPathList() {
     list.querySelectorAll('[data-learning-lesson]').forEach(button => {
         button.addEventListener('click', () => selectLearningLesson(button.dataset.learningLesson));
     });
+
+    renderLearningProgressDashboard();
+}
+
+function renderLearningProgressDashboard() {
+    const container = document.getElementById('learningProgressDashboard');
+    if (!container) return;
+
+    const globalStats = getLearningGlobalStats();
+    const conceptStats = getLearningConceptStats();
+    const recommendation = getLearningRecommendation();
+    const activity = getRecentLearningActivity();
+    const dominated = conceptStats.filter(concept => concept.percent === 100).length;
+    const started = conceptStats.filter(concept => concept.percent > 0).length;
+    const profile = getLearningProfile();
+
+    const metrics = [
+        {
+            label: 'Lecciones',
+            value: `${globalStats.lessonsCompleted}/${globalStats.lessonsTotal}`,
+            icon: 'fa-book-open',
+            tone: 'tone-blue',
+            hint: 'Ruta de aprendizaje'
+        },
+        {
+            label: 'Retos',
+            value: `${globalStats.challengesCompleted}/${globalStats.challengesTotal}`,
+            icon: 'fa-trophy',
+            tone: 'tone-amber',
+            hint: 'Retos SQL'
+        },
+        {
+            label: 'Actividades',
+            value: `${globalStats.completed}/${globalStats.total}`,
+            icon: 'fa-list-check',
+            tone: 'tone-green',
+            hint: 'Lecciones + retos'
+        },
+        {
+            label: 'Conceptos dominados',
+            value: `${dominated}/${conceptStats.length}`,
+            icon: 'fa-graduation-cap',
+            tone: 'tone-violet',
+            hint: 'Al 100%'
+        }
+    ];
+
+    container.innerHTML = `
+        <div class="progress-hero">
+            <div class="progress-hero-copy">
+                <span class="progress-eyebrow"><i class="fas fa-chart-simple"></i> Tu mapa de habilidades</span>
+                <h3>Progreso global</h3>
+                <p>Dataset activo: <strong>${escapeHtml(profile.name)}</strong>. Has completado ${globalStats.completed} de ${globalStats.total} actividades entre lecciones y retos de los tres datasets SQL.</p>
+                <div class="progress-hero-bar" role="progressbar" aria-label="Progreso global" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${globalStats.percent}">
+                    <span style="width:${globalStats.percent}%"></span>
+                </div>
+            </div>
+            <div class="progress-hero-score">
+                <strong>${globalStats.percent}%</strong>
+                <span>global</span>
+            </div>
+        </div>
+
+        <div class="progress-recommendation progress-recommendation-${recommendation.kind}">
+            <span class="progress-recommendation-icon"><i class="fas ${recommendation.icon}"></i></span>
+            <div class="progress-recommendation-copy">
+                <span>Siguiente paso recomendado</span>
+                <strong>${escapeHtml(recommendation.title)}</strong>
+                <p>${escapeHtml(recommendation.message)}</p>
+            </div>
+            <button type="button" class="btn-primary" onclick="${recommendation.onclick}">
+                ${escapeHtml(recommendation.action)} <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <div class="progress-summary">
+            ${metrics.map(metric => `
+                <div class="analyze-metric">
+                    <span class="analyze-metric-icon ${metric.tone}"><i class="fas ${metric.icon}"></i></span>
+                    <div>
+                        <span class="analyze-metric-value">${metric.value}</span>
+                        <span class="analyze-metric-label">${metric.label}</span>
+                        <span class="analyze-metric-hint">${metric.hint}</span>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-section-head">
+                <div>
+                    <h3>Dominio por concepto</h3>
+                    <p>Combinación de lecciones y retos de los tres datasets.</p>
+                </div>
+                <span class="progress-section-badge">${started} de ${conceptStats.length} iniciados</span>
+            </div>
+            <div class="concept-mastery-grid">
+                ${conceptStats.map(concept => {
+                    const levelClass = concept.percent === 100
+                        ? 'is-complete'
+                        : concept.percent >= 80
+                            ? 'is-high'
+                            : concept.percent > 0
+                                ? 'is-progress'
+                                : 'is-empty';
+                    const status = concept.percent === 100
+                        ? 'Dominado'
+                        : concept.percent >= 80
+                            ? 'Casi'
+                            : concept.percent > 0
+                                ? 'En progreso'
+                                : 'Sin empezar';
+                    return `
+                        <article class="concept-mastery-card ${levelClass}">
+                            <div class="concept-mastery-head">
+                                <span class="concept-mastery-icon"><i class="fas ${concept.icon}"></i></span>
+                                <div class="concept-mastery-copy">
+                                    <h4>${escapeHtml(concept.label)}</h4>
+                                    <p>${escapeHtml(concept.description)}</p>
+                                </div>
+                                <span class="concept-mastery-percent">${concept.percent}%</span>
+                            </div>
+                            <div class="concept-mastery-bar" role="progressbar" aria-label="${escapeHtml(concept.label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${concept.percent}">
+                                <span style="width:${concept.percent}%"></span>
+                            </div>
+                            <div class="concept-mastery-foot">
+                                <span>${concept.completed} de ${concept.total} actividades · ${status}</span>
+                                <button type="button" class="btn-ghost btn-sm" onclick="practiceLearningConcept('${concept.id}')">
+                                    Practicar <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </article>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+
+        <div class="progress-columns">
+            <div class="progress-section">
+                <div class="progress-section-head">
+                    <div>
+                        <h3>Progreso por dataset</h3>
+                        <p>Lecciones y retos completados en cada base.</p>
+                    </div>
+                </div>
+                <div class="dataset-progress-list">
+                    ${globalStats.datasetStats.map(stat => `
+                        <article class="dataset-progress-card${stat.datasetName === getLearningDatasetName() ? ' is-active' : ''}">
+                            <div class="dataset-progress-head">
+                                <div>
+                                    <strong>${escapeHtml(stat.name)}</strong>
+                                    <span>${stat.completed} de ${stat.total} actividades</span>
+                                </div>
+                                <span class="dataset-progress-percent">${stat.percent}%</span>
+                            </div>
+                            <div class="dataset-progress-bar" role="progressbar" aria-label="${escapeHtml(stat.name)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${stat.percent}">
+                                <span style="width:${stat.percent}%"></span>
+                            </div>
+                            <div class="dataset-progress-meta">
+                                <span>${stat.lessonsCompleted}/${stat.lessonsTotal} lecciones</span>
+                                <span>${stat.challengesCompleted}/${stat.challengesTotal} retos</span>
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="progress-section-head">
+                    <div>
+                        <h3>Actividad SQL reciente</h3>
+                        <p>Tus últimos avances en lecciones y retos SQL.</p>
+                    </div>
+                </div>
+                ${activity.length ? `
+                    <div class="recent-activity-list">
+                        ${activity.map(item => `
+                            <div class="recent-activity-item">
+                                <span class="recent-activity-icon"><i class="fas ${item.icon}"></i></span>
+                                <div>
+                                    <strong title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</strong>
+                                    <span>${item.type} · ${escapeHtml(LEARNING_PATH_PROFILES[item.datasetName]?.name || item.datasetName)}</span>
+                                </div>
+                                <time datetime="${escapeHtml(item.completedAt)}">${escapeHtml(formatLearningActivityDate(item.completedAt))}</time>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="progress-empty">
+                        <i class="fas fa-clock"></i>
+                        <p>Aún no has completado actividades. Empieza con la primera lección.</p>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+}
+
+function activatePathTab(tabName) {
+    const next = tabName === 'progress' ? 'progress' : 'lessons';
+    const tabs = Array.from(document.querySelectorAll('.path-tab'));
+    const panels = {
+        lessons: document.getElementById('pathLessonsPanel'),
+        progress: document.getElementById('pathProgressPanel')
+    };
+
+    tabs.forEach(tab => {
+        const active = tab.dataset.pathTab === next;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+        tab.tabIndex = active ? 0 : -1;
+    });
+
+    Object.entries(panels).forEach(([name, panel]) => {
+        if (!panel) return;
+        const active = name === next;
+        panel.hidden = !active;
+        panel.classList.toggle('active', active);
+    });
+
+    if (next === 'progress') {
+        renderLearningProgressDashboard();
+    }
+}
+
+function openLearningPath() {
+    activateSection('path');
+    activatePathTab('lessons');
+}
+
+function continueLearningLesson(id) {
+    openLearningPath();
+    selectLearningLesson(id);
+}
+
+function openSQLChallenges() {
+    activateSection('challenges');
+    activateChallengeTab('sql');
+}
+
+function practiceLearningChallenge(id) {
+    openSQLChallenges();
+    openChallenge(id);
+}
+
+function practiceLearningConcept(conceptId) {
+    const datasetName = getLearningDatasetName();
+    const profile = LEARNING_PATH_PROFILES[datasetName];
+    const lesson = getLearningLessonsForDataset(datasetName)
+        .find(item => item.id === conceptId && !isLearningLessonCompletedForDataset(item.id, datasetName));
+    if (lesson) {
+        continueLearningLesson(lesson.id);
+        return;
+    }
+
+    const challenge = getChallengeCatalog(datasetName)
+        .find(item => getChallengeConceptId(item) === conceptId && !challengeProgress[item.id]?.completed);
+    if (challenge) {
+        practiceLearningChallenge(challenge.id);
+        return;
+    }
+
+    const otherDataset = Object.keys(LEARNING_PATH_PROFILES).find(name => {
+        if (name === datasetName) return false;
+        const hasPendingLesson = getLearningLessonsForDataset(name).some(item => (
+            item.id === conceptId && !isLearningLessonCompletedForDataset(item.id, name)
+        ));
+        const hasPendingChallenge = getChallengeCatalog(name).some(item => (
+            getChallengeConceptId(item) === conceptId && !challengeProgress[item.id]?.completed
+        ));
+        return hasPendingLesson || hasPendingChallenge;
+    });
+
+    if (otherDataset) {
+        showToast('info', `Este concepto ya está completo en ${profile.name}. Cambia a ${LEARNING_PATH_PROFILES[otherDataset].name} desde Practicar para seguir.`);
+        return;
+    }
+
+    showToast('success', `¡Ya dominas ${getConceptLabel(conceptId)}!`);
 }
 
 function renderLearningLessonDetail() {
@@ -4741,6 +5279,25 @@ function initLearningPath() {
     loadLearningPathProgress();
     currentLearningLessonId = null;
     refreshLearningPath({ selectFirst: true });
+    activatePathTab('lessons');
+
+    if (learningPathEventsBound) return;
+    learningPathEventsBound = true;
+
+    document.querySelectorAll('.path-tab').forEach(tab => {
+        tab.addEventListener('click', () => activatePathTab(tab.dataset.pathTab));
+        tab.addEventListener('keydown', event => {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+            const tabs = Array.from(document.querySelectorAll('.path-tab'));
+            const index = tabs.indexOf(tab);
+            if (index === -1) return;
+            event.preventDefault();
+            const offset = event.key === 'ArrowRight' ? 1 : -1;
+            const nextTab = tabs[(index + offset + tabs.length) % tabs.length];
+            nextTab.focus();
+            activatePathTab(nextTab.dataset.pathTab);
+        });
+    });
 
     document.addEventListener('keydown', event => {
         if (event.target?.id !== 'pathEditor') return;

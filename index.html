@@ -88,7 +88,7 @@
                     <h3>Aprende SQL paso a paso</h3>
                     <p>8 lecciones cortas con editor, ejemplos, pistas y validación automática.</p>
                 </div>
-                <button type="button" id="pathCtaBtn" class="btn-primary" onclick="activateSection('path')">
+                <button type="button" id="pathCtaBtn" class="btn-primary" onclick="openLearningPath()">
                     Comenzar ruta <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -291,40 +291,55 @@
         <section id="section-path" class="section">
             <div class="section-header">
                 <h2><i class="fas fa-route"></i> Ruta de Aprendizaje</h2>
-                <p>Aprende SQL paso a paso con lecciones cortas y ejercicios validados</p>
+                <p>Aprende SQL paso a paso y revisa tu dominio por concepto</p>
             </div>
 
-            <div class="challenges-layout">
-                <aside class="challenge-list-panel" aria-label="Lecciones de la ruta">
-                    <div class="challenge-progress">
-                        <div class="challenge-progress-head">
-                            <span>Tu progreso</span>
-                            <strong id="pathProgressText">0 de 8</strong>
+            <div class="path-tabs" role="tablist" aria-label="Ruta de aprendizaje">
+                <button type="button" id="pathLessonsTab" class="path-tab active" data-path-tab="lessons" role="tab" aria-selected="true" aria-controls="pathLessonsPanel">
+                    <i class="fas fa-list-check"></i> Lecciones
+                </button>
+                <button type="button" id="pathProgressTab" class="path-tab" data-path-tab="progress" role="tab" aria-selected="false" aria-controls="pathProgressPanel">
+                    <i class="fas fa-chart-simple"></i> Mi progreso
+                </button>
+            </div>
+
+            <div id="pathLessonsPanel" class="path-tab-panel active" role="tabpanel" aria-labelledby="pathLessonsTab">
+                <div class="challenges-layout">
+                    <aside class="challenge-list-panel" aria-label="Lecciones de la ruta">
+                        <div class="challenge-progress">
+                            <div class="challenge-progress-head">
+                                <span>Tu progreso</span>
+                                <strong id="pathProgressText">0 de 8</strong>
+                            </div>
+                            <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de la ruta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pathProgressTrack">
+                                <div id="pathProgressBar"></div>
+                            </div>
                         </div>
-                        <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de la ruta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pathProgressTrack">
-                            <div id="pathProgressBar"></div>
+
+                        <p id="pathDatasetLabel" class="path-dataset-label">Dataset SQL: Escuela</p>
+                        <div id="pathLessonList" class="challenge-list">
+                            <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando ruta...</p>
                         </div>
-                    </div>
 
-                    <p id="pathDatasetLabel" class="path-dataset-label">Dataset SQL: Escuela</p>
-                    <div id="pathLessonList" class="challenge-list">
-                        <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando ruta...</p>
-                    </div>
+                        <button type="button" onclick="resetLearningProgress()" class="btn-secondary challenge-reset-btn">
+                            <i class="fas fa-rotate-left"></i> Reiniciar ruta
+                        </button>
+                    </aside>
 
-                    <button type="button" onclick="resetLearningProgress()" class="btn-secondary challenge-reset-btn">
-                        <i class="fas fa-rotate-left"></i> Reiniciar ruta
-                    </button>
-                </aside>
-
-                <div class="challenge-play-panel">
-                    <div id="pathLessonDetail" class="challenge-detail">
-                        <div class="challenge-empty">
-                            <i class="fas fa-route"></i>
-                            <h3>Cargando ruta...</h3>
-                            <p>Preparando las lecciones para el dataset activo.</p>
+                    <div class="challenge-play-panel">
+                        <div id="pathLessonDetail" class="challenge-detail">
+                            <div class="challenge-empty">
+                                <i class="fas fa-route"></i>
+                                <h3>Cargando ruta...</h3>
+                                <p>Preparando las lecciones para el dataset activo.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div id="pathProgressPanel" class="path-tab-panel" role="tabpanel" aria-labelledby="pathProgressTab" hidden>
+                <div id="learningProgressDashboard"></div>
             </div>
         </section>
 

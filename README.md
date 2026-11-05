@@ -17,6 +17,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas y comprobaciones de calidad.
 - Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
+- Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
@@ -211,6 +212,8 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Validación por resultado:** se compara la consulta con el resultado esperado y se indica si faltan filas, columnas o valores.
 - **Progreso persistente:** cada lección completada se guarda por dataset en `localStorage`.
 - **Navegación guiada:** botón para pasar a la siguiente lección y opción de reiniciar la ruta.
+- **Panel Mi progreso:** dominio por concepto, avance por dataset, actividad reciente y siguiente paso recomendado.
+- **Recomendaciones accionables:** el panel propone continuar una lección, practicar un reto o cambiar de dataset.
 
 ### Retos
 
@@ -332,7 +335,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
-- `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso y la validación de ejercicios.
+- `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
 - `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL y la navegación al laboratorio.
@@ -362,6 +365,15 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL y NoSQL, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.5.9
+
+- **Panel Mi progreso:** nueva pestaña dentro de la Ruta con resumen global de lecciones y retos.
+- **Dominio por concepto:** barras y porcentajes para `SELECT`, filtros, ordenación, `LIMIT`, `JOIN`, agrupaciones, `HAVING` y subconsultas.
+- **Progreso por dataset:** avance independiente de Escuela, Tienda y Biblioteca.
+- **Siguiente paso recomendado:** botones para continuar una lección, practicar un reto o cambiar de dataset.
+- **Actividad reciente:** últimas lecciones y retos completados con su fecha.
+- **Calidad:** pruebas del dashboard, métricas, recomendaciones y actividad reciente.
 
 ### v1.5.8
 

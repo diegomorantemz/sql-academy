@@ -23,12 +23,21 @@ const dom = new JSDOM(
         <select id="tableSelector"></select>
         <select id="categorySelector"></select>
         <span id="sqlExampleStatus"></span>
-        <div id="pathLessonList"></div>
-        <div id="pathLessonDetail"></div>
-        <strong id="pathProgressText"></strong>
-        <div id="pathProgressBar"></div>
-        <div id="pathProgressTrack"></div>
-        <p id="pathDatasetLabel"></p>
+        <button id="pathLessonsTab" class="path-tab active" data-path-tab="lessons"></button>
+        <button id="pathProgressTab" class="path-tab" data-path-tab="progress"></button>
+        <div id="pathLessonsPanel" class="path-tab-panel active">
+            <div id="pathLessonList"></div>
+            <div id="pathLessonDetail"></div>
+            <strong id="pathProgressText"></strong>
+            <div id="pathProgressBar"></div>
+            <div id="pathProgressTrack"></div>
+            <p id="pathDatasetLabel"></p>
+        </div>
+        <div id="pathProgressPanel" class="path-tab-panel" hidden>
+            <div id="learningProgressDashboard"></div>
+        </div>
+        <section id="section-path" class="section"></section>
+        <section id="section-challenges" class="section"></section>
     </body></html>`,
     {
         url: 'https://sql-academy.test/',
@@ -225,6 +234,62 @@ test('la ruta renderiza pasos, editor, dataset y progreso', () => {
 
     window.resetLearningProgress();
     assert.equal(document.getElementById('pathProgressText').textContent, '0 de 8');
+});
+
+test('el dashboard muestra progreso, conceptos, actividad y recomendación', () => {
+    window.localStorage.setItem(
+        'sql-academy-preferences-v1',
+        JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
+    );
+    window.loadPreferences();
+    window.resetLearningProgress();
+    window.resetChallengeProgress();
+    window.markLearningLessonCompleted('select');
+    window.markChallengeComplete({ id: 'tienda-stock-01' });
+    window.refreshLearningPath({ selectFirst: true });
+    document.getElementById('pathProgressTab').click();
+
+    const dashboard = document.getElementById('learningProgressDashboard');
+    assert.equal(document.getElementById('pathProgressPanel').hidden, false);
+    assert.equal(document.getElementById('pathLessonsPanel').hidden, true);
+    assert.match(dashboard.textContent, /Progreso global/);
+    assert.match(dashboard.textContent, /Dataset activo: Tienda/);
+    assert.match(dashboard.textContent, /Dominio por concepto/);
+    assert.match(dashboard.textContent, /1\/24/);
+    assert.match(dashboard.textContent, /1\/20/);
+    assert.match(dashboard.textContent, /Seleccionar/);
+    assert.match(dashboard.textContent, /Filtros/);
+    assert.match(dashboard.textContent, /2 de 14 actividades/);
+    assert.match(dashboard.textContent, /Selecciona columnas/);
+    assert.match(dashboard.textContent, /Productos con stock bajo/);
+    assert.match(dashboard.textContent, /Siguiente paso recomendado/);
+    assert.match(
+        dashboard.querySelector('.progress-recommendation').textContent,
+        /Filtra con WHERE/
+    );
+
+    document.getElementById('pathLessonsTab').click();
+    assert.equal(document.getElementById('pathProgressPanel').hidden, true);
+    assert.equal(document.getElementById('pathLessonsPanel').hidden, false);
+});
+
+test('las acciones del dashboard abren la lección y el reto correctos', () => {
+    window.localStorage.setItem(
+        'sql-academy-preferences-v1',
+        JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
+    );
+    window.loadPreferences();
+    window.resetLearningProgress();
+    window.refreshLearningPath({ selectFirst: true });
+
+    window.practiceLearningConcept('where');
+    assert.ok(document.getElementById('section-path').classList.contains('active'));
+    assert.match(document.getElementById('pathLessonDetail').textContent, /Filtra con WHERE/);
+    assert.equal(document.getElementById('pathProgressPanel').hidden, true);
+
+    window.practiceLearningChallenge('tienda-stock-01');
+    assert.ok(document.getElementById('section-challenges').classList.contains('active'));
+    assert.match(document.getElementById('challengeDetail').textContent, /Productos con stock bajo/);
 });
 
 test('runLearningLesson valida una consulta y muestra el siguiente paso', () => {

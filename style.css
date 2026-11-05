@@ -4842,3 +4842,602 @@ button:disabled {
         justify-content: center;
     }
 }
+
+/* ===== DASHBOARD DE PROGRESO ===== */
+.path-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--postgres-border);
+}
+
+.path-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.path-tab:hover {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.path-tab.active {
+    background: var(--postgres-blue);
+    border-color: var(--postgres-blue);
+    color: #fff;
+}
+
+.path-tab-panel[hidden] {
+    display: none;
+}
+
+.progress-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.progress-hero-copy {
+    flex: 1 1 420px;
+    min-width: 0;
+}
+
+.progress-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.progress-hero h3 {
+    color: var(--text-strong);
+    font-size: 1.3em;
+    margin-bottom: 4px;
+}
+
+.progress-hero p {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.progress-hero-bar {
+    max-width: 560px;
+    height: 8px;
+    margin-top: 14px;
+    overflow: hidden;
+    background: var(--surface-strong);
+    border-radius: 999px;
+}
+
+.progress-hero-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--postgres-blue), #6c5ce7);
+}
+
+.progress-hero-score {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    min-width: 110px;
+    padding: 8px 14px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(47, 111, 159, 0.18);
+    border-radius: 10px;
+}
+
+.progress-hero-score strong {
+    color: var(--postgres-blue);
+    font-size: 2.1em;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.progress-hero-score span {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.progress-recommendation {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding: 15px 16px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(47, 111, 159, 0.2);
+    border-left: 3px solid var(--postgres-blue);
+    border-radius: var(--radius-md);
+}
+
+.progress-recommendation-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--postgres-blue);
+    font-size: 14px;
+}
+
+.progress-recommendation-copy {
+    flex: 1 1 300px;
+    min-width: 0;
+}
+
+.progress-recommendation-copy > span {
+    display: block;
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.progress-recommendation-copy strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-size: 14px;
+}
+
+.progress-recommendation-copy p {
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.progress-recommendation .btn-primary {
+    align-self: center;
+    flex: 0 0 auto;
+}
+
+.progress-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.progress-section {
+    margin-top: 18px;
+    padding: 18px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.progress-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.progress-section-head h3 {
+    color: var(--text-strong);
+    font-size: 1em;
+    margin-bottom: 3px;
+}
+
+.progress-section-head p {
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.4;
+}
+
+.progress-section-badge {
+    flex: 0 0 auto;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.concept-mastery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.concept-mastery-card {
+    padding: 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-left: 3px solid var(--postgres-border);
+    border-radius: 9px;
+}
+
+.concept-mastery-card.is-progress {
+    border-left-color: var(--postgres-blue);
+}
+
+.concept-mastery-card.is-high {
+    border-left-color: #f59e0b;
+}
+
+.concept-mastery-card.is-complete {
+    border-left-color: #28a745;
+}
+
+.concept-mastery-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.concept-mastery-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 12px;
+}
+
+.concept-mastery-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.concept-mastery-copy h4 {
+    color: var(--text-strong);
+    font-size: 12.5px;
+    margin-bottom: 1px;
+}
+
+.concept-mastery-copy p {
+    color: var(--text-muted);
+    font-size: 10.5px;
+    line-height: 1.35;
+}
+
+.concept-mastery-percent {
+    flex: 0 0 auto;
+    color: var(--text-strong);
+    font-size: 1.05em;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.concept-mastery-bar {
+    height: 7px;
+    margin: 12px 0 9px;
+    overflow: hidden;
+    background: var(--surface-strong);
+    border-radius: 999px;
+}
+
+.concept-mastery-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--postgres-blue);
+}
+
+.concept-mastery-card.is-high .concept-mastery-bar span {
+    background: #f59e0b;
+}
+
+.concept-mastery-card.is-complete .concept-mastery-bar span {
+    background: #28a745;
+}
+
+.concept-mastery-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.concept-mastery-foot .btn-ghost {
+    padding: 3px 6px;
+    font-size: 10px;
+}
+
+.progress-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    align-items: start;
+}
+
+.dataset-progress-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dataset-progress-card {
+    padding: 12px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+}
+
+.dataset-progress-card.is-active {
+    background: var(--accent-soft);
+    border-color: rgba(47, 111, 159, 0.4);
+}
+
+.dataset-progress-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dataset-progress-head strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 12.5px;
+}
+
+.dataset-progress-head span {
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.dataset-progress-percent {
+    color: var(--postgres-blue);
+    font-size: 12px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.dataset-progress-bar {
+    height: 7px;
+    margin: 10px 0 7px;
+    overflow: hidden;
+    background: var(--surface-strong);
+    border-radius: 999px;
+}
+
+.dataset-progress-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--postgres-blue), #6c5ce7);
+}
+
+.dataset-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.recent-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.recent-activity-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+}
+
+.recent-activity-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 11px;
+}
+
+.recent-activity-item > div {
+    flex: 1;
+    min-width: 0;
+}
+
+.recent-activity-item strong {
+    display: block;
+    overflow: hidden;
+    color: var(--text-strong);
+    font-size: 11.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recent-activity-item span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.recent-activity-item time {
+    flex: 0 0 auto;
+    color: var(--text-muted);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.progress-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 120px;
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--surface-muted);
+    border: 1px dashed var(--postgres-border);
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.progress-empty i {
+    color: var(--postgres-blue);
+    font-size: 1.4em;
+}
+
+[data-theme="dark"] .path-tab {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .path-tab:hover {
+    background: #1e293b;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .path-tab.active {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #fff;
+}
+
+[data-theme="dark"] .progress-hero-score {
+    background: #172554;
+    border-color: #1e40af;
+}
+
+[data-theme="dark"] .progress-hero-score strong {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .progress-recommendation {
+    background: #172554;
+    border-color: #1e40af;
+    border-left-color: #60a5fa;
+}
+
+[data-theme="dark"] .progress-recommendation-icon {
+    background: #0f172a;
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .progress-recommendation-copy > span {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .dataset-progress-card.is-active {
+    background: #172554;
+    border-color: #1e40af;
+}
+
+[data-theme="dark"] .concept-mastery-card.is-high .concept-mastery-bar span {
+    background: #fbbf24;
+}
+
+[data-theme="dark"] .concept-mastery-card.is-complete .concept-mastery-bar span {
+    background: #4ade80;
+}
+
+[data-theme="dark"] .progress-empty i {
+    color: #93c5fd;
+}
+
+@media (max-width: 900px) {
+    .progress-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .progress-hero,
+    .progress-section {
+        padding: 15px;
+    }
+
+    .progress-hero-score {
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .progress-recommendation .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .concept-mastery-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.progress-hero p strong {
+    color: var(--text-strong);
+}
+
+[data-theme="dark"] .progress-eyebrow,
+[data-theme="dark"] .dataset-progress-percent,
+[data-theme="dark"] .concept-mastery-icon,
+[data-theme="dark"] .recent-activity-icon {
+    color: #93c5fd;
+}
+
+.path-tab:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.progress-summary .analyze-metric-value {
+    font-variant-numeric: tabular-nums;
+}
