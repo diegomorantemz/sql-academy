@@ -54,12 +54,13 @@ test('el modal de donaciones abre en Yape y muestra las opciones actuales', () =
     const body = modalBody();
 
     assert.ok(modal.classList.contains('active'));
-    assert.match(body.textContent, /SQL Academy es gratis/);
+    assert.match(body.textContent, /Si te sirvió/);
+    assert.match(body.textContent, /Escanea el QR y elige el monto/);
     assert.match(body.textContent, /Monto libre desde S\/1/);
     assert.match(body.textContent, /100% voluntario/);
-    assert.match(body.textContent, /Dominio y hosting/);
-    assert.match(body.textContent, /Gracias por apoyar SQL Academy/);
+    assert.match(body.textContent, /Hosting, dominio y mantenimiento/);
     assert.equal(body.querySelectorAll('.donation-method-tab').length, 2);
+    assert.equal(body.querySelectorAll('.donation-steps, .donation-transparency').length, 0);
     assert.match(body.textContent, /Yape/);
     assert.match(body.textContent, /Plin/);
     assert.doesNotMatch(body.textContent, /PayPal/);

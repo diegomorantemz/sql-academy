@@ -401,6 +401,13 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 
 ## Release Notes
 
+### v1.7.9
+
+- **Donación más directa:** el modal reduce el texto a una frase de introducción, el QR y una línea de monto libre.
+- **Menos pasos:** se eliminaron las listas de instrucciones y transparencia; el QR y las pestañas Yape/Plin concentran la acción.
+- **Mismo enfoque voluntario:** se mantiene “desde S/1”, la frase de humor y el aviso de que no bloquea funciones.
+- **Caché PWA:** actualizada para el modal simplificado.
+
 ### v1.7.8
 
 - **Donaciones voluntarias:** nuevo modal **Apoyar SQL Academy** con Yape y Plin, sin exponer números de teléfono.

@@ -3360,13 +3360,7 @@ const DONATION_METHODS = {
         enabled: true,
         type: 'qr',
         image: 'images/qr-yape.png',
-        alt: 'QR de Yape para donar a SQL Academy',
-        steps: [
-            'Abre Yape en tu teléfono.',
-            'Elige «Pago con QR» y escanea el código.',
-            'Ingresa el monto que quieras, desde S/1.',
-            'Confirma la operación. ¡Gracias!'
-        ]
+        alt: 'QR de Yape para donar a SQL Academy'
     },
     plin: {
         id: 'plin',
@@ -3375,13 +3369,7 @@ const DONATION_METHODS = {
         enabled: true,
         type: 'qr',
         image: 'images/qr-plin.png',
-        alt: 'QR de Plin para donar a SQL Academy',
-        steps: [
-            'Abre la app de tu entidad financiera.',
-            'Elige «Pago con QR» y escanea el código.',
-            'Ingresa el monto que quieras, desde S/1.',
-            'Confirma la operación. ¡Gracias!'
-        ]
+        alt: 'QR de Plin para donar a SQL Academy'
     },
     paypal: {
         id: 'paypal',
@@ -3389,8 +3377,7 @@ const DONATION_METHODS = {
         icon: 'fa-paypal',
         enabled: false,
         type: 'link',
-        url: '',
-        steps: []
+        url: ''
     },
     kofi: {
         id: 'kofi',
@@ -3398,8 +3385,7 @@ const DONATION_METHODS = {
         icon: 'fa-mug-hot',
         enabled: false,
         type: 'link',
-        url: '',
-        steps: []
+        url: ''
     }
 };
 
@@ -3461,10 +3447,7 @@ function renderDonationMethodPanel(method) {
                     </a>
                 </div>
                 <div class="donation-method-copy">
-                    <h3>Donar con ${escapeHtml(method.label)}</h3>
-                    <ol class="donation-steps">
-                        ${method.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}
-                    </ol>
+                    <p class="donation-scan-copy"><i class="fas fa-qrcode"></i> Escanea el QR y elige el monto.</p>
                     <p class="donation-amount">Monto libre desde <strong>S/1</strong>. Tú decides cuánto.</p>
                 </div>
             </div>
@@ -3486,19 +3469,6 @@ function renderDonationMethodPanel(method) {
     }
 
     return '';
-}
-
-function renderDonationTransparency() {
-    return `
-        <div class="donation-transparency">
-            <h4><i class="fas fa-circle-info"></i> ¿En qué se usa tu apoyo?</h4>
-            <ul>
-                <li><i class="fas fa-server"></i> Dominio y hosting del proyecto.</li>
-                <li><i class="fas fa-wand-magic-sparkles"></i> API del asistente IA.</li>
-                <li><i class="fas fa-code"></i> Mantenimiento y nuevos contenidos.</li>
-            </ul>
-        </div>
-    `;
 }
 
 function showDonationQR(type = 'yape') {
@@ -3523,19 +3493,18 @@ function showDonationQR(type = 'yape') {
     body.innerHTML = `
         <div class="donation-card">
             <p class="donation-lead">
-                SQL Academy es gratis y seguirá siéndolo. Si te sirvió, puedes dejar una propina voluntaria desde S/1. Tú decides cuánto.
+                Si te sirvió, deja una donación voluntaria desde S/1.
             </p>
 
             ${renderDonationMethodTabs(method.id, methods)}
             ${renderDonationMethodPanel(method)}
 
             <div class="donation-quote">“${escapeHtml(quote)}”</div>
-            ${renderDonationTransparency()}
 
             <div class="donation-voluntary">
-                <i class="fas fa-heart"></i> 100% voluntario. No desbloquea funciones ni certificados.
+                <i class="fas fa-heart"></i> 100% voluntario · No bloquea nada.
             </div>
-            <p class="donation-thanks">Gracias por apoyar SQL Academy.</p>
+            <p class="donation-footnote"><i class="fas fa-server"></i> Hosting, dominio y mantenimiento.</p>
         </div>
     `;
 
