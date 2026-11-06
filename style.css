@@ -250,6 +250,107 @@ body {
     max-width: 780px;
 }
 
+/* ===== NIVEL DE HABILIDAD ===== */
+.level-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.level-bar.is-onboarding {
+    border-left-color: #e0a800;
+    background: linear-gradient(135deg, #fffef9 0%, #fff9e8 100%);
+}
+
+.level-bar-copy {
+    min-width: 0;
+}
+
+.level-bar-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.level-bar-copy strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-size: 15px;
+}
+
+.level-bar-copy p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.level-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.level-select-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+#sqlLevelSelect,
+#nosqlLevelSelect {
+    min-height: 36px;
+    padding: 7px 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.level-test-btn {
+    white-space: nowrap;
+}
+
+.level-skip-btn {
+    display: none;
+}
+
+.level-bar.is-onboarding .level-skip-btn {
+    display: inline-flex;
+}
+
+.level-bar.is-onboarding .level-test-btn {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.18);
+}
+
+.level-bar.is-onboarding .level-test-btn:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+}
+
 /* ===== LEARN SECTION ===== */
 .learn-grid {
     display: grid;
@@ -3223,6 +3324,251 @@ button:disabled {
     opacity: 0.55;
     cursor: not-allowed;
     transform: none;
+}
+
+/* ===== TEST DE NIVEL ===== */
+.skill-test-content {
+    max-width: 640px;
+}
+
+.skill-test-eyebrow {
+    display: inline-flex;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.skill-test-question h3 {
+    margin: 4px 0 0;
+    color: var(--postgres-dark);
+    font-size: 1.2em;
+    line-height: 1.45;
+}
+
+.skill-test-progress {
+    height: 6px;
+    margin: 14px 0 16px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-strong);
+}
+
+.skill-test-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--postgres-blue), #6c5ce7);
+    transition: width 0.3s ease;
+}
+
+.skill-test-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skill-test-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.skill-test-option:hover {
+    border-color: rgba(47, 111, 159, 0.45);
+    background: var(--accent-soft);
+}
+
+.skill-test-option.selected {
+    border-color: var(--postgres-blue);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 2px rgba(51, 103, 145, 0.13);
+}
+
+.skill-test-option-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface-muted);
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.skill-test-option.selected .skill-test-option-letter {
+    background: var(--postgres-blue);
+    color: white;
+}
+
+.skill-test-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.skill-test-score {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.skill-test-next {
+    margin-top: 14px;
+    padding: 11px 13px;
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.skill-test-next span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.skill-test-next strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-strong);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.skill-test-result {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.skill-test-result h3 {
+    margin: 2px 0 0;
+    color: var(--postgres-dark);
+}
+
+.skill-test-result > p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.skill-test-result-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+[data-theme="dark"] .level-bar {
+    background: #111827;
+    border-color: #334155;
+    border-left-color: #60a5fa;
+}
+
+[data-theme="dark"] .level-bar.is-onboarding {
+    background: #3b2f14;
+    border-left-color: #a16207;
+}
+
+[data-theme="dark"] .level-bar-copy strong,
+[data-theme="dark"] #skillTestBody .skill-test-question h3,
+[data-theme="dark"] #skillTestBody .skill-test-result h3 {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .level-bar-copy p,
+[data-theme="dark"] #skillTestBody .skill-test-result > p,
+[data-theme="dark"] #skillTestBody .skill-test-score {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] #sqlLevelSelect,
+[data-theme="dark"] #nosqlLevelSelect {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .skill-test-option {
+    background: #111827;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .skill-test-option:hover,
+[data-theme="dark"] .skill-test-option.selected {
+    background: #172554;
+    border-color: #60a5fa;
+}
+
+[data-theme="dark"] .skill-test-option-letter {
+    background: #1e293b;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .skill-test-option.selected .skill-test-option-letter {
+    background: var(--postgres-blue);
+    color: white;
+}
+
+[data-theme="dark"] .skill-test-next {
+    background: #0f172a;
+    border-left-color: #60a5fa;
+}
+
+[data-theme="dark"] .skill-test-next strong {
+    color: #e2e8f0;
+}
+
+@media (max-width: 600px) {
+    .level-bar-actions {
+        width: 100%;
+    }
+
+    .level-bar-actions select {
+        flex: 1;
+    }
+
+    .level-test-btn {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .skill-test-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .skill-test-footer .btn-primary,
+    .skill-test-footer .btn-ghost,
+    .skill-test-result-actions button {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 /* ===== DONACIONES ===== */

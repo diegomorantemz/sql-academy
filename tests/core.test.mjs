@@ -342,6 +342,7 @@ test('el cambio de dataset actualiza categorías y retos SQL', () => {
         JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
     );
     window.loadPreferences();
+    window.setSkillLevel('sql', 'all');
     window.refreshPracticeContentForDataset();
 
     const tiendaCategories = Array.from(

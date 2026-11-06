@@ -14,6 +14,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
 - Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
 - Retos de depuración **Encuentra el error**: consulta rota, síntoma, pista, editor de corrección y validación por resultado en los tres datasets SQL.
+- Test de habilidad adaptativo con niveles separados para SQL y NoSQL. Practicar y el laboratorio filtran ejemplos y sintaxis según el nivel, con opción de ver todo.
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
@@ -116,6 +117,7 @@ sql-academy/
 │   ├── challenges-ui.test.mjs  # Pestañas SQL, NoSQL y Depuración
 │   ├── table-editor-ui.test.mjs # Vista y edición de tablas
 │   ├── donation-ui.test.mjs    # Modal de donaciones
+│   ├── skill-level.test.mjs    # Test adaptativo y filtros por nivel
 │   ├── license.test.mjs        # Licencia y rutas de assets
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
@@ -206,6 +208,16 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - Copia de toda la tabla o de una celda con doble clic.
 - Exportación a CSV y JSON.
 - Soporte para varias sentencias `SELECT` en una misma ejecución.
+
+### Niveles y test de habilidad
+
+- **Test adaptativo:** seis preguntas que suben o bajan de dificultad según las respuestas.
+- **Niveles separados:** SQL y NoSQL se evalúan y guardan de forma independiente.
+- **Nivel recomendado:** el resultado explica qué practicar a continuación.
+- **Filtros por nivel:** Practicar muestra solo las categorías del nivel activo; el laboratorio NoSQL filtra ejemplos y sintaxis rápida.
+- **Control manual:** puedes cambiar de nivel o elegir **Ver todo** en cualquier momento.
+- **Sin bloqueos:** el nivel es una guía; no oculta el editor, las tablas ni la consola.
+- **Persistencia:** el perfil se guarda en `localStorage`.
 
 ### Análisis de datos
 
@@ -378,6 +390,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL/Depuración y la navegación al laboratorio.
 - `tests/table-editor-ui.test.mjs` cubre los modos Vista/Editar del explorador, el aviso de cambios sin guardar, el bloqueo sin clave primaria y el límite de filas.
 - `tests/donation-ui.test.mjs` cubre el modal de donaciones, el cambio Yape/Plin, la ausencia de números y la presencia de los QR.
+- `tests/skill-level.test.mjs` cubre el perfil de nivel, el test adaptativo, los filtros SQL/NoSQL y la persistencia.
 - `tests/license.test.mjs` cubre la licencia noncommercial, la nota de copyright y las rutas de los assets de la PWA.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
@@ -405,6 +418,17 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.9.0
+
+- **Test de habilidad adaptativo:** seis preguntas por recorrido que ajustan la dificultad según las respuestas.
+- **Niveles separados:** perfil independiente para SQL y NoSQL, guardado en `localStorage`.
+- **Practicar por nivel:** las categorías de ejemplos SQL se filtran según el nivel activo y se pueden mostrar todas.
+- **NoSQL por nivel:** los ejemplos y la sintaxis rápida se adaptan al nivel; la consola y las colecciones siguen disponibles.
+- **Control manual:** selector de nivel, opción **Ver todo** y botón para empezar desde cero.
+- **Resultado accionable:** el test recomienda el siguiente paso y permite repetirlo.
+- **Calidad:** pruebas del test adaptativo, filtros, persistencia y banco de preguntas.
+- **Caché PWA:** actualizada para el nuevo onboarding y los filtros.
 
 ### v1.8.0
 

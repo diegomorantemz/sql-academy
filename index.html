@@ -712,6 +712,29 @@
                 <p>Escribe consultas SQL y ve los resultados en tiempo real</p>
             </div>
 
+            <div id="sqlLevelBar" class="level-bar is-onboarding">
+                <div class="level-bar-copy">
+                    <span class="level-bar-eyebrow"><i class="fas fa-signal"></i> Tu nivel SQL</span>
+                    <strong id="sqlLevelLabel">Nivel estimado: Básico</strong>
+                    <p id="sqlLevelDescription">Aún no has hecho el test. Empezamos por lo básico.</p>
+                </div>
+                <div class="level-bar-actions">
+                    <label class="level-select-label" for="sqlLevelSelect">Nivel</label>
+                    <select id="sqlLevelSelect" onchange="setSkillLevel('sql', this.value)" aria-label="Nivel de ejemplos SQL">
+                        <option value="basico">Básico</option>
+                        <option value="intermedio">Intermedio</option>
+                        <option value="avanzado">Avanzado</option>
+                        <option value="all">Ver todo</option>
+                    </select>
+                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('sql')">
+                        <i class="fas fa-clipboard-question"></i> Test de nivel
+                    </button>
+                    <button type="button" class="btn-ghost level-skip-btn" onclick="setSkillLevel('sql', 'basico')">
+                        Empezar desde cero
+                    </button>
+                </div>
+            </div>
+
             <div class="practice-layout">
                 <!-- Panel izquierdo: Info -->
                 <div class="practice-sidebar">
@@ -843,6 +866,29 @@
                 <p>Practica con documentos JSON y una consola tipo MongoDB, directamente en el navegador</p>
             </div>
 
+            <div id="nosqlLevelBar" class="level-bar is-onboarding">
+                <div class="level-bar-copy">
+                    <span class="level-bar-eyebrow"><i class="fas fa-signal"></i> Tu nivel NoSQL</span>
+                    <strong id="nosqlLevelLabel">Nivel estimado: Básico</strong>
+                    <p id="nosqlLevelDescription">Aún no has hecho el test. Empezamos por lo básico.</p>
+                </div>
+                <div class="level-bar-actions">
+                    <label class="level-select-label" for="nosqlLevelSelect">Nivel</label>
+                    <select id="nosqlLevelSelect" onchange="setSkillLevel('nosql', this.value)" aria-label="Nivel de ejemplos NoSQL">
+                        <option value="basico">Básico</option>
+                        <option value="intermedio">Intermedio</option>
+                        <option value="avanzado">Avanzado</option>
+                        <option value="all">Ver todo</option>
+                    </select>
+                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('nosql')">
+                        <i class="fas fa-clipboard-question"></i> Test de nivel
+                    </button>
+                    <button type="button" class="btn-ghost level-skip-btn" onclick="setSkillLevel('nosql', 'basico')">
+                        Empezar desde cero
+                    </button>
+                </div>
+            </div>
+
             <div class="nosql-layout">
                 <aside class="nosql-sidebar">
                     <div class="info-panel nosql-collections-panel">
@@ -864,11 +910,8 @@
                     <div class="info-panel nosql-help-panel">
                         <h3><i class="fas fa-circle-info"></i> Sintaxis rápida</h3>
                         <p>Usa una consola simplificada de MongoDB. No se ejecuta JavaScript arbitrario.</p>
-                        <code>db.estudiantes.find({ edad: { $gt: 18 } })</code>
-                        <code>db.estudiantes.insertOne({ nombre: "Ana" })</code>
-                        <code>db.estudiantes.updateMany({}, { $inc: { edad: 1 } })</code>
-                        <code>db.estudiantes.aggregate([{ $group: { _id: "$carrera", total: { $sum: 1 } } }])</code>
-                        <p class="nosql-muted">Operadores: <code>$gt</code>, <code>$gte</code>, <code>$lt</code>, <code>$in</code>, <code>$and</code>, <code>$or</code>, <code>$set</code>, <code>$inc</code>, <code>$push</code>.</p>
+                        <div id="nosqlQuickSyntax" class="nosql-quick-syntax"></div>
+                        <p id="nosqlQuickOperators" class="nosql-muted"></p>
                     </div>
                 </aside>
 
@@ -1244,6 +1287,20 @@
                 <button onclick="closeDonationModal()" class="modal-close" aria-label="Cerrar apoyo">&times;</button>
             </div>
             <div class="modal-body" id="donationModalBody"></div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE TEST DE NIVEL ===== -->
+    <div id="skillTestModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="skillTestTitle">
+        <div class="modal-content skill-test-content">
+            <div class="modal-header">
+                <div>
+                    <span id="skillTestTrackLabel" class="skill-test-eyebrow">SQL</span>
+                    <h2 id="skillTestTitle">Test de nivel</h2>
+                </div>
+                <button type="button" onclick="closeSkillTest()" class="modal-close" aria-label="Cerrar test">&times;</button>
+            </div>
+            <div class="modal-body" id="skillTestBody" aria-live="polite"></div>
         </div>
     </div>
     <!-- ===== GUÍA DE PRIMEROS PASOS EN SQL ===== -->
