@@ -32,6 +32,187 @@ let preferences = {
 };
 
 // ============================================
+// SONIDO
+// ============================================
+
+const SOUND_STORAGE_KEY = 'sql-academy-sound-enabled';
+let soundEnabled = false;
+let audioContext = null;
+let masterGain = null;
+
+function loadSoundPreference() {
+    try {
+        soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) === '1';
+    } catch (error) {
+        soundEnabled = false;
+    }
+}
+
+function saveSoundPreference() {
+    try {
+        localStorage.setItem(SOUND_STORAGE_KEY, soundEnabled ? '1' : '0');
+    } catch (error) {
+        // La app sigue funcionando aunque localStorage esté bloqueado.
+    }
+}
+
+function updateSoundButton() {
+    const button = document.getElementById('soundToggle');
+    if (!button) return;
+    button.innerHTML = `<i class="fas ${soundEnabled ? 'fa-volume-high' : 'fa-volume-xmark'}"></i>`;
+    button.setAttribute('aria-pressed', String(soundEnabled));
+    button.setAttribute('aria-label', soundEnabled ? 'Desactivar sonido' : 'Activar sonido');
+    button.title = soundEnabled ? 'Desactivar sonido' : 'Activar sonido';
+}
+
+function applySoundPreference() {
+    updateSoundButton();
+    if (audioContext && masterGain) {
+        masterGain.gain.setTargetAtTime(soundEnabled ? 0.75 : 0, audioContext.currentTime, 0.02);
+    }
+}
+
+function ensureAudioContext() {
+    if (audioContext) {
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().catch(() => {});
+        }
+        if (masterGain) {
+            masterGain.gain.setTargetAtTime(soundEnabled ? 0.75 : 0, audioContext.currentTime, 0.02);
+        }
+        return audioContext;
+    }
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    try {
+        audioContext = new AudioContextClass();
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = soundEnabled ? 0.75 : 0;
+        masterGain.connect(audioContext.destination);
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().catch(() => {});
+        }
+        return audioContext;
+    } catch (error) {
+        audioContext = null;
+        masterGain = null;
+        return null;
+    }
+}
+
+function playTone({ frequency, start = 0, duration = 0.2, type = 'sine', gain = 0.04, endFrequency = frequency }) {
+    const context = ensureAudioContext();
+    if (!context || !masterGain) return;
+
+    const startAt = context.currentTime + start;
+    const oscillator = context.createOscillator();
+    const envelope = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, startAt);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), startAt + duration);
+    envelope.gain.setValueAtTime(0.0001, startAt);
+    envelope.gain.exponentialRampToValueAtTime(gain, startAt + Math.min(0.02, duration / 4));
+    envelope.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    oscillator.connect(envelope).connect(masterGain);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.05);
+}
+
+function playNoiseHit({ start = 0, duration = 0.35, gain = 0.03, frequency = 1100 }) {
+    const context = ensureAudioContext();
+    if (!context || !masterGain) return;
+
+    const startAt = context.currentTime + start;
+    const sampleCount = Math.max(1, Math.floor(context.sampleRate * duration));
+    const buffer = context.createBuffer(1, sampleCount, context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let index = 0; index < sampleCount; index += 1) {
+        data[index] = (Math.random() * 2 - 1) * (1 - index / sampleCount);
+    }
+
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const envelope = context.createGain();
+    source.buffer = buffer;
+    filter.type = 'bandpass';
+    filter.frequency.value = frequency;
+    filter.Q.value = 0.7;
+    envelope.gain.setValueAtTime(gain, startAt);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    source.connect(filter).connect(envelope).connect(masterGain);
+    source.start(startAt);
+    source.stop(startAt + duration + 0.02);
+}
+
+function playIntroSound() {
+    const context = ensureAudioContext();
+    if (!context || !masterGain) return;
+
+    const startAt = context.currentTime;
+    const drone = context.createOscillator();
+    const droneEnvelope = context.createGain();
+    drone.type = 'sine';
+    drone.frequency.setValueAtTime(55, startAt);
+    droneEnvelope.gain.setValueAtTime(0.0001, startAt);
+    droneEnvelope.gain.exponentialRampToValueAtTime(0.035, startAt + 0.18);
+    droneEnvelope.gain.setValueAtTime(0.035, startAt + 3.25);
+    droneEnvelope.gain.exponentialRampToValueAtTime(0.0001, startAt + 4);
+    drone.connect(droneEnvelope).connect(masterGain);
+    drone.start(startAt);
+    drone.stop(startAt + 4.1);
+
+    for (let index = 0; index < 4; index += 1) {
+        playTone({
+            frequency: 110,
+            start: 0.35 + index * 0.82,
+            duration: 0.18,
+            type: 'triangle',
+            gain: 0.03,
+            endFrequency: 55
+        });
+    }
+
+    playNoiseHit({ start: 0.12, duration: 0.45, gain: 0.03, frequency: 1200 });
+    playTone({ frequency: 440, start: 0.12, duration: 0.5, type: 'sine', gain: 0.014, endFrequency: 660 });
+}
+
+function playSuccessSound() {
+    playTone({ frequency: 523.25, start: 0, duration: 0.12, gain: 0.045 });
+    playTone({ frequency: 783.99, start: 0.1, duration: 0.2, gain: 0.04 });
+}
+
+function playErrorSound() {
+    playTone({ frequency: 220, start: 0, duration: 0.16, type: 'triangle', gain: 0.035, endFrequency: 170 });
+    playTone({ frequency: 164.81, start: 0.12, duration: 0.22, type: 'triangle', gain: 0.03, endFrequency: 130 });
+}
+
+function playSound(type) {
+    if (!soundEnabled) return;
+    if (type === 'intro') playIntroSound();
+    else if (type === 'success') playSuccessSound();
+    else if (type === 'error') playErrorSound();
+}
+
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    saveSoundPreference();
+    applySoundPreference();
+
+    if (soundEnabled) {
+        ensureAudioContext();
+        playSound('success');
+        showToast('success', 'Sonido activado.');
+    } else {
+        if (audioContext && masterGain) {
+            masterGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.02);
+        }
+        showToast('info', 'Sonido desactivado.');
+    }
+}
+
+// ============================================
 // ASISTENTE IA
 // ============================================
 
@@ -5532,6 +5713,7 @@ function runChallenge() {
 
         if (comparison.ok) {
             markChallengeComplete(challenge);
+            playSound('success');
             setChallengeResult('success', `
                 <strong><i class="fas fa-circle-check"></i> ¡Correcto!</strong>
                 Tu consulta devuelve el mismo resultado que la solución esperada.
@@ -5556,6 +5738,7 @@ function runChallenge() {
         }
 
         const canShowSolution = challengeAttempts >= 3;
+        playSound('error');
         setChallengeResult('error', `
             <strong><i class="fas fa-circle-xmark"></i> Aún no</strong>
             ${escapeHtml(message)}
@@ -5575,6 +5758,7 @@ function runChallenge() {
             showChallengeHint();
         }
     } catch (error) {
+        playSound('error');
         setChallengeResult('error', `
             <strong><i class="fas fa-circle-exclamation"></i> Error en la consulta</strong>
             <code>${escapeHtml(error.message || String(error))}</code>
@@ -5815,6 +5999,7 @@ function runDebugChallenge() {
         if (comparison.ok) {
             const wasCompleted = Boolean(challengeProgress[challenge.id]?.completed);
             markDebugChallengeComplete(challenge);
+            playSound('success');
             showDebugResult('success', `
                 <strong><i class="fas fa-circle-check"></i> ¡Consulta corregida!</strong>
                 ${wasCompleted ? 'Ya tenías este reto completado.' : 'El resultado coincide con la solución esperada.'}
@@ -5825,6 +6010,7 @@ function runDebugChallenge() {
         }
 
         debugChallengeAttempts += 1;
+        playSound('error');
         const solutionButton = debugChallengeAttempts >= 2
             ? '<div class="challenge-result-actions"><button type="button" class="btn-secondary" onclick="showDebugSolution()"><i class="fas fa-eye"></i> Ver solución</button></div>'
             : '';
@@ -5835,6 +6021,7 @@ function runDebugChallenge() {
         `);
     } catch (error) {
         debugChallengeAttempts += 1;
+        playSound('error');
         const solutionButton = debugChallengeAttempts >= 2
             ? '<div class="challenge-result-actions"><button type="button" class="btn-secondary" onclick="showDebugSolution()"><i class="fas fa-eye"></i> Ver solución</button></div>'
             : '';
@@ -6807,12 +6994,14 @@ function renderDemoTourStep() {
 
 function startDemoTour() {
     demoTourIndex = 0;
+    playSound('intro');
     renderDemoTourStep();
 }
 
 function nextDemoTourStep() {
     if (demoTourIndex >= DEMO_TOUR_STEPS.length - 1) {
         closeDemoTour();
+        playSound('success');
         showToast('success', 'Recorrido completado. Gracias por acompañar SQL Academy.');
         return;
     }
@@ -8071,6 +8260,7 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
 
         if (comparison.ok) {
             markLearningLessonCompleted(lesson.id);
+            playSound('success');
             renderLearningPathList();
             const status = document.getElementById('pathLessonStatus');
             if (status) status.hidden = false;
@@ -8092,11 +8282,13 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
             return;
         }
 
+        playSound('error');
         setLearningResult('error', `
             <strong><i class="fas fa-circle-xmark"></i> Todavía no</strong>
             ${escapeHtml(learningComparisonMessage(comparison))}
         `);
     } catch (error) {
+        playSound('error');
         setLearningResult('error', `
             <strong><i class="fas fa-circle-exclamation"></i> Error en la consulta</strong>
             <code>${escapeHtml(error.message || String(error))}</code>
@@ -8467,6 +8659,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Preferencias e historial guardados en el navegador.
     loadPreferences();
     applyPreferences();
+    loadSoundPreference();
+    applySoundPreference();
     loadSkillProfile();
     applySkillLevelUI();
     loadHistoryFromStorage();
@@ -9066,6 +9260,11 @@ window.openProgressReport = openProgressReport;
 window.printProgressReport = printProgressReport;
 window.closeProgressReport = closeProgressReport;
 window.buildProgressReportHtml = buildProgressReportHtml;
+window.toggleSound = toggleSound;
+window.playSound = playSound;
+window.loadSoundPreference = loadSoundPreference;
+window.applySoundPreference = applySoundPreference;
+window.isSoundEnabled = () => soundEnabled;
 window.filterNoSQLExamplesBySkill = filterNoSQLExamplesBySkill;
 window.getSkillTestQuestions = getSkillTestQuestions;
 window.renderNoSQLQuickSyntax = renderNoSQLQuickSyntax;

@@ -614,6 +614,9 @@
                     saveChallengeProgress();
                     renderChallenges();
                 }
+                if (typeof global.playSound === 'function') {
+                    global.playSound(feedback.ok ? 'success' : 'error');
+                }
             }
 
             showToast(result.type === 'write' ? 'success' : 'info', getResultSummary(result));
@@ -766,6 +769,9 @@
                 }
                 feedback.canRevealSolution = !feedback.ok && activeChallengeAttempts >= 2;
                 feedback.challengeId = activeChallengeId;
+                if (typeof global.playSound === 'function') {
+                    global.playSound(feedback.ok ? 'success' : 'error');
+                }
             }
 
             showToast(result.type === 'write' ? 'success' : 'info', getResultSummary(result));

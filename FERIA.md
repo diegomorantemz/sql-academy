@@ -155,6 +155,7 @@ Donaciones voluntarias y, más adelante, licencias comerciales, planes para aula
 - [ ] Laptop cargada y cargador.
 - [ ] Demo abierta en una pestaña y app limpia en otra.
 - [ ] Perfil de prueba y recorrido de 5 minutos revisados.
+- [ ] Decidir si usarás el sonido opcional; si sí, activarlo desde la cabecera antes de empezar.
 - [ ] QR de la demo impreso o visible.
 - [ ] Video de respaldo grabado por si falla la conexión.
 - [ ] Versión offline comprobada.

@@ -28,6 +28,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
 - Aplicación instalable (PWA), modo oscuro y mejoras de accesibilidad.
+- Sonido opcional: intro original sintetizada para el recorrido y feedback de aciertos/errores, apagado por defecto.
 - Donaciones voluntarias con Yape y Plin desde S/1, sin montos obligatorios ni funciones bloqueadas.
 - Tests automatizados, CI y escaneo de secretos con Gitleaks.
 
@@ -119,7 +120,7 @@ sql-academy/
 │   ├── challenges-ui.test.mjs  # Pestañas SQL, NoSQL y Depuración
 │   ├── table-editor-ui.test.mjs # Vista y edición de tablas
 │   ├── donation-ui.test.mjs    # Modal de donaciones
-│   ├── skill-level.test.mjs    # Test adaptativo y filtros por nivel
+│   ├── skill-level.test.mjs    # Test adaptativo, filtros y sonido
 │   ├── license.test.mjs        # Licencia y rutas de assets
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
@@ -212,6 +213,14 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - Copia de toda la tabla o de una celda con doble clic.
 - Exportación a CSV y JSON.
 - Soporte para varias sentencias `SELECT` en una misma ejecución.
+
+### Sonido
+
+- **Apagado por defecto:** no hay autoplay ni música invasiva.
+- **Intro original:** secuencia sintetizada para empezar el recorrido de feria.
+- **Feedback:** sonidos breves al acertar o fallar un reto.
+- **Control:** botón de sonido en la cabecera y preferencia persistente.
+- **Sin archivos externos:** se genera con Web Audio API, sin problemas de licencia.
 
 ### Niveles y test de habilidad
 
@@ -394,7 +403,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/challenges-ui.test.mjs` cubre las pestañas SQL/NoSQL/Depuración y la navegación al laboratorio.
 - `tests/table-editor-ui.test.mjs` cubre los modos Vista/Editar del explorador, el aviso de cambios sin guardar, el bloqueo sin clave primaria y el límite de filas.
 - `tests/donation-ui.test.mjs` cubre el modal de donaciones, el cambio Yape/Plin, la ausencia de números y la presencia de los QR.
-- `tests/skill-level.test.mjs` cubre el perfil de nivel, el test adaptativo, los filtros SQL/NoSQL y la persistencia.
+- `tests/skill-level.test.mjs` cubre el perfil de nivel, el test adaptativo, los filtros SQL/NoSQL, la persistencia y el control de sonido.
 - `tests/license.test.mjs` cubre la licencia noncommercial, la nota de copyright y las rutas de los assets de la PWA.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
@@ -422,6 +431,14 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.11.0
+
+- **Sonido opcional:** intro original sintetizada para el recorrido y feedback breve en aciertos y errores.
+- **Sin autoplay:** el sonido está apagado por defecto y se activa desde la cabecera.
+- **Preferencia persistente:** el estado se guarda en `localStorage`.
+- **Sin licencias externas:** los sonidos se generan con Web Audio API.
+- **Caché PWA:** actualizada para la nueva versión.
 
 ### v1.10.0
 

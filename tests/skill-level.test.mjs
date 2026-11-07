@@ -47,6 +47,7 @@ const dom = new JSDOM(
             <button id="demoTourNextBtn"></button>
         </div>
         <div id="toastContainer"></div>
+        <button id="soundToggle" class="header-icon-btn" aria-pressed="false"><i class="fas fa-volume-xmark"></i></button>
         <textarea id="sqlEditor"></textarea>
         <ul id="historyList"></ul>
         <div id="resultOutput"></div>
@@ -293,4 +294,83 @@ test('los controles nuevos incluyen etiquetas y estilos de accesibilidad', () =>
     assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
     assert.match(css, /#sqlLevelSelect:focus/);
     assert.match(css, /\.skill-test-option\.selected/);
+});
+
+test('el sonido se activa, se apaga y se persiste', () => {
+    window.localStorage.removeItem('sql-academy-sound-enabled');
+    window.loadSoundPreference();
+    window.applySoundPreference();
+
+    const button = window.document.getElementById('soundToggle');
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    assert.match(button.innerHTML, /fa-volume-xmark/);
+
+    window.toggleSound();
+    assert.equal(window.localStorage.getItem('sql-academy-sound-enabled'), '1');
+    assert.equal(button.getAttribute('aria-pressed'), 'true');
+    assert.match(button.innerHTML, /fa-volume-high/);
+
+    window.toggleSound();
+    assert.equal(window.localStorage.getItem('sql-academy-sound-enabled'), '0');
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    assert.match(button.innerHTML, /fa-volume-xmark/);
+});
+
+test('reproducir sonidos sin AudioContext no rompe la app', () => {
+    window.toggleSound();
+    assert.doesNotThrow(() => window.playSound('intro'));
+    assert.doesNotThrow(() => window.playSound('success'));
+    assert.doesNotThrow(() => window.playSound('error'));
+    window.toggleSound();
+});
+
+test('la cabecera incluye el control de sonido', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    assert.match(html, /id="soundToggle"/);
+    assert.match(html, /onclick="toggleSound\(\)"/);
+    assert.match(html, /fa-volume-xmark/);
+});
+
+test('el motor de sonido genera intro y feedback con Web Audio', () => {
+    class FakeParam {
+        constructor() { this.value = 0; }
+        setValueAtTime() {}
+        exponentialRampToValueAtTime() {}
+        setTargetAtTime() {}
+    }
+    class FakeNode {
+        constructor() {
+            this.gain = new FakeParam();
+            this.frequency = new FakeParam();
+            this.Q = new FakeParam();
+        }
+        connect() { return this; }
+        start() {}
+        stop() {}
+    }
+    class FakeAudioContext {
+        constructor() {
+            this.currentTime = 0;
+            this.sampleRate = 44100;
+            this.state = 'running';
+            this.destination = {};
+        }
+        createGain() { return new FakeNode(); }
+        createOscillator() { return new FakeNode(); }
+        createBufferSource() { return new FakeNode(); }
+        createBiquadFilter() { return new FakeNode(); }
+        createBuffer(channels, length) { return { getChannelData: () => new Float32Array(length) }; }
+        resume() { return Promise.resolve(); }
+    }
+
+    const original = window.AudioContext;
+    window.AudioContext = FakeAudioContext;
+    window.toggleSound();
+
+    assert.doesNotThrow(() => window.playSound('intro'));
+    assert.doesNotThrow(() => window.playSound('success'));
+    assert.doesNotThrow(() => window.playSound('error'));
+
+    window.toggleSound();
+    window.AudioContext = original;
 });
