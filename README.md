@@ -121,6 +121,7 @@ sql-academy/
 │   ├── table-editor-ui.test.mjs # Vista y edición de tablas
 │   ├── donation-ui.test.mjs    # Modal de donaciones
 │   ├── skill-level.test.mjs    # Test adaptativo, filtros y sonido
+│   ├── toolbar-ui.test.mjs     # Barra de herramientas y menú Más
 │   ├── license.test.mjs        # Licencia y rutas de assets
 │   └── explain.test.mjs        # Función de Netlify y prompts
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
@@ -346,10 +347,10 @@ La sintaxis está limitada a un subconjunto seguro: no se aceptan funciones, lla
 - Enlace para saltar al contenido, foco atrapado en modales, etiquetas ARIA y estilo `prefers-reduced-motion`.
 - Toasts accesibles para avisos sin sustituir los resultados.
 
-### Exportar e importar
+### Exportar base de datos
 
-- Descarga y carga de archivos SQLite (`.sqlite`, `.sqlite3`, `.db`).
-- Al importar, el archivo se guarda en IndexedDB y pasa a ser la base activa.
+- Descarga una copia del archivo SQLite activo (`.sqlite`) desde el menú **Más** de Practicar.
+- La importación de bases externas ya no está disponible en esta versión.
 
 ## Atajos de teclado
 
@@ -404,6 +405,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/table-editor-ui.test.mjs` cubre los modos Vista/Editar del explorador, el aviso de cambios sin guardar, el bloqueo sin clave primaria y el límite de filas.
 - `tests/donation-ui.test.mjs` cubre el modal de donaciones, el cambio Yape/Plin, la ausencia de números y la presencia de los QR.
 - `tests/skill-level.test.mjs` cubre el perfil de nivel, el test adaptativo, los filtros SQL/NoSQL, la persistencia y el control de sonido.
+- `tests/toolbar-ui.test.mjs` cubre la agrupación de acciones, el menú Más y la retirada de la importación de bases.
 - `tests/license.test.mjs` cubre la licencia noncommercial, la nota de copyright y las rutas de los assets de la PWA.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
@@ -431,6 +433,15 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.12.0
+
+- **Barra de Practicar más limpia:** Reiniciar, Exportar y Guía se agrupan en el menú **Más**.
+- **Importación retirada:** se eliminó el botón de importar bases SQLite y su lógica asociada.
+- **Estado separado:** Guardado local y Modo seguro pasan a una barra secundaria, sin competir con las acciones principales.
+- **NoSQL consistente:** el laboratorio usa la misma separación entre acciones y estado.
+- **Accesibilidad:** cierre del menú con clic fuera o Escape y foco visible.
+- **Caché PWA:** actualizada para la nueva interfaz.
 
 ### v1.11.0
 

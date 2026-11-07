@@ -47,6 +47,7 @@ const dom = new JSDOM(
             <button id="demoTourNextBtn"></button>
         </div>
         <div id="toastContainer"></div>
+        <details id="sqlMoreMenu"></details>
         <button id="soundToggle" class="header-icon-btn" aria-pressed="false"><i class="fas fa-volume-xmark"></i></button>
         <textarea id="sqlEditor"></textarea>
         <ul id="historyList"></ul>
@@ -373,4 +374,11 @@ test('el motor de sonido genera intro y feedback con Web Audio', () => {
 
     window.toggleSound();
     window.AudioContext = original;
+});
+
+test('el menú Más se puede cerrar desde código', () => {
+    const menu = window.document.getElementById('sqlMoreMenu');
+    menu.open = true;
+    window.closeToolbarMore();
+    assert.equal(menu.open, false);
 });

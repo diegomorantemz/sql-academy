@@ -814,33 +814,35 @@
                                     <option value="tienda">Tienda</option>
                                     <option value="biblioteca">Biblioteca</option>
                                 </select>
-                                <button onclick="resetDatabase()" class="btn-secondary">
-                                    <i class="fas fa-rotate"></i> Reiniciar
-                                </button>
-                                <button onclick="exportDatabase()" class="btn-secondary btn-icon" title="Exportar BD" aria-label="Exportar base de datos">
-                                    <i class="fas fa-download"></i>
-                                </button>
-                                <button onclick="importDatabase()" class="btn-secondary btn-icon" title="Importar BD" aria-label="Importar base de datos">
-                                    <i class="fas fa-upload"></i>
-                                </button>
-                                <button onclick="openSQLGuide()" class="btn-secondary" title="Guía de primeros pasos en SQL">
-                                    <i class="fas fa-graduation-cap"></i> Guía
-                                </button>
                                 <button id="aiHelpBtn" onclick="openAIHelp('manual')" class="btn-secondary btn-ai" title="Explicar tu consulta con IA">
                                     <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
                                 </button>
+                                <details class="toolbar-more" id="sqlMoreMenu">
+                                    <summary class="btn-secondary toolbar-more-toggle" title="Más acciones">
+                                        <i class="fas fa-ellipsis"></i> Más
+                                    </summary>
+                                    <div class="toolbar-more-menu" role="menu" aria-label="Más acciones de práctica">
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); resetDatabase()">
+                                            <i class="fas fa-rotate"></i> Reiniciar base
+                                        </button>
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); exportDatabase()">
+                                            <i class="fas fa-download"></i> Exportar base
+                                        </button>
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); openSQLGuide()">
+                                            <i class="fas fa-graduation-cap"></i> Guía de primeros pasos
+                                        </button>
+                                    </div>
+                                </details>
                             </div>
-
-                            <div class="toolbar-group toolbar-group-status">
-                                <span id="persistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite" title="La base de datos se guarda en este navegador (IndexedDB)">
-                                    <i class="fas fa-hard-drive"></i> Guardado local
-                                </span>
-
-                                <label class="safe-mode-toggle" title="Pide confirmación antes de ejecutar consultas destructivas">
-                                    <input type="checkbox" id="safeModeToggle" checked onchange="toggleSafeMode(this.checked)">
-                                    <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
-                                </label>
-                            </div>
+                        </div>
+                        <div class="editor-statusbar">
+                            <span id="persistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite" title="La base de datos se guarda en este navegador (IndexedDB)">
+                                <i class="fas fa-hard-drive"></i> Guardado local
+                            </span>
+                            <label class="safe-mode-toggle" title="Pide confirmación antes de ejecutar consultas destructivas">
+                                <input type="checkbox" id="safeModeToggle" checked onchange="toggleSafeMode(this.checked)">
+                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                            </label>
                         </div>
                     </div>
 
@@ -963,17 +965,16 @@
                                 <button type="button" onclick="openNoSQLAIHelp()" class="btn-secondary btn-ai" title="Explicar tu comando con IA">
                                     <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
                                 </button>
-                                <label class="safe-mode-toggle" title="Pide confirmación antes de operaciones destructivas">
-                                    <input type="checkbox" id="nosqlSafeModeToggle" checked onchange="toggleNoSQLSafeMode(this.checked)">
-                                    <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
-                                </label>
                             </div>
-
-                            <div class="toolbar-group toolbar-group-status">
-                                <span id="nosqlPersistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite">
-                                    <i class="fas fa-hard-drive"></i> Guardado local
-                                </span>
-                            </div>
+                        </div>
+                        <div class="editor-statusbar">
+                            <span id="nosqlPersistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite">
+                                <i class="fas fa-hard-drive"></i> Guardado local
+                            </span>
+                            <label class="safe-mode-toggle" title="Pide confirmación antes de operaciones destructivas">
+                                <input type="checkbox" id="nosqlSafeModeToggle" checked onchange="toggleNoSQLSafeMode(this.checked)">
+                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                            </label>
                         </div>
                     </div>
 

@@ -1950,7 +1950,7 @@ function clearHistory() {
     }
 }
 
-// EXPORTAR / IMPORTAR
+// EXPORTAR BASE DE DATOS
 function exportDatabase() {
     if (!db) {
         showMessage('error', 'La base de datos no está inicializada');
@@ -1973,52 +1973,9 @@ function exportDatabase() {
     }
 }
 
-function importDatabase() {
-    if (!SQLModule) {
-        showMessage('warning', 'Espera a que la base de datos termine de inicializarse');
-        return;
-    }
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.sqlite,.sqlite3,.db,application/x-sqlite3';
-    input.style.display = 'none';
-    input.addEventListener('change', () => {
-        const file = input.files && input.files[0];
-        input.remove();
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            let imported = null;
-            try {
-                imported = new SQLModule.Database(new Uint8Array(reader.result));
-                // Fuerza la lectura del esquema para detectar archivos que no son SQLite.
-                imported.exec('SELECT name FROM sqlite_master LIMIT 1;');
-                imported.run('PRAGMA foreign_keys = ON;');
-                if (db) db.close();
-                db = imported;
-                dbInitialized = true;
-                lastQueryError = null;
-                aiCooldownUntil = 0;
-                aiResponseCache.clear();
-                refreshAll();
-                schedulePersistDatabase();
-                showMessage('success', 'Base de datos importada correctamente', `Archivo: ${escapeHtml(file.name)}`);
-            } catch (e) {
-                if (imported) {
-                    try { imported.close(); } catch (closeError) { /* ignorar */ }
-                }
-                showMessage('error', 'No se pudo importar el archivo', `<code>${escapeHtml(e.message)}</code>`);
-            }
-        };
-        reader.onerror = () => {
-            showMessage('error', 'No se pudo leer el archivo seleccionado');
-        };
-        reader.readAsArrayBuffer(file);
-    });
-    document.body.appendChild(input);
-    input.click();
+function closeToolbarMore() {
+    const menu = document.getElementById('sqlMoreMenu');
+    if (menu) menu.open = false;
 }
 
 // EXPLORADOR DE TABLAS Y EDITOR DE DATOS
@@ -8688,6 +8645,14 @@ document.addEventListener('click', function(e) {
     if (e.target.classList && e.target.classList.contains('modal')) {
         closeModal(e.target);
     }
+    const toolbarMenu = document.getElementById('sqlMoreMenu');
+    if (toolbarMenu && toolbarMenu.open && !toolbarMenu.contains(e.target)) {
+        toolbarMenu.open = false;
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeToolbarMore();
 });
 
 document.addEventListener('dblclick', function(e) {
@@ -9199,7 +9164,7 @@ window.showExamples = showExamples;
 window.clearHistory = clearHistory;
 window.loadHistoryQuery = loadHistoryQuery;
 window.exportDatabase = exportDatabase;
-window.importDatabase = importDatabase;
+window.closeToolbarMore = closeToolbarMore;
 window.loadTableEditor = loadTableEditor;
 window.deleteRow = deleteRow;
 window.addRow = addRow;
