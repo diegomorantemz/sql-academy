@@ -39,6 +39,13 @@ const dom = new JSDOM(
                 <div id="skillTestBody"></div>
             </div>
         </div>
+        <div id="demoTourBar" hidden>
+            <span id="demoTourStepLabel"></span>
+            <strong id="demoTourTitle"></strong>
+            <p id="demoTourDescription"></p>
+            <button id="demoTourPrevBtn"></button>
+            <button id="demoTourNextBtn"></button>
+        </div>
         <div id="toastContainer"></div>
         <textarea id="sqlEditor"></textarea>
         <ul id="historyList"></ul>
@@ -145,7 +152,9 @@ test('el test adaptativo recomienda avanzado con respuestas correctas', () => {
     const text = window.document.getElementById('skillTestBody').textContent;
     assert.match(text, /Tu nivel recomendado es Avanzado/);
     assert.match(text, /Avanzado/);
+    assert.match(text, /No se detectaron conceptos débiles/);
     assert.equal(window.getSkillLevel('sql'), 'avanzado');
+    assert.equal(window.getWeakConcepts('sql').length, 0);
     window.closeSkillTest();
 });
 
@@ -162,7 +171,9 @@ test('el test adaptativo recomienda básico cuando no se acierta', () => {
 
     const text = window.document.getElementById('skillTestBody').textContent;
     assert.match(text, /Tu nivel recomendado es Básico/);
+    assert.match(text, /Refuerza estos conceptos/);
     assert.equal(window.getSkillLevel('nosql'), 'basico');
+    assert.ok(window.getWeakConcepts('nosql').length > 0);
     window.closeSkillTest();
 });
 
@@ -198,4 +209,88 @@ test('la interfaz incluye las barras de nivel y el modal del test', () => {
     assert.match(html, /id="skillTestBody"/);
     assert.match(html, /onclick="openSkillTest\('sql'\)"/);
     assert.match(html, /onclick="openSkillTest\('nosql'\)"/);
+});
+
+test('las recomendaciones abren el concepto en Practicar', () => {
+    window.setSkillLevel('sql', 'basico');
+    window.practiceSkillTarget('sql', 'join', 'intermedio');
+
+    assert.equal(window.document.getElementById('categorySelector').value, 'join');
+    assert.match(window.document.getElementById('sqlEditor').value, /JOIN/i);
+});
+
+test('el recorrido guiado avanza por los pasos y se puede cerrar', () => {
+    window.startDemoTour();
+    const bar = window.document.getElementById('demoTourBar');
+    assert.equal(bar.hidden, false);
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 7/);
+    assert.ok(window.document.getElementById('demoTourTitle').textContent.length > 0);
+
+    window.nextDemoTourStep();
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 2 de 7/);
+    assert.equal(window.document.getElementById('demoTourPrevBtn').disabled, false);
+
+    window.previousDemoTourStep();
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 7/);
+    assert.equal(window.document.getElementById('demoTourPrevBtn').disabled, true);
+
+    window.closeDemoTour();
+    assert.equal(bar.hidden, true);
+});
+
+test('el HTML incluye el recorrido de feria', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    assert.match(html, /Recorrido de 5 minutos/);
+    assert.match(html, /onclick="startDemoTour\(\)"/);
+    assert.match(html, /id="demoTourBar"/);
+});
+
+test('el reporte de progreso incluye niveles y nombre', () => {
+    window.setSkillLevel('sql', 'intermedio');
+    window.setSkillLevel('nosql', 'avanzado');
+
+    const html = window.buildProgressReportHtml('Ana Perez');
+
+    assert.match(html, /Reporte de aprendizaje/);
+    assert.match(html, /Ana Perez/);
+    assert.match(html, /Nivel SQL/);
+    assert.match(html, /Intermedio/);
+    assert.match(html, /Nivel NoSQL/);
+    assert.match(html, /Avanzado/);
+    assert.match(html, /SQL ACADEMY/);
+    assert.match(html, /Siguiente paso recomendado/);
+});
+
+test('la interfaz incluye el modal de reporte y el acceso desde progreso', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    assert.match(html, /id="progressReportModal"/);
+    assert.match(html, /id="progressReportBody"/);
+    assert.match(html, /onclick="closeProgressReport\(\)"/);
+});
+
+test('el perfil de nivel aparece en el dashboard con refuerzos', () => {
+    window.setSkillLevel('sql', 'intermedio');
+    window.setSkillLevel('nosql', 'basico');
+
+    const html = window.renderSkillProfileCards();
+
+    assert.match(html, /Tu perfil de nivel/);
+    assert.match(html, /Nivel SQL/);
+    assert.match(html, /Intermedio/);
+    assert.match(html, /Nivel NoSQL/);
+    assert.match(html, /onclick="openProgressReport\(\)"/);
+    assert.match(html, /skill-profile-grid/);
+});
+
+test('los controles nuevos incluyen etiquetas y estilos de accesibilidad', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const css = fs.readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+
+    assert.match(html, /role="region" aria-label="Nivel SQL"/);
+    assert.match(html, /role="region" aria-label="Nivel NoSQL"/);
+    assert.match(html, /aria-live="polite" aria-atomic="true"/);
+    assert.match(html, /aria-haspopup="dialog" aria-controls="skillTestModal"/);
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+    assert.match(css, /#sqlLevelSelect:focus/);
+    assert.match(css, /\.skill-test-option\.selected/);
 });

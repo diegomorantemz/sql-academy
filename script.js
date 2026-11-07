@@ -6132,6 +6132,27 @@ const SKILL_TEST_QUESTIONS = {
     ]
 };
 
+const SKILL_QUESTION_TARGETS = {
+    'sql-basico-1': { concept: 'SELECT y WHERE', category: 'filtros', level: 'basico' },
+    'sql-basico-2': { concept: 'ORDER BY', category: 'orden', level: 'basico' },
+    'sql-basico-3': { concept: 'LIMIT', category: 'basicos', level: 'basico' },
+    'sql-intermedio-1': { concept: 'HAVING', category: 'having', level: 'intermedio' },
+    'sql-intermedio-2': { concept: 'GROUP BY', category: 'groupby', level: 'intermedio' },
+    'sql-intermedio-3': { concept: 'JOIN', category: 'join', level: 'intermedio' },
+    'sql-avanzado-1': { concept: 'Subconsultas', category: 'subconsultas', level: 'avanzado' },
+    'sql-avanzado-2': { concept: 'LEFT JOIN y NULL', category: 'join', level: 'avanzado' },
+    'sql-avanzado-3': { concept: 'Subconsultas', category: 'subconsultas', level: 'avanzado' },
+    'nosql-basico-1': { concept: 'find', category: 'Consultas', level: 'basico' },
+    'nosql-basico-2': { concept: 'Filtros', category: 'Filtros', level: 'basico' },
+    'nosql-basico-3': { concept: 'Proyección', category: 'Consultas', level: 'basico' },
+    'nosql-intermedio-1': { concept: 'sort', category: 'Consultas', level: 'intermedio' },
+    'nosql-intermedio-2': { concept: 'Actualización', category: 'CRUD', level: 'intermedio' },
+    'nosql-intermedio-3': { concept: '$inc', category: 'CRUD', level: 'intermedio' },
+    'nosql-avanzado-1': { concept: '$group', category: 'Agregación', level: 'avanzado' },
+    'nosql-avanzado-2': { concept: '$unwind', category: 'Agregación', level: 'avanzado' },
+    'nosql-avanzado-3': { concept: '$match', category: 'Agregación', level: 'avanzado' }
+};
+
 let skillProfile = {
     sql: null,
     nosql: null,
@@ -6140,7 +6161,9 @@ let skillProfile = {
     sqlSource: null,
     nosqlSource: null,
     sqlTestedAt: null,
-    nosqlTestedAt: null
+    nosqlTestedAt: null,
+    sqlWeakConcepts: [],
+    nosqlWeakConcepts: []
 };
 
 let skillTestState = null;
@@ -6164,7 +6187,13 @@ function loadSkillProfile() {
         sqlSource: normalizeSkillSource(data.sqlSource),
         nosqlSource: normalizeSkillSource(data.nosqlSource),
         sqlTestedAt: typeof data.sqlTestedAt === 'string' ? data.sqlTestedAt : null,
-        nosqlTestedAt: typeof data.nosqlTestedAt === 'string' ? data.nosqlTestedAt : null
+        nosqlTestedAt: typeof data.nosqlTestedAt === 'string' ? data.nosqlTestedAt : null,
+        sqlWeakConcepts: Array.isArray(data.sqlWeakConcepts)
+            ? data.sqlWeakConcepts.filter(item => item && typeof item.concept === 'string' && typeof item.category === 'string')
+            : [],
+        nosqlWeakConcepts: Array.isArray(data.nosqlWeakConcepts)
+            ? data.nosqlWeakConcepts.filter(item => item && typeof item.concept === 'string' && typeof item.category === 'string')
+            : []
     };
 }
 
@@ -6203,6 +6232,57 @@ function getVisibleExampleCategories(datasetName = preferences.dataset) {
     return Object.keys(filtered).length ? filtered : categories;
 }
 
+function getWeakConcepts(track) {
+    return Array.isArray(skillProfile[`${track}WeakConcepts`])
+        ? skillProfile[`${track}WeakConcepts`]
+        : [];
+}
+
+function collectWeakConcepts(track, answers) {
+    const unique = new Map();
+    answers.filter(answer => !answer.correct).forEach(answer => {
+        const target = SKILL_QUESTION_TARGETS[answer.questionId];
+        if (!target) return;
+        unique.set(`${target.category}:${target.concept}`, { ...target, track });
+    });
+    return [...unique.values()];
+}
+
+function practiceSkillTarget(track, category, level = '') {
+    if (track === 'sql') {
+        if (!Object.keys(getVisibleExampleCategories()).includes(category)) {
+            setSkillLevel('sql', 'all');
+        }
+        activateSection('practice');
+        const selector = document.getElementById('categorySelector');
+        if (selector) {
+            selector.value = category;
+            showExampleByCategory();
+        }
+        return;
+    }
+
+    setSkillLevel('nosql', 'all');
+    activateSection('nosql');
+    if (typeof window.refreshNoSQLExamples === 'function') {
+        window.refreshNoSQLExamples();
+    }
+    const select = document.getElementById('nosqlExampleSelector');
+    const datasetName = typeof window.getNoSQLActiveDataset === 'function'
+        ? window.getNoSQLActiveDataset()
+        : 'escuela';
+    const examples = typeof window.getNoSQLExamplesForDataset === 'function'
+        ? window.getNoSQLExamplesForDataset(datasetName)
+        : [];
+    const index = examples.findIndex(example => example.category === category);
+    if (select && index >= 0) {
+        select.value = String(index);
+        if (typeof window.loadNoSQLExample === 'function') {
+            window.loadNoSQLExample();
+        }
+    }
+}
+
 function filterNoSQLExamplesBySkill(examples) {
     const effectiveLevel = getEffectiveSkillLevel('nosql');
     if (effectiveLevel === 'all') return examples;
@@ -6227,6 +6307,7 @@ function setSkillLevel(track, value) {
     saveSkillProfile();
     applySkillLevelUI();
     refreshSkillFilters();
+    renderLearningProgressDashboard();
     showToast('info', `Nivel ${track === 'sql' ? 'SQL' : 'NoSQL'} actualizado.`);
 }
 
@@ -6303,6 +6384,83 @@ function refreshSkillFilters() {
         window.refreshNoSQLExamples();
     }
     renderNoSQLQuickSyntax();
+}
+
+function getSkillProfileCard(track) {
+    const label = track === 'sql' ? 'SQL' : 'NoSQL';
+    const sectionLabel = track === 'sql' ? 'Practicar' : 'NoSQL';
+    const icon = track === 'sql' ? 'fa-database' : 'fa-leaf';
+    const level = getEffectiveSkillLevel(track);
+    const selectedLevel = level === 'all' ? 'all' : getSkillLevel(track);
+    const info = getSkillLevelInfo(getSkillLevel(track));
+    const testedAt = skillProfile[`${track}TestedAt`];
+    const source = skillProfile[`${track}Source`];
+    const testButtonLabel = source === 'test' ? 'Repetir test' : 'Test de nivel';
+    const meta = testedAt
+        ? `Test realizado: ${formatLearningActivityDate(testedAt)}`
+        : (source === 'manual' ? 'Nivel elegido manualmente' : 'Todavía sin test');
+    const recommendation = track === 'sql' ? info.sqlRecommendation : info.nosqlRecommendation;
+    const weakConcepts = getWeakConcepts(track);
+
+    return `
+        <article class="skill-profile-card">
+            <div class="skill-profile-head">
+                <span class="skill-profile-icon"><i class="fas ${icon}"></i></span>
+                <div class="skill-profile-heading">
+                    <span>Nivel ${label}</span>
+                    <strong>${escapeHtml(info.label)}</strong>
+                </div>
+                <span class="challenge-level ${escapeHtml(level === 'all' ? 'intermedio' : getSkillLevel(track))}">${level === 'all' ? 'Ver todo' : escapeHtml(info.label)}</span>
+            </div>
+            <p class="skill-profile-description">${escapeHtml(info.description)}</p>
+            <p class="skill-profile-next"><strong>Siguiente paso:</strong> ${escapeHtml(recommendation)}</p>
+            ${weakConcepts.length ? `
+                <div class="skill-profile-weak">
+                    <span>Refuerza:</span>
+                    ${weakConcepts.slice(0, 4).map(item => `
+                        <button type="button" class="skill-weak-chip" onclick="practiceSkillTarget('${escapeHtml(track)}', '${escapeHtml(item.category)}', '${escapeHtml(item.level)}')">
+                            ${escapeHtml(item.concept)}
+                        </button>
+                    `).join('')}
+                </div>
+            ` : ''}
+            <div class="skill-profile-meta">${escapeHtml(meta)}</div>
+            <div class="skill-profile-actions">
+                <label class="skill-profile-select-label" for="dashboard${label}LevelSelect">Nivel</label>
+                <select id="dashboard${label}LevelSelect" class="skill-profile-select" onchange="setSkillLevel('${track}', this.value)" aria-label="Nivel ${label}">
+                    <option value="basico"${selectedLevel === 'basico' ? ' selected' : ''}>Básico</option>
+                    <option value="intermedio"${selectedLevel === 'intermedio' ? ' selected' : ''}>Intermedio</option>
+                    <option value="avanzado"${selectedLevel === 'avanzado' ? ' selected' : ''}>Avanzado</option>
+                    <option value="all"${selectedLevel === 'all' ? ' selected' : ''}>Ver todo</option>
+                </select>
+                <button type="button" class="btn-secondary btn-sm" onclick="openSkillTest('${track}')">${testButtonLabel}</button>
+                <button type="button" class="btn-ghost btn-sm" onclick="goToSkillTrack('${track}')">Ir a ${sectionLabel}</button>
+            </div>
+        </article>
+    `;
+}
+
+function renderSkillProfileCards() {
+    return `
+        <div class="progress-section skill-profile-section">
+            <div class="progress-section-head">
+                <div>
+                    <h3>Tu perfil de nivel</h3>
+                    <p>Dos recorridos independientes para practicar sin ruido.</p>
+                </div>
+                <div class="progress-section-head-actions">
+                    <span class="progress-section-badge">SQL + NoSQL</span>
+                    <button type="button" class="btn-secondary btn-sm" onclick="openProgressReport()">
+                        <i class="fas fa-print"></i> Reporte
+                    </button>
+                </div>
+            </div>
+            <div class="skill-profile-grid">
+                ${getSkillProfileCard('sql')}
+                ${getSkillProfileCard('nosql')}
+            </div>
+        </div>
+    `;
 }
 
 function calculateSkillLevelFromAnswers(answers) {
@@ -6456,9 +6614,11 @@ function finishSkillTest() {
     skillProfile[`${state.track}ShowAll`] = false;
     skillProfile[`${state.track}Source`] = 'test';
     skillProfile[`${state.track}TestedAt`] = new Date().toISOString();
+    skillProfile[`${state.track}WeakConcepts`] = collectWeakConcepts(state.track, state.answers);
     saveSkillProfile();
     applySkillLevelUI();
     refreshSkillFilters();
+    renderLearningProgressDashboard();
     renderSkillTestResult(level);
 }
 
@@ -6471,6 +6631,7 @@ function renderSkillTestResult(level) {
     const track = state.track;
     const correctCount = state.answers.filter(answer => answer.correct).length;
     const recommendation = track === 'sql' ? info.sqlRecommendation : info.nosqlRecommendation;
+    const weakConcepts = getWeakConcepts(track);
 
     body.innerHTML = `
         <div class="skill-test-result">
@@ -6479,6 +6640,18 @@ function renderSkillTestResult(level) {
             <h3>Tu nivel recomendado es ${escapeHtml(info.label)}</h3>
             <p>${escapeHtml(info.description)}</p>
             <p class="skill-test-score">Acertaste ${correctCount} de ${state.answers.length} preguntas.</p>
+            ${weakConcepts.length ? `
+                <div class="skill-test-weak">
+                    <span>Refuerza estos conceptos</span>
+                    <div class="skill-test-weak-list">
+                        ${weakConcepts.map(item => `
+                            <button type="button" class="skill-weak-chip" onclick="practiceSkillTarget('${escapeHtml(track)}', '${escapeHtml(item.category)}', '${escapeHtml(item.level)}')">
+                                ${escapeHtml(item.concept)}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '<p class="skill-test-score">No se detectaron conceptos débiles en este test.</p>'}
             <div class="skill-test-next">
                 <span>Siguiente paso</span>
                 <strong>${escapeHtml(recommendation)}</strong>
@@ -6540,6 +6713,292 @@ function showAllSkillContent(track) {
 function closeSkillTest() {
     skillTestState = null;
     closeModal(document.getElementById('skillTestModal'));
+}
+
+// ============================================
+// RECORRIDO GUIADO DE LA FERIA
+// ============================================
+
+const DEMO_TOUR_STEPS = [
+    {
+        title: 'Una academia que se adapta',
+        description: 'SQL Academy combina teoría, práctica y juego. El recorrido empieza en Aprender.',
+        section: 'learn'
+    },
+    {
+        title: 'Descubre tu nivel',
+        description: 'El test adaptativo recomienda un nivel para SQL y otro para NoSQL. Practicar y el laboratorio se ajustan a tu perfil.',
+        section: 'practice',
+        target: 'sqlLevelBar'
+    },
+    {
+        title: 'Practica con datos reales',
+        description: 'Elige un ejemplo, ejecútalo y revisa los resultados. La base SQLite funciona en el navegador.',
+        section: 'practice',
+        target: 'sqlEditor'
+    },
+    {
+        title: 'Explora el laboratorio NoSQL',
+        description: 'Los ejemplos y la sintaxis rápida también se filtran por nivel. La consola documental sigue disponible.',
+        section: 'nosql',
+        target: 'nosqlLevelBar'
+    },
+    {
+        title: 'Ponte a prueba',
+        description: 'Resuelve retos SQL, retos NoSQL o depuraciones con validación por resultado.',
+        section: 'challenges'
+    },
+    {
+        title: 'Revisa tu progreso',
+        description: 'Consulta tu nivel, las actividades completadas, los conceptos dominados y el siguiente paso recomendado.',
+        section: 'path',
+        progress: true,
+        target: 'learningProgressDashboard'
+    },
+    {
+        title: 'Tecnología y aprendizaje',
+        description: 'SQLite real en el navegador, PWA, pruebas automatizadas y un asistente IA opcional. Gracias por acompañar el recorrido.',
+        section: null
+    }
+];
+
+let demoTourIndex = 0;
+
+function scrollToDemoTarget(targetId) {
+    if (!targetId) return;
+    const target = document.getElementById(targetId);
+    if (target && typeof target.scrollIntoView === 'function') {
+        const reduceMotion = typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    }
+}
+
+function renderDemoTourStep() {
+    const bar = document.getElementById('demoTourBar');
+    if (!bar) return;
+    const step = DEMO_TOUR_STEPS[demoTourIndex];
+    if (!step) {
+        closeDemoTour();
+        return;
+    }
+
+    bar.hidden = false;
+    const stepLabel = document.getElementById('demoTourStepLabel');
+    const title = document.getElementById('demoTourTitle');
+    const description = document.getElementById('demoTourDescription');
+    const previous = document.getElementById('demoTourPrevBtn');
+    const next = document.getElementById('demoTourNextBtn');
+
+    if (stepLabel) stepLabel.textContent = `Paso ${demoTourIndex + 1} de ${DEMO_TOUR_STEPS.length}`;
+    if (title) title.textContent = step.title;
+    if (description) description.textContent = step.description;
+    if (previous) previous.disabled = demoTourIndex === 0;
+    if (next) next.textContent = demoTourIndex === DEMO_TOUR_STEPS.length - 1 ? 'Finalizar' : 'Siguiente';
+
+    if (step.section) {
+        activateSection(step.section);
+        if (step.progress) activatePathTab('progress');
+    }
+    if (step.target) {
+        setTimeout(() => scrollToDemoTarget(step.target), 80);
+    }
+}
+
+function startDemoTour() {
+    demoTourIndex = 0;
+    renderDemoTourStep();
+}
+
+function nextDemoTourStep() {
+    if (demoTourIndex >= DEMO_TOUR_STEPS.length - 1) {
+        closeDemoTour();
+        showToast('success', 'Recorrido completado. Gracias por acompañar SQL Academy.');
+        return;
+    }
+    demoTourIndex += 1;
+    renderDemoTourStep();
+}
+
+function previousDemoTourStep() {
+    if (demoTourIndex <= 0) return;
+    demoTourIndex -= 1;
+    renderDemoTourStep();
+}
+
+function closeDemoTour() {
+    const bar = document.getElementById('demoTourBar');
+    if (bar) bar.hidden = true;
+}
+
+// ============================================
+// REPORTE DE PROGRESO
+// ============================================
+
+function formatReportDate(value = new Date()) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function buildProgressReportHtml(studentName = '') {
+    const stats = getLearningGlobalStats();
+    const concepts = getLearningConceptStats();
+    const recommendation = getLearningRecommendation();
+    const sqlLevel = getSkillLevelInfo(getSkillLevel('sql'));
+    const nosqlLevel = getSkillLevelInfo(getSkillLevel('nosql'));
+    const sqlMeta = skillProfile.sqlTestedAt
+        ? `Test: ${formatReportDate(skillProfile.sqlTestedAt)}`
+        : (skillProfile.sqlSource === 'manual' ? 'Nivel elegido manualmente' : 'Sin test');
+    const nosqlMeta = skillProfile.nosqlTestedAt
+        ? `Test: ${formatReportDate(skillProfile.nosqlTestedAt)}`
+        : (skillProfile.nosqlSource === 'manual' ? 'Nivel elegido manualmente' : 'Sin test');
+    const weak = [...getWeakConcepts('sql'), ...getWeakConcepts('nosql')];
+    const named = studentName.trim();
+
+    const conceptRows = concepts.map(concept => `
+        <tr>
+            <td>${escapeHtml(concept.label)}</td>
+            <td>${concept.percent}%</td>
+            <td>${concept.completed}/${concept.total}</td>
+        </tr>
+    `).join('');
+
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte de aprendizaje - SQL Academy</title>
+<style>
+    @page { size: A4; margin: 16mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #1e293b; font-family: Arial, Helvetica, sans-serif; line-height: 1.45; }
+    .header { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 14px; border-bottom: 3px solid #336791; }
+    .brand { color: #336791; font-size: 20px; font-weight: 800; letter-spacing: .04em; }
+    .subtitle { color: #64748b; font-size: 11px; margin-top: 3px; }
+    .meta { color: #64748b; font-size: 11px; text-align: right; }
+    h1 { margin: 22px 0 4px; font-size: 23px; }
+    .student { color: #475569; font-size: 13px; margin: 0 0 18px; }
+    .grid { display: flex; gap: 10px; margin: 16px 0; }
+    .metric { flex: 1; padding: 11px; border: 1px solid #dbe4ee; border-radius: 8px; background: #f8fafc; }
+    .metric span { display: block; color: #64748b; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 3px; font-size: 20px; color: #1e293b; }
+    .levels { display: flex; gap: 10px; margin: 14px 0; }
+    .level { flex: 1; padding: 12px; border-left: 4px solid #336791; border-radius: 7px; background: #f8fafc; }
+    .level span { display: block; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .level strong { display: block; margin: 2px 0; color: #1e293b; font-size: 17px; }
+    .level small { color: #64748b; font-size: 10px; }
+    h2 { margin: 22px 0 8px; font-size: 14px; color: #334155; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { padding: 7px 8px; background: #eef4fa; color: #475569; text-align: left; border-bottom: 1px solid #dbe4ee; }
+    td { padding: 6px 8px; border-bottom: 1px solid #edf2f7; }
+    .recommendation { margin-top: 16px; padding: 11px 13px; border-left: 4px solid #f39c12; border-radius: 7px; background: #fff9e8; font-size: 11px; }
+    .recommendation strong { display: block; color: #7a5a00; }
+    .weak { margin-top: 10px; color: #8b1e1e; font-size: 11px; }
+    .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #dbe4ee; color: #94a3b8; font-size: 9px; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="brand">SQL ACADEMY</div>
+            <div class="subtitle">Reporte de aprendizaje · MNTWARE</div>
+        </div>
+        <div class="meta">Generado el ${escapeHtml(formatReportDate())}</div>
+    </div>
+
+    <h1>Reporte de aprendizaje</h1>
+    ${named ? `<p class="student">Preparado para: <strong>${escapeHtml(named)}</strong></p>` : '<p class="student">Resumen personal de tu recorrido en SQL Academy.</p>'}
+
+    <div class="levels">
+        <div class="level">
+            <span>Nivel SQL</span>
+            <strong>${escapeHtml(sqlLevel.label)}</strong>
+            <small>${escapeHtml(sqlMeta)}</small>
+        </div>
+        <div class="level">
+            <span>Nivel NoSQL</span>
+            <strong>${escapeHtml(nosqlLevel.label)}</strong>
+            <small>${escapeHtml(nosqlMeta)}</small>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="metric"><span>Lecciones</span><strong>${stats.lessonsCompleted}/${stats.lessonsTotal}</strong></div>
+        <div class="metric"><span>Retos SQL</span><strong>${stats.challengesCompleted}/${stats.challengesTotal}</strong></div>
+        <div class="metric"><span>Actividades</span><strong>${stats.completed}/${stats.total}</strong></div>
+        <div class="metric"><span>Avance global</span><strong>${stats.percent}%</strong></div>
+    </div>
+
+    <h2>Dominio por concepto</h2>
+    <table>
+        <thead><tr><th>Concepto</th><th>Dominio</th><th>Actividades</th></tr></thead>
+        <tbody>${conceptRows}</tbody>
+    </table>
+
+    <div class="recommendation">
+        <strong>Siguiente paso recomendado</strong>
+        ${escapeHtml(recommendation.title)} — ${escapeHtml(recommendation.message)}
+    </div>
+
+    ${weak.length ? `<div class="weak"><strong>Refuerza:</strong> ${escapeHtml(weak.map(item => item.concept).join(', '))}</div>` : ''}
+
+    <div class="footer">
+        <span>SQL Academy · Aprende, practica y comprueba resultados.</span>
+        <span>${escapeHtml(recommendation.action)}</span>
+    </div>
+</body>
+</html>`;
+}
+
+function openProgressReport() {
+    const body = document.getElementById('progressReportBody');
+    const modal = document.getElementById('progressReportModal');
+    if (!body || !modal) return;
+
+    const stats = getLearningGlobalStats();
+    const sqlLevel = getSkillLevelInfo(getSkillLevel('sql'));
+    const nosqlLevel = getSkillLevelInfo(getSkillLevel('nosql'));
+
+    body.innerHTML = `
+        <div class="report-form">
+            <p>Genera un resumen de tu recorrido para imprimir o guardar como PDF.</p>
+            <label class="report-name-label" for="reportStudentName">Nombre para el reporte (opcional)</label>
+            <input id="reportStudentName" type="text" maxlength="80" placeholder="Tu nombre">
+            <div class="report-preview">
+                <div><span>Nivel SQL</span><strong>${escapeHtml(sqlLevel.label)}</strong></div>
+                <div><span>Nivel NoSQL</span><strong>${escapeHtml(nosqlLevel.label)}</strong></div>
+                <div><span>Actividades</span><strong>${stats.completed}/${stats.total}</strong></div>
+            </div>
+            <div class="report-actions">
+                <button type="button" class="btn-primary" onclick="printProgressReport()">
+                    <i class="fas fa-print"></i> Imprimir / Guardar PDF
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeProgressReport()">Cerrar</button>
+            </div>
+        </div>
+    `;
+    openModal(modal);
+}
+
+function printProgressReport() {
+    const name = document.getElementById('reportStudentName')?.value.trim() || '';
+    const report = buildProgressReportHtml(name);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        showToast('warning', 'Permite ventanas emergentes para imprimir el reporte.');
+        return;
+    }
+    try { printWindow.opener = null; } catch (error) { /* ignorar */ }
+    printWindow.document.open();
+    printWindow.document.write(report);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
+}
+
+function closeProgressReport() {
+    closeModal(document.getElementById('progressReportModal'));
 }
 
 // ============================================
@@ -7156,6 +7615,8 @@ function renderLearningProgressDashboard() {
                 <span>global</span>
             </div>
         </div>
+
+        ${renderSkillProfileCards()}
 
         <div class="progress-recommendation progress-recommendation-${recommendation.kind}">
             <span class="progress-recommendation-icon"><i class="fas ${recommendation.icon}"></i></span>
@@ -8594,6 +9055,17 @@ window.calculateSkillLevelFromAnswers = calculateSkillLevelFromAnswers;
 window.getVisibleExampleCategories = getVisibleExampleCategories;
 window.getNoSQLExampleLevel = getNoSQLExampleLevel;
 window.getSkillLevelInfo = getSkillLevelInfo;
+window.getWeakConcepts = getWeakConcepts;
+window.renderSkillProfileCards = renderSkillProfileCards;
+window.practiceSkillTarget = practiceSkillTarget;
+window.startDemoTour = startDemoTour;
+window.nextDemoTourStep = nextDemoTourStep;
+window.previousDemoTourStep = previousDemoTourStep;
+window.closeDemoTour = closeDemoTour;
+window.openProgressReport = openProgressReport;
+window.printProgressReport = printProgressReport;
+window.closeProgressReport = closeProgressReport;
+window.buildProgressReportHtml = buildProgressReportHtml;
 window.filterNoSQLExamplesBySkill = filterNoSQLExamplesBySkill;
 window.getSkillTestQuestions = getSkillTestQuestions;
 window.renderNoSQLQuickSyntax = renderNoSQLQuickSyntax;

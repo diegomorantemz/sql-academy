@@ -3571,6 +3571,97 @@ button:disabled {
     }
 }
 
+.report-modal-content {
+    max-width: 560px;
+}
+
+.report-form p {
+    margin: 0 0 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.report-name-label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+#reportStudentName {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 11px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.report-preview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.report-preview > div {
+    padding: 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.report-preview span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.report-preview strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-strong);
+    font-size: 15px;
+}
+
+.report-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+[data-theme="dark"] #reportStudentName {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .report-preview > div {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+@media (max-width: 600px) {
+    .report-preview {
+        grid-template-columns: 1fr;
+    }
+
+    .report-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 /* ===== DONACIONES ===== */
 .donation-modal-content {
     max-width: 480px;
@@ -3898,6 +3989,26 @@ button:disabled {
 .btn-donation-sm.support:hover {
     background: linear-gradient(135deg, #e67e22, #d35400);
     transform: translateY(-2px);
+}
+
+#sqlLevelSelect:focus,
+#nosqlLevelSelect:focus,
+.skill-profile-select:focus,
+#reportStudentName:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 /* ===== UTILITIES ===== */
@@ -5735,6 +5846,182 @@ button:disabled {
     }
 }
 
+.fair-tour-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 15px 18px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f3f0ff 100%);
+    border: 1px solid #d8d7f5;
+    border-left: 4px solid #6c5ce7;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.fair-tour-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #6c5ce7;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.fair-tour-card h3 {
+    margin: 3px 0;
+    color: var(--text-strong);
+    font-size: 1.05em;
+}
+
+.fair-tour-card p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.fair-tour-card .btn-secondary {
+    flex: 0 0 auto;
+}
+
+.demo-tour-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: min(920px, calc(100% - 32px));
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-left: 4px solid #6c5ce7;
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-50%);
+}
+
+.demo-tour-bar[hidden] {
+    display: none;
+}
+
+.demo-tour-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #ece9ff;
+    color: #6c5ce7;
+    font-size: 16px;
+}
+
+.demo-tour-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.demo-tour-copy > span {
+    display: block;
+    color: #6c5ce7;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.demo-tour-copy strong {
+    display: block;
+    margin-top: 1px;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+.demo-tour-copy p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.4;
+}
+
+.demo-tour-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+[data-theme="dark"] .fair-tour-card {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .fair-tour-eyebrow,
+[data-theme="dark"] .demo-tour-copy > span {
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .demo-tour-bar {
+    background: #111827;
+    border-color: #334155;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .demo-tour-icon {
+    background: #1e1b4b;
+    color: #a5b4fc;
+}
+
+@media (max-width: 700px) {
+    .fair-tour-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .fair-tour-card .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .demo-tour-bar {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        bottom: 8px;
+        width: calc(100% - 16px);
+        padding: 10px 12px;
+    }
+
+    .demo-tour-copy {
+        flex-basis: calc(100% - 52px);
+    }
+
+    .demo-tour-actions {
+        width: 100%;
+    }
+
+    .demo-tour-actions .btn-primary,
+    .demo-tour-actions .btn-ghost {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+@media print {
+    .fair-tour-card,
+    .demo-tour-bar {
+        display: none !important;
+    }
+}
+
 /* ===== DASHBOARD DE PROGRESO ===== */
 .path-tabs {
     display: flex;
@@ -5970,6 +6257,230 @@ button:disabled {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     white-space: nowrap;
+}
+
+.progress-section-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.skill-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.skill-profile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-left: 3px solid var(--postgres-blue);
+    border-radius: 9px;
+}
+
+.skill-profile-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.skill-profile-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 9px;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.skill-profile-heading {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.skill-profile-heading span {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.skill-profile-heading strong {
+    color: var(--text-strong);
+    font-size: 15px;
+}
+
+.skill-profile-head .challenge-level {
+    margin-left: auto;
+}
+
+.skill-profile-description {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.skill-profile-next {
+    margin: 0;
+    padding: 8px 10px;
+    border-left: 3px solid #f39c12;
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.skill-profile-next strong {
+    color: var(--text-strong);
+}
+
+.skill-profile-weak {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.skill-weak-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border: 1px solid rgba(220, 53, 69, 0.25);
+    border-radius: 999px;
+    background: #fff5f5;
+    color: #a12828;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.skill-weak-chip:hover {
+    background: #ffe7e7;
+    border-color: #dc3545;
+}
+
+.skill-test-weak {
+    width: 100%;
+    margin-top: 4px;
+    padding: 10px 11px;
+    border: 1px solid rgba(220, 53, 69, 0.18);
+    border-radius: 8px;
+    background: #fff8f8;
+}
+
+.skill-test-weak > span {
+    display: block;
+    margin-bottom: 7px;
+    color: #a12828;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.skill-test-weak-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.skill-profile-meta {
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.skill-profile-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 3px;
+}
+
+.skill-profile-select-label {
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.skill-profile-select {
+    min-height: 32px;
+    padding: 5px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .skill-profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-profile-actions .btn-secondary,
+    .skill-profile-actions .btn-ghost {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+[data-theme="dark"] .skill-weak-chip {
+    background: #3f1d1d;
+    border-color: #7f1d1d;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .skill-weak-chip:hover {
+    background: #4c2222;
+    border-color: #f87171;
+}
+
+[data-theme="dark"] .skill-test-weak {
+    background: #2a1518;
+    border-color: #7f1d1d;
+}
+
+[data-theme="dark"] .skill-test-weak > span,
+[data-theme="dark"] .skill-profile-weak {
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .skill-profile-card {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .skill-profile-next {
+    background: #111827;
+}
+
+[data-theme="dark"] .skill-profile-select {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
 }
 
 .concept-mastery-grid {

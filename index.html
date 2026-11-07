@@ -93,6 +93,17 @@
                 </button>
             </div>
 
+            <div class="fair-tour-card">
+                <div>
+                    <span class="fair-tour-eyebrow"><i class="fas fa-chalkboard-user"></i> Modo feria</span>
+                    <h3>Recorrido de 5 minutos</h3>
+                    <p>Una guía rápida por el test de nivel, la práctica, NoSQL, los retos y tu progreso.</p>
+                </div>
+                <button type="button" class="btn-secondary" onclick="startDemoTour()">
+                    <i class="fas fa-play"></i> Comenzar recorrido
+                </button>
+            </div>
+
             <div class="learn-tabs" role="tablist" aria-label="Biblioteca de aprendizaje">
                 <button type="button" id="learnGuidesTab" class="learn-tab active" data-learn-tab="guides" role="tab" aria-selected="true" aria-controls="learnGuidesPanel">
                     <i class="fas fa-compass"></i> Guías
@@ -712,8 +723,8 @@
                 <p>Escribe consultas SQL y ve los resultados en tiempo real</p>
             </div>
 
-            <div id="sqlLevelBar" class="level-bar is-onboarding">
-                <div class="level-bar-copy">
+            <div id="sqlLevelBar" class="level-bar is-onboarding" role="region" aria-label="Nivel SQL">
+                <div class="level-bar-copy" aria-live="polite" aria-atomic="true">
                     <span class="level-bar-eyebrow"><i class="fas fa-signal"></i> Tu nivel SQL</span>
                     <strong id="sqlLevelLabel">Nivel estimado: Básico</strong>
                     <p id="sqlLevelDescription">Aún no has hecho el test. Empezamos por lo básico.</p>
@@ -726,7 +737,7 @@
                         <option value="avanzado">Avanzado</option>
                         <option value="all">Ver todo</option>
                     </select>
-                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('sql')">
+                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('sql')" aria-haspopup="dialog" aria-controls="skillTestModal">
                         <i class="fas fa-clipboard-question"></i> Test de nivel
                     </button>
                     <button type="button" class="btn-ghost level-skip-btn" onclick="setSkillLevel('sql', 'basico')">
@@ -866,8 +877,8 @@
                 <p>Practica con documentos JSON y una consola tipo MongoDB, directamente en el navegador</p>
             </div>
 
-            <div id="nosqlLevelBar" class="level-bar is-onboarding">
-                <div class="level-bar-copy">
+            <div id="nosqlLevelBar" class="level-bar is-onboarding" role="region" aria-label="Nivel NoSQL">
+                <div class="level-bar-copy" aria-live="polite" aria-atomic="true">
                     <span class="level-bar-eyebrow"><i class="fas fa-signal"></i> Tu nivel NoSQL</span>
                     <strong id="nosqlLevelLabel">Nivel estimado: Básico</strong>
                     <p id="nosqlLevelDescription">Aún no has hecho el test. Empezamos por lo básico.</p>
@@ -880,7 +891,7 @@
                         <option value="avanzado">Avanzado</option>
                         <option value="all">Ver todo</option>
                     </select>
-                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('nosql')">
+                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('nosql')" aria-haspopup="dialog" aria-controls="skillTestModal">
                         <i class="fas fa-clipboard-question"></i> Test de nivel
                     </button>
                     <button type="button" class="btn-ghost level-skip-btn" onclick="setSkillLevel('nosql', 'basico')">
@@ -1303,6 +1314,17 @@
             <div class="modal-body" id="skillTestBody" aria-live="polite"></div>
         </div>
     </div>
+    <!-- ===== MODAL DE REPORTE DE PROGRESO ===== -->
+    <div id="progressReportModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="progressReportTitle">
+        <div class="modal-content report-modal-content">
+            <div class="modal-header">
+                <h2 id="progressReportTitle">Reporte de aprendizaje</h2>
+                <button type="button" onclick="closeProgressReport()" class="modal-close" aria-label="Cerrar reporte">&times;</button>
+            </div>
+            <div class="modal-body" id="progressReportBody"></div>
+        </div>
+    </div>
+
     <!-- ===== GUÍA DE PRIMEROS PASOS EN SQL ===== -->
 <div id="sqlGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="sqlGuideTitle">
     <div class="modal-content" style="max-width: 750px; max-height: 90vh;">
@@ -1356,6 +1378,22 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="demoTourBar" class="demo-tour-bar" role="region" aria-label="Recorrido guiado" aria-live="polite" hidden>
+        <div class="demo-tour-icon"><i class="fas fa-route"></i></div>
+        <div class="demo-tour-copy">
+            <span id="demoTourStepLabel">Paso 1 de 7</span>
+            <strong id="demoTourTitle"></strong>
+            <p id="demoTourDescription"></p>
+        </div>
+        <div class="demo-tour-actions">
+            <button type="button" class="btn-ghost btn-sm" id="demoTourPrevBtn" onclick="previousDemoTourStep()">Anterior</button>
+            <button type="button" class="btn-primary btn-sm" id="demoTourNextBtn" onclick="nextDemoTourStep()">Siguiente</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="closeDemoTour()" aria-label="Cerrar recorrido">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     </div>
 

@@ -33,3 +33,9 @@ test('los assets están centralizados y las rutas de la PWA existen', () => {
         assert.equal(exists(icon.src), true, `No existe ${icon.src}`);
     }
 });
+
+test('los materiales de feria y su QR existen', () => {
+    assert.equal(exists('FERIA.md'), true);
+    assert.equal(exists('feria.html'), true);
+    assert.equal(exists('assets/images/qr-demo.png'), true);
+});

@@ -4,6 +4,8 @@ Simulador educativo de SQL y NoSQL que se ejecuta en el navegador. El laboratori
 
 **Demo:** [https://sql-academy.netlify.app](https://sql-academy.netlify.app)
 
+**Materiales de feria:** [FERIA.md](FERIA.md) · [feria.html](feria.html)
+
 El proyecto nació como parte de un curso de 18 semanas para practicar flujos de trabajo colaborativos con Git y GitHub.
 
 ## Puntos destacados
@@ -99,7 +101,7 @@ sql-academy/
 ├── manifest.webmanifest        # Configuración de la aplicación instalable
 ├── assets/
 │   ├── icons/                  # Iconos PWA
-│   ├── images/                 # QR de donaciones Yape y Plin
+│   ├── images/                 # QR de donaciones y de la demo
 │   └── logos/                  # Logos de gestores SQL y NoSQL
 ├── netlify.toml                # Publicación, función, redirect e ignore de builds
 ├── _headers                    # Cabeceras de seguridad de Netlify
@@ -125,6 +127,8 @@ sql-academy/
 ├── .env.example                # Variables de entorno de ejemplo
 ├── package.json
 ├── package-lock.json
+├── FERIA.md                    # Pitch, demo, arquitectura, impacto y FAQ
+├── feria.html                  # One-pager imprimible para el stand
 ├── LICENSE
 └── README.md
 ```
@@ -418,6 +422,17 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 
 ## Release Notes
+
+### v1.10.0
+
+- **Perfil de nivel en Mi progreso:** niveles SQL/NoSQL, fecha del test, cambio manual, repetición del test y siguiente paso.
+- **Acciones después del test:** conceptos a reforzar con acceso directo a la práctica correspondiente.
+- **Recorrido de 5 minutos:** barra guiada para presentar la app en la feria paso a paso.
+- **Reporte de aprendizaje:** resumen imprimible o guardable como PDF con niveles, actividad, conceptos y siguiente paso.
+- **Pulido de experiencia:** etiquetas accesibles, foco visible, modo oscuro, responsive y respeto por movimiento reducido.
+- **Materiales de feria:** `FERIA.md` con pitch, demo, arquitectura, impacto, roadmap y FAQ; `feria.html` como one-pager imprimible.
+- **QR de demo:** código QR listo para el stand.
+- **Caché PWA:** actualizada para la nueva versión.
 
 ### v1.9.0
 
