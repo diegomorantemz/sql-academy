@@ -3841,7 +3841,7 @@ const dbInfo = {
     logo: 'assets/logos/redis.png',
     description: 'Redis es la base de datos clave-valor más rápida del mundo. Es ampliamente utilizada como caché, para sesiones de usuario y para aplicaciones que requieren baja latencia.',
     type: 'NoSQL (Clave-Valor)',
-    licencia: 'Open Source (BSD)',
+    licencia: 'AGPLv3 (Redis 8+)',
     sitio: 'redis.io',
     caracteristicas: [
         'Alta velocidad (sub-milisegundo)',
@@ -3904,7 +3904,7 @@ const dbInfo = {
     logo: 'assets/logos/elasticsearch.png',
     description: 'Elasticsearch es el motor de búsqueda y análisis de datos más popular. Está basado en Lucene y permite consultas full-text en tiempo real.',
     type: 'NoSQL (Busqueda)',
-    licencia: 'Open Source (Apache 2.0)',
+    licencia: 'Elastic License 2.0 / AGPLv3',
     sitio: 'elastic.co',
     caracteristicas: [
         'Búsqueda full-text en tiempo real',
@@ -4564,13 +4564,18 @@ function renderInstallGuides() {
 
     container.innerHTML = guides.map(guide => {
         const paths = Array.isArray(guide.paths) ? guide.paths : [];
-        const osIds = paths.map(path => path.id).join(' ');
+        const osIds = [...new Set(paths.flatMap(path => (
+            Array.isArray(path.platforms) && path.platforms.length ? path.platforms : [path.id]
+        )))].join(' ');
         const search = [
             guide.name,
             guide.summary,
             guide.type,
             guide.difficulty,
-            ...paths.map(path => path.label)
+            ...paths.flatMap(path => [
+                path.label,
+                ...(Array.isArray(path.platforms) ? path.platforms : [])
+            ])
         ].join(' ');
         return `
             <article class="install-guide-card"

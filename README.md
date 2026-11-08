@@ -22,7 +22,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
 - Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
-- Guías de instalación paso a paso para SQLite, PostgreSQL, MySQL, SQL Server, MongoDB y Oracle, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
+- Guías de instalación paso a paso para doce gestores SQL y NoSQL, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
 - Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
 - **Torre de Datos:** minijuego deckbuilder con 6 pisos, cartas SQL, recompensas y soporte para teclado, ratón y mando.
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
@@ -259,8 +259,8 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 
 ### Guías de instalación
 
-- **Seis gestores del MVP:** SQLite, PostgreSQL, MySQL, SQL Server, MongoDB y Oracle.
-- **Rutas por sistema:** pasos para Windows, macOS, Linux y Docker según el gestor; MongoDB y Oracle priorizan alternativas más ligeras.
+- **Doce gestores:** SQLite, PostgreSQL, MySQL, SQL Server, MariaDB y Oracle en SQL; MongoDB, Redis, Neo4j, Cassandra, Elasticsearch y Firebase en NoSQL.
+- **Rutas por sistema:** pasos para Windows, macOS, Linux y Docker según el gestor; Redis usa WSL2 en Windows, Neo4j y Cassandra priorizan Docker, y Firebase se configura desde la consola web o con un emulador local.
 - **Contenido para principiantes:** requisitos, pasos, comandos copiables, verificación, notas, errores comunes y consejos de seguridad.
 - **Enlaces oficiales:** cada guía enlaza a la descarga y la documentación del fabricante; la app no aloja instaladores ni capturas.
 - **Acceso conectado:** pestaña **Instalación** en Aprender y botón **Cómo instalarlo** en la ficha de cada gestor.
@@ -409,7 +409,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
 - `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor, la pestaña Instalación y el mini-quiz de conceptos.
-- `tests/install-guides.test.mjs` cubre el catálogo de los seis gestores, las rutas por sistema, los campos obligatorios, los logos y los enlaces oficiales.
+- `tests/install-guides.test.mjs` cubre el catálogo de los doce gestores, las rutas por sistema, las plataformas de Firebase, los campos obligatorios, los logos y los enlaces oficiales.
 - `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
 - `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
@@ -445,8 +445,18 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - La PWA necesita HTTPS (Netlify lo proporciona). El asistente IA requiere conexión y la Netlify Function desplegada.
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
 - Las guías de instalación son orientativas y enlazan a sitios oficiales; no sustituyen la documentación del fabricante ni incluyen instaladores propios.
+- Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.14.0
+
+- **Catálogo ampliado a doce gestores:** se suman MariaDB, Redis, Neo4j, Cassandra, Elasticsearch y Firebase.
+- **Rutas específicas:** MariaDB y Elasticsearch incluyen Windows, macOS, Linux y Docker; Redis añade WSL2; Neo4j usa Desktop o Docker; Cassandra combina Docker y Homebrew.
+- **Firebase sin servidor local:** la guía explica la consola web y el emulador de Firestore con Node.js y Java.
+- **Contenido de soporte:** comandos de verificación, errores comunes, notas y seguridad para cada motor.
+- **Fichas actualizadas:** licencias de Redis y Elasticsearch alineadas con sus versiones actuales.
+- **Calidad:** pruebas para las doce guías, las plataformas de Firebase y la caché PWA `v31`.
 
 ### v1.13.0
 

@@ -11,10 +11,10 @@ const { window } = dom;
 window.eval(fs.readFileSync(new URL('../install-guides.js', import.meta.url), 'utf8'));
 
 const guides = window.INSTALL_GUIDES;
-const expectedIds = ['sqlite', 'postgresql', 'mysql', 'sqlserver', 'mongodb', 'oracle'];
+const expectedIds = ['sqlite', 'postgresql', 'mysql', 'sqlserver', 'mongodb', 'oracle', 'mariadb', 'redis', 'neo4j', 'cassandra', 'elasticsearch', 'firebase'];
 const exists = path => fs.existsSync(new URL(`../${path}`, import.meta.url));
 
-test('el catálogo de instalación incluye los seis gestores del MVP', () => {
+test('el catálogo de instalación incluye los doce gestores', () => {
     assert.ok(guides);
     assert.deepEqual(Object.keys(guides).sort(), [...expectedIds].sort());
 
@@ -48,6 +48,15 @@ test('cada ruta de instalación tiene pasos, verificación y contenido válido',
             assert.ok(Array.isArray(path.steps) && path.steps.length > 0);
             assert.ok(Array.isArray(path.verify) && path.verify.length > 0);
             assert.ok(Array.isArray(path.notes));
+            if (path.platforms) {
+                assert.ok(Array.isArray(path.platforms) && path.platforms.length > 0, `Plataformas vacías en ${guide.id}/${path.id}`);
+                for (const platform of path.platforms) {
+                    assert.ok(
+                        ['windows', 'macos', 'linux', 'docker'].includes(platform),
+                        `Plataforma no válida en ${guide.id}/${path.id}: ${platform}`
+                    );
+                }
+            }
 
             for (const step of path.steps) {
                 assert.ok(step.title.length > 3);

@@ -775,5 +775,918 @@ window.INSTALL_GUIDES = {
             'Revisa las condiciones de licencia de Oracle antes de usar la base en producción.'
         ],
         lastReviewed: '2026-11'
+    },
+
+    mariadb: {
+        id: 'mariadb',
+        name: 'MariaDB',
+        logo: 'assets/logos/mariadb.png',
+        type: 'SQL',
+        difficulty: 'Media',
+        time: '15-20 min',
+        recommended: false,
+        summary: 'Alternativa open source compatible con MySQL, mantenida por la comunidad y muy usada en hosting y aplicaciones web.',
+        officialUrl: 'https://mariadb.org/download/',
+        docsUrl: 'https://mariadb.com/kb/en/documentation/',
+        requirements: ['Permisos de administrador', 'Opcional: Docker'],
+        clients: [
+            { name: 'DBeaver', url: 'https://dbeaver.io/download/' },
+            { name: 'HeidiSQL', url: 'https://www.heidisql.com/download.php' }
+        ],
+        cloudAlternative: null,
+        paths: [
+            {
+                id: 'windows',
+                label: 'Windows',
+                recommended: true,
+                steps: [
+                    {
+                        title: 'Descarga MariaDB Server',
+                        body: 'Entra en la página oficial, elige Windows y descarga el instalador MSI de MariaDB Server.',
+                        link: { label: 'Descargar MariaDB', url: 'https://mariadb.org/download/' }
+                    },
+                    {
+                        title: 'Ejecuta el instalador',
+                        body: 'Selecciona Server y HeidiSQL si quieres un cliente visual. Deja el puerto 3306 salvo que ya esté ocupado.'
+                    },
+                    {
+                        title: 'Define la contraseña de root',
+                        body: 'Usa una contraseña de práctica y guárdala. No reutilices una contraseña real.'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba la versión',
+                        body: 'Abre PowerShell o CMD y ejecuta:',
+                        code: 'mariadb --version'
+                    },
+                    {
+                        title: 'Conecta con HeidiSQL',
+                        body: 'Crea una conexión a localhost:3306 con el usuario root y la contraseña definida.'
+                    }
+                ],
+                notes: ['Si mariadb no aparece en la terminal, añade la carpeta bin de MariaDB al PATH.']
+            },
+            {
+                id: 'macos',
+                label: 'macOS',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Instala MariaDB con Homebrew',
+                        body: 'Instala el servidor desde la terminal.',
+                        code: 'brew install mariadb'
+                    },
+                    {
+                        title: 'Inicia el servicio',
+                        body: 'Arranca MariaDB como servicio local.',
+                        code: 'brew services start mariadb'
+                    },
+                    {
+                        title: 'Protege la instalación',
+                        body: 'Ejecuta el asistente para definir la contraseña de root y eliminar configuraciones inseguras.',
+                        code: 'mariadb-secure-installation'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba la versión',
+                        body: 'La terminal debe mostrar la versión instalada.',
+                        code: 'mariadb --version'
+                    },
+                    {
+                        title: 'Entra a la consola',
+                        body: 'Conecta con el usuario root.',
+                        code: 'mariadb -u root -p'
+                    }
+                ],
+                notes: ['En instalaciones antiguas el comando puede aparecer como mysql_secure_installation.']
+            },
+            {
+                id: 'linux',
+                label: 'Linux',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Instala MariaDB Server',
+                        body: 'En Ubuntu o Debian actualiza los paquetes e instala el servidor.',
+                        code: 'sudo apt update && sudo apt install mariadb-server'
+                    },
+                    {
+                        title: 'Inicia el servicio',
+                        body: 'Activa MariaDB y comprueba que está funcionando.',
+                        code: 'sudo systemctl enable --now mariadb'
+                    },
+                    {
+                        title: 'Protege la instalación',
+                        body: 'Ejecuta el asistente de configuración inicial.',
+                        code: 'sudo mariadb-secure-installation'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba el estado',
+                        body: 'El servicio debe aparecer como activo.',
+                        code: 'sudo systemctl status mariadb'
+                    },
+                    {
+                        title: 'Abre la consola',
+                        body: 'El usuario root del sistema puede entrar con autenticación local.',
+                        code: 'sudo mariadb'
+                    }
+                ],
+                notes: ['En Fedora o Arch Linux cambia apt por el gestor de paquetes correspondiente.']
+            },
+            {
+                id: 'docker',
+                label: 'Docker',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Arranca el contenedor',
+                        body: 'Crea una instancia de MariaDB con un volumen para conservar los datos.',
+                        code: 'docker run --name sql-academy-mariadb -e MARIADB_ROOT_PASSWORD=CambiaEstaClave123 -p 3306:3306 -v sql-academy-mariadb-data:/var/lib/mysql -d mariadb:11'
+                    },
+                    {
+                        title: 'Espera a que esté listo',
+                        body: 'Revisa los logs hasta que MariaDB acepte conexiones.',
+                        code: 'docker logs sql-academy-mariadb'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Conecta con el cliente',
+                        body: 'Usa HeidiSQL o la terminal con localhost:3306.',
+                        code: 'mariadb -h 127.0.0.1 -u root -p'
+                    }
+                ],
+                notes: ['El volumen evita perder los datos al detener el contenedor.']
+            }
+        ],
+        commonErrors: [
+            {
+                problem: 'El puerto 3306 ya está en uso',
+                solution: 'Detén el otro servicio o cambia el puerto durante la instalación.'
+            },
+            {
+                problem: 'Access denied for user root',
+                solution: 'Comprueba la contraseña y el método de autenticación configurado.'
+            },
+            {
+                problem: 'El servicio no inicia',
+                solution: 'Revisa el estado con systemctl y los logs de MariaDB.'
+            }
+        ],
+        security: [
+            'No uses root para las aplicaciones; crea un usuario específico.',
+            'Ejecuta mariadb-secure-installation después de instalar.',
+            'Evita exponer MariaDB directamente a internet.',
+            'Haz copias de seguridad antes de cambiar datos importantes.'
+        ],
+        lastReviewed: '2026-11'
+    },
+
+    redis: {
+        id: 'redis',
+        name: 'Redis',
+        logo: 'assets/logos/redis.png',
+        type: 'NoSQL',
+        difficulty: 'Fácil-media',
+        time: '10-15 min',
+        recommended: true,
+        summary: 'Base de datos clave-valor en memoria, ideal para caché, sesiones, colas y contadores.',
+        officialUrl: 'https://redis.io/downloads/',
+        docsUrl: 'https://redis.io/docs/latest/',
+        requirements: ['Opcional: WSL2 en Windows', 'Opcional: Docker'],
+        clients: [
+            { name: 'Redis Insight', url: 'https://redis.io/insight/' }
+        ],
+        cloudAlternative: {
+            label: 'Redis Cloud',
+            url: 'https://redis.io/cloud/',
+            note: 'Plan gratuito para practicar sin instalar un servidor local.'
+        },
+        paths: [
+            {
+                id: 'windows',
+                label: 'Windows (WSL2)',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Activa WSL2',
+                        body: 'Redis no tiene una versión nativa oficial para Windows. Abre PowerShell como administrador y activa WSL2.',
+                        code: 'wsl --install'
+                    },
+                    {
+                        title: 'Instala Redis en Ubuntu',
+                        body: 'Abre la terminal de Ubuntu y actualiza los paquetes.',
+                        code: 'sudo apt update && sudo apt install redis-server'
+                    },
+                    {
+                        title: 'Inicia el servicio',
+                        body: 'Arranca Redis dentro de la distribución de Linux.',
+                        code: 'sudo service redis-server start'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba la conexión',
+                        body: 'La terminal debe responder PONG.',
+                        code: 'redis-cli ping'
+                    }
+                ],
+                notes: [
+                    'Reinicia el equipo después de activar WSL2 si Windows lo solicita.',
+                    'También puedes usar Docker Desktop.'
+                ]
+            },
+            {
+                id: 'macos',
+                label: 'macOS',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Instala Redis con Homebrew',
+                        body: 'Instala el servidor desde la terminal.',
+                        code: 'brew install redis'
+                    },
+                    {
+                        title: 'Inicia el servicio',
+                        body: 'Arranca Redis como servicio local.',
+                        code: 'brew services start redis'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba la conexión',
+                        body: 'La terminal debe responder PONG.',
+                        code: 'redis-cli ping'
+                    }
+                ],
+                notes: ['También puedes usar Redis Cloud o Docker.']
+            },
+            {
+                id: 'linux',
+                label: 'Linux',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Instala Redis Server',
+                        body: 'En Ubuntu o Debian instala el servidor desde los repositorios.',
+                        code: 'sudo apt update && sudo apt install redis-server'
+                    },
+                    {
+                        title: 'Inicia el servicio',
+                        body: 'Activa Redis y comprueba que está funcionando.',
+                        code: 'sudo systemctl enable --now redis-server'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba la conexión',
+                        body: 'La terminal debe responder PONG.',
+                        code: 'redis-cli ping'
+                    }
+                ],
+                notes: ['En Fedora o Arch Linux cambia apt por el gestor de paquetes correspondiente.']
+            },
+            {
+                id: 'docker',
+                label: 'Docker',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Arranca el contenedor',
+                        body: 'Crea una instancia con persistencia para conservar los datos.',
+                        code: 'docker run --name sql-academy-redis -p 6379:6379 -v sql-academy-redis-data:/data -d redis:8 redis-server --appendonly yes'
+                    },
+                    {
+                        title: 'Revisa el arranque',
+                        body: 'Comprueba que el contenedor sigue en ejecución.',
+                        code: 'docker logs sql-academy-redis'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba la conexión',
+                        body: 'Ejecuta redis-cli dentro del contenedor; debe responder PONG.',
+                        code: 'docker exec -it sql-academy-redis redis-cli ping'
+                    }
+                ],
+                notes: ['--appendonly yes activa la persistencia en el volumen.']
+            }
+        ],
+        commonErrors: [
+            {
+                problem: 'Connection refused en localhost:6379',
+                solution: 'Comprueba que el servicio o el contenedor estén iniciados.'
+            },
+            {
+                problem: 'NOAUTH Authentication required',
+                solution: 'La instancia tiene contraseña. Configura requirepass en el cliente o usa la contraseña definida.'
+            },
+            {
+                problem: 'WSL2 no está disponible',
+                solution: 'Actualiza Windows y ejecuta wsl --install como administrador.'
+            },
+            {
+                problem: 'El puerto 6379 está ocupado',
+                solution: 'Detén el otro servicio o cambia el puerto al arrancar Redis.'
+            }
+        ],
+        security: [
+            'Redis no usa autenticación por defecto; mantenlo en localhost mientras practicas.',
+            'Si necesitas exponerlo, configura requirepass y una red privada.',
+            'No publiques el puerto 6379 en internet.',
+            'Revisa la persistencia y las copias si guardas datos importantes.'
+        ],
+        lastReviewed: '2026-11'
+    },
+
+    neo4j: {
+        id: 'neo4j',
+        name: 'Neo4j',
+        logo: 'assets/logos/neo4j.png',
+        type: 'NoSQL',
+        difficulty: 'Media',
+        time: '15-25 min',
+        recommended: false,
+        summary: 'Base de datos de grafos para modelar relaciones complejas con nodos y aristas.',
+        officialUrl: 'https://neo4j.com/download/',
+        docsUrl: 'https://neo4j.com/docs/',
+        requirements: ['Cuenta gratuita para Aura', 'Opcional: Docker', 'Java si usas la distribución nativa'],
+        clients: [
+            { name: 'Neo4j Desktop', url: 'https://neo4j.com/download/' },
+            { name: 'Neo4j Browser', url: 'https://neo4j.com/docs/browser-manual/current/' }
+        ],
+        cloudAlternative: {
+            label: 'Neo4j AuraDB',
+            url: 'https://neo4j.com/cloud/platform/aura-graph-database/',
+            note: 'Instancia gratuita para practicar sin instalar nada.'
+        },
+        paths: [
+            {
+                id: 'windows',
+                label: 'Windows (Desktop)',
+                recommended: true,
+                steps: [
+                    {
+                        title: 'Descarga Neo4j Desktop',
+                        body: 'Descarga el instalador oficial para Windows.',
+                        link: { label: 'Descargar Neo4j Desktop', url: 'https://neo4j.com/download/' }
+                    },
+                    {
+                        title: 'Crea una base local',
+                        body: 'Abre Neo4j Desktop, crea un proyecto y añade un DBMS local. Define una contraseña de práctica.'
+                    },
+                    {
+                        title: 'Inicia la base',
+                        body: 'Pulsa Start y abre Neo4j Browser cuando esté disponible.'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Ejecuta una consulta',
+                        body: 'Conecta a bolt://localhost:7687 con el usuario neo4j y la contraseña definida. Ejecuta RETURN 1 AS ok;.'
+                    }
+                ],
+                notes: ['Neo4j Desktop incluye Neo4j Browser y herramientas visuales.']
+            },
+            {
+                id: 'macos',
+                label: 'macOS (Desktop)',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Descarga Neo4j Desktop',
+                        body: 'Descarga el archivo DMG desde la página oficial.',
+                        link: { label: 'Descargar Neo4j Desktop', url: 'https://neo4j.com/download/' }
+                    },
+                    {
+                        title: 'Crea una base local',
+                        body: 'Abre Neo4j Desktop, crea un proyecto y añade un DBMS local. Define una contraseña de práctica.'
+                    },
+                    {
+                        title: 'Inicia la base',
+                        body: 'Pulsa Start y abre Neo4j Browser cuando esté disponible.'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Ejecuta una consulta',
+                        body: 'Conecta a bolt://localhost:7687 con el usuario neo4j y la contraseña definida. Ejecuta RETURN 1 AS ok;.'
+                    }
+                ],
+                notes: ['También existe una versión con Homebrew, pero Desktop es más sencilla para empezar.']
+            },
+            {
+                id: 'docker',
+                label: 'Linux / Docker',
+                recommended: false,
+                platforms: ['linux', 'docker'],
+                steps: [
+                    {
+                        title: 'Arranca el contenedor',
+                        body: 'Crea una instancia local con un volumen para conservar los datos.',
+                        code: 'docker run --name sql-academy-neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/CambiaEstaClave123 -v sql-academy-neo4j-data:/data -d neo4j:5'
+                    },
+                    {
+                        title: 'Espera el arranque',
+                        body: 'Revisa los logs hasta que Neo4j esté listo.',
+                        code: 'docker logs -f sql-academy-neo4j'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Abre Neo4j Browser',
+                        body: 'Visita http://localhost:7474, conecta con bolt://localhost:7687 y ejecuta RETURN 1 AS ok;.'
+                    }
+                ],
+                notes: [
+                    'La contraseña debe tener al menos 8 caracteres.',
+                    'En Linux también puedes instalar Neo4j de forma nativa siguiendo la documentación oficial.'
+                ]
+            }
+        ],
+        commonErrors: [
+            {
+                problem: 'Neo4j Browser no abre',
+                solution: 'Comprueba que la base esté iniciada y que los puertos 7474 y 7687 estén libres.'
+            },
+            {
+                problem: 'La contraseña es rechazada',
+                solution: 'Usa al menos 8 caracteres y revisa el formato NEO4J_AUTH=usuario/contraseña.'
+            },
+            {
+                problem: 'El contenedor se detiene',
+                solution: 'Revisa los logs y asegúrate de que Docker tiene memoria suficiente.'
+            }
+        ],
+        security: [
+            'Cambia la contraseña de ejemplo antes de usar la base.',
+            'No expongas los puertos 7474 y 7687 a internet.',
+            'Usa AuraDB para experimentos que no quieras alojar en local.',
+            'Haz copias de seguridad de las bases importantes.'
+        ],
+        lastReviewed: '2026-11'
+    },
+
+    cassandra: {
+        id: 'cassandra',
+        name: 'Cassandra',
+        logo: 'assets/logos/cassandra.png',
+        type: 'NoSQL',
+        difficulty: 'Alta',
+        time: '20-30 min',
+        recommended: false,
+        summary: 'Base de datos columnar distribuida para grandes volúmenes y alta disponibilidad.',
+        officialUrl: 'https://cassandra.apache.org/_/download.html',
+        docsUrl: 'https://cassandra.apache.org/doc/latest/',
+        requirements: ['Docker Desktop en Windows', 'Al menos 2 GB de RAM para el contenedor', 'Opcional: Java para la instalación nativa'],
+        clients: [
+            { name: 'cqlsh (incluido)', url: 'https://cassandra.apache.org/doc/latest/cassandra/managing/tools/cqlsh.html' }
+        ],
+        cloudAlternative: {
+            label: 'DataStax Astra DB',
+            url: 'https://astra.datastax.com/',
+            note: 'Plan gratuito para practicar sin instalar Cassandra.'
+        },
+        paths: [
+            {
+                id: 'windows',
+                label: 'Windows (Docker)',
+                recommended: true,
+                steps: [
+                    {
+                        title: 'Instala Docker Desktop',
+                        body: 'Cassandra no tiene instalador nativo para Windows. Usa Docker Desktop con WSL2.',
+                        link: { label: 'Descargar Docker Desktop', url: 'https://www.docker.com/products/docker-desktop/' }
+                    },
+                    {
+                        title: 'Arranca el contenedor',
+                        body: 'Crea una instancia local con un volumen para conservar los datos.',
+                        code: 'docker run --name sql-academy-cassandra -p 9042:9042 -v sql-academy-cassandra-data:/var/lib/cassandra -d cassandra:5'
+                    },
+                    {
+                        title: 'Espera el arranque',
+                        body: 'La primera inicialización puede tardar uno o dos minutos. Revisa los logs.',
+                        code: 'docker logs -f sql-academy-cassandra'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Abre cqlsh',
+                        body: 'Entra a la consola de Cassandra desde el contenedor.',
+                        code: 'docker exec -it sql-academy-cassandra cqlsh'
+                    },
+                    {
+                        title: 'Comprueba el clúster',
+                        body: 'Dentro de cqlsh ejecuta DESCRIBE KEYSPACES; y comprueba que responde.'
+                    }
+                ],
+                notes: ['Asigna al menos 2 GB de memoria a Docker Desktop.']
+            },
+            {
+                id: 'macos',
+                label: 'macOS (Homebrew)',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Instala Cassandra',
+                        body: 'Homebrew instala Cassandra y una versión compatible de Java.',
+                        code: 'brew install cassandra'
+                    },
+                    {
+                        title: 'Inicia el servicio',
+                        body: 'Arranca Cassandra como servicio local.',
+                        code: 'brew services start cassandra'
+                    },
+                    {
+                        title: 'Espera el arranque',
+                        body: 'El primer arranque puede tardar. Revisa el estado del servicio si no responde.',
+                        code: 'brew services info cassandra'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Abre cqlsh',
+                        body: 'Conecta a la instancia local y ejecuta DESCRIBE KEYSPACES;.',
+                        code: 'cqlsh'
+                    }
+                ],
+                notes: ['También puedes usar Docker o DataStax Astra.']
+            },
+            {
+                id: 'docker',
+                label: 'Linux / Docker',
+                recommended: false,
+                platforms: ['linux', 'docker'],
+                steps: [
+                    {
+                        title: 'Arranca el contenedor',
+                        body: 'Crea una instancia local con un volumen para conservar los datos.',
+                        code: 'docker run --name sql-academy-cassandra -p 9042:9042 -v sql-academy-cassandra-data:/var/lib/cassandra -d cassandra:5'
+                    },
+                    {
+                        title: 'Espera el arranque',
+                        body: 'Revisa los logs hasta que Cassandra acepte conexiones.',
+                        code: 'docker logs -f sql-academy-cassandra'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Abre cqlsh',
+                        body: 'Entra a la consola y comprueba el clúster.',
+                        code: 'docker exec -it sql-academy-cassandra cqlsh'
+                    }
+                ],
+                notes: ['En Linux también puedes instalar Cassandra con paquetes nativos siguiendo la documentación oficial.']
+            }
+        ],
+        commonErrors: [
+            {
+                problem: 'El contenedor se detiene o reinicia',
+                solution: 'Revisa la memoria disponible y los logs; Cassandra necesita al menos 2 GB para practicar con comodidad.'
+            },
+            {
+                problem: 'cqlsh no puede conectar',
+                solution: 'Espera a que termine la inicialización y comprueba que el puerto 9042 está libre.'
+            },
+            {
+                problem: 'Java no está instalado',
+                solution: 'Instala Java 17 si usas la distribución nativa; Docker no necesita Java en el equipo.'
+            },
+            {
+                problem: 'El puerto 9042 está ocupado',
+                solution: 'Detén el otro servicio o cambia el puerto publicado del contenedor.'
+            }
+        ],
+        security: [
+            'Cassandra no usa autenticación por defecto; no la expongas a internet.',
+            'Para un entorno compartido, configura autenticación y TLS siguiendo la documentación oficial.',
+            'Mantén la instancia de práctica en localhost.',
+            'Haz copias de seguridad antes de cambiar datos importantes.'
+        ],
+        lastReviewed: '2026-11'
+    },
+
+    elasticsearch: {
+        id: 'elasticsearch',
+        name: 'Elasticsearch',
+        logo: 'assets/logos/elasticsearch.png',
+        type: 'NoSQL',
+        difficulty: 'Alta',
+        time: '20-30 min',
+        recommended: false,
+        summary: 'Motor de búsqueda y análisis distribuido para texto completo, logs y agregaciones.',
+        officialUrl: 'https://www.elastic.co/downloads/elasticsearch',
+        docsUrl: 'https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html',
+        requirements: ['Al menos 2 GB de memoria libre', 'Java incluido en la distribución', 'Opcional: Docker'],
+        clients: [
+            { name: 'Kibana', url: 'https://www.elastic.co/downloads/kibana' }
+        ],
+        cloudAlternative: {
+            label: 'Elastic Cloud',
+            url: 'https://cloud.elastic.co/registration',
+            note: 'Prueba gratuita de Elastic Cloud; revisa la duración y las condiciones antes de usarla.'
+        },
+        paths: [
+            {
+                id: 'windows',
+                label: 'Windows (ZIP)',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Descarga Elasticsearch',
+                        body: 'Descarga el archivo ZIP para Windows desde la página oficial.',
+                        link: { label: 'Descargar Elasticsearch', url: 'https://www.elastic.co/downloads/elasticsearch' }
+                    },
+                    {
+                        title: 'Extrae el archivo',
+                        body: 'Descomprime el ZIP en una carpeta sin espacios en la ruta.'
+                    },
+                    {
+                        title: 'Arranca Elasticsearch',
+                        body: 'Abre PowerShell en la carpeta y ejecuta el arranque.',
+                        code: '.\\bin\\elasticsearch.bat'
+                    },
+                    {
+                        title: 'Guarda la contraseña inicial',
+                        body: 'En el primer arranque se genera la contraseña del usuario elastic y se muestra en la consola. Guárdala.'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba el servicio',
+                        body: 'Abre https://localhost:9200, acepta el certificado local y usa el usuario elastic y la contraseña generada.'
+                    },
+                    {
+                        title: 'Instala Kibana opcionalmente',
+                        body: 'Kibana ofrece una interfaz visual y Dev Tools para ejecutar consultas.',
+                        link: { label: 'Descargar Kibana', url: 'https://www.elastic.co/downloads/kibana' }
+                    }
+                ],
+                notes: ['Si pierdes la contraseña, ejecuta bin\\elasticsearch-reset-password -u elastic.']
+            },
+            {
+                id: 'macos',
+                label: 'macOS (tar.gz)',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Descarga Elasticsearch',
+                        body: 'Descarga el archivo tar.gz desde la página oficial.',
+                        link: { label: 'Descargar Elasticsearch', url: 'https://www.elastic.co/downloads/elasticsearch' }
+                    },
+                    {
+                        title: 'Extrae el archivo',
+                        body: 'Descomprime el archivo en una carpeta de trabajo.',
+                        code: 'tar -xzf elasticsearch-*.tar.gz && cd elasticsearch-*'
+                    },
+                    {
+                        title: 'Arranca Elasticsearch',
+                        body: 'Inicia el servidor desde la carpeta extraída.',
+                        code: './bin/elasticsearch'
+                    },
+                    {
+                        title: 'Guarda la contraseña inicial',
+                        body: 'La primera ejecución muestra la contraseña del usuario elastic y el certificado local.'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba el servicio',
+                        body: 'Usa el certificado generado y la contraseña inicial.',
+                        code: 'curl --cacert config/certs/http_ca.crt -u elastic https://localhost:9200'
+                    }
+                ],
+                notes: ['También puedes usar Docker para evitar instalar Java.']
+            },
+            {
+                id: 'linux',
+                label: 'Linux (tar.gz)',
+                recommended: false,
+                steps: [
+                    {
+                        title: 'Descarga Elasticsearch',
+                        body: 'Descarga el archivo tar.gz desde la página oficial.',
+                        link: { label: 'Descargar Elasticsearch', url: 'https://www.elastic.co/downloads/elasticsearch' }
+                    },
+                    {
+                        title: 'Ajusta la memoria virtual',
+                        body: 'Elasticsearch necesita este ajuste en Linux. Para conservarlo tras reiniciar, añade vm.max_map_count=262144 a /etc/sysctl.conf.',
+                        code: 'sudo sysctl -w vm.max_map_count=262144'
+                    },
+                    {
+                        title: 'Extrae y arranca',
+                        body: 'Descomprime el archivo y ejecuta el servidor.',
+                        code: 'tar -xzf elasticsearch-*.tar.gz && cd elasticsearch-* && ./bin/elasticsearch'
+                    },
+                    {
+                        title: 'Guarda la contraseña inicial',
+                        body: 'La primera ejecución muestra la contraseña del usuario elastic y el certificado local.'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba el servicio',
+                        body: 'Usa el certificado generado y la contraseña inicial.',
+                        code: 'curl --cacert config/certs/http_ca.crt -u elastic https://localhost:9200'
+                    }
+                ],
+                notes: [
+                    'No ejecutes Elasticsearch como root.',
+                    'La distribución incluye su propia JVM.'
+                ]
+            },
+            {
+                id: 'docker',
+                label: 'Docker',
+                recommended: true,
+                steps: [
+                    {
+                        title: 'Arranca el contenedor',
+                        body: 'Crea una instancia local con seguridad activada y un volumen para los datos.',
+                        code: 'docker run --name sql-academy-elasticsearch -e discovery.type=single-node -e ELASTIC_PASSWORD=CambiaEstaClave123 -p 9200:9200 -v sql-academy-es-data:/usr/share/elasticsearch/data -d docker.elastic.co/elasticsearch/elasticsearch:9.5.6'
+                    },
+                    {
+                        title: 'Espera el arranque',
+                        body: 'Revisa los logs hasta que el servicio esté listo.',
+                        code: 'docker logs -f sql-academy-elasticsearch'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Comprueba el servicio',
+                        body: 'La respuesta debe incluir el nombre del clúster y la versión.',
+                        code: 'curl -k -u elastic:CambiaEstaClave123 https://localhost:9200'
+                    }
+                ],
+                notes: [
+                    'La imagen necesita al menos 2 GB de memoria libre.',
+                    'Cambia la contraseña de ejemplo antes de usar el entorno en red.'
+                ]
+            }
+        ],
+        commonErrors: [
+            {
+                problem: 'max virtual memory areas vm.max_map_count is too low',
+                solution: 'Ejecuta sudo sysctl -w vm.max_map_count=262144 en Linux.'
+            },
+            {
+                problem: 'El puerto 9200 está ocupado',
+                solution: 'Detén el otro servicio o publica el contenedor en otro puerto.'
+            },
+            {
+                problem: 'El contenedor se detiene por falta de memoria',
+                solution: 'Libera memoria o aumenta el límite de Docker a al menos 2 GB.'
+            },
+            {
+                problem: 'El navegador advierte del certificado',
+                solution: 'Es el certificado local de Elasticsearch. Acepta la excepción solo en tu equipo de práctica.'
+            },
+            {
+                problem: 'No recuerdo la contraseña de elastic',
+                solution: 'Usa bin/elasticsearch-reset-password -u elastic desde la instalación local o el contenedor.'
+            }
+        ],
+        security: [
+            'Mantén la seguridad activada; no desactives TLS en redes compartidas.',
+            'Cambia la contraseña de ejemplo antes de usar la instancia.',
+            'Mantén Elasticsearch en localhost mientras practicas.',
+            'Revisa las condiciones de licencia de Elastic antes de usarlo en producción.'
+        ],
+        lastReviewed: '2026-11'
+    },
+
+    firebase: {
+        id: 'firebase',
+        name: 'Firebase',
+        logo: 'assets/logos/firebase.png',
+        type: 'NoSQL',
+        difficulty: 'Fácil',
+        time: '10-15 min',
+        recommended: true,
+        summary: 'Plataforma en la nube de Google; Firestore guarda documentos y sincroniza datos en tiempo real.',
+        officialUrl: 'https://firebase.google.com/docs/firestore',
+        docsUrl: 'https://firebase.google.com/docs',
+        requirements: ['Cuenta de Google', 'Node.js y Java para el emulador local'],
+        clients: [
+            { name: 'Consola de Firebase', url: 'https://console.firebase.google.com/' },
+            { name: 'Firebase CLI', url: 'https://firebase.google.com/docs/cli' }
+        ],
+        cloudAlternative: null,
+        paths: [
+            {
+                id: 'web',
+                label: 'Consola web',
+                recommended: true,
+                platforms: ['windows', 'macos', 'linux'],
+                steps: [
+                    {
+                        title: 'Crea un proyecto',
+                        body: 'Entra en la consola, pulsa Crear proyecto y elige un nombre. No necesitas instalar nada.'
+                    },
+                    {
+                        title: 'Activa Firestore',
+                        body: 'En el menú lateral abre Firestore Database, crea una base en modo nativo y elige una ubicación.'
+                    },
+                    {
+                        title: 'Crea una colección de prueba',
+                        body: 'Añade una colección estudiantes y un documento con nombre y nivel.'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Lee el documento',
+                        body: 'Abre el documento en Firestore y comprueba que los campos se guardaron.'
+                    },
+                    {
+                        title: 'Revisa las reglas',
+                        body: 'En la pestaña Reglas, confirma que no vas a dejar las reglas de prueba abiertas para siempre.'
+                    }
+                ],
+                notes: [
+                    'Firestore tiene una capa gratuita para practicar; revisa los límites antes de crear datos masivos.',
+                    'La consola funciona en cualquier sistema operativo.'
+                ]
+            },
+            {
+                id: 'emulator',
+                label: 'Emulador local',
+                recommended: false,
+                platforms: ['windows', 'macos', 'linux'],
+                steps: [
+                    {
+                        title: 'Instala Node.js y Java',
+                        body: 'Instala Node.js LTS y Java 11 o superior. El emulador de Firestore necesita ambos.'
+                    },
+                    {
+                        title: 'Instala Firebase CLI',
+                        body: 'Instala la herramienta oficial desde npm.',
+                        code: 'npm install -g firebase-tools'
+                    },
+                    {
+                        title: 'Inicia sesión',
+                        body: 'Conecta la CLI con tu cuenta de Google.',
+                        code: 'firebase login'
+                    },
+                    {
+                        title: 'Inicializa el proyecto',
+                        body: 'Ejecuta el asistente en una carpeta de práctica y selecciona Firestore. Puedes elegir no configurar un proyecto predeterminado si solo quieres usar el emulador.',
+                        code: 'firebase init'
+                    },
+                    {
+                        title: 'Configura los emuladores',
+                        body: 'Elige Firestore cuando el asistente pregunte qué emuladores configurar.',
+                        code: 'firebase init emulators'
+                    },
+                    {
+                        title: 'Arranca el emulador',
+                        body: 'Ejecuta el emulador de Firestore desde la carpeta del proyecto.',
+                        code: 'firebase emulators:start --only firestore'
+                    }
+                ],
+                verify: [
+                    {
+                        title: 'Abre la interfaz del emulador',
+                        body: 'Visita http://localhost:4000 y comprueba que Firestore aparece en la lista.'
+                    },
+                    {
+                        title: 'Crea un documento de prueba',
+                        body: 'Usa la pestaña Firestore del emulador para crear una colección y un documento.'
+                    }
+                ],
+                notes: [
+                    'El emulador guarda los datos localmente y no necesita una cuenta de Firebase para las pruebas.',
+                    'Si el puerto 4000 está ocupado, cambia la configuración en firebase.json.'
+                ]
+            }
+        ],
+        commonErrors: [
+            {
+                problem: 'El emulador pide Java',
+                solution: 'Instala Java 11 o superior y vuelve a ejecutar firebase emulators:start.'
+            },
+            {
+                problem: 'No puedo iniciar sesión en Firebase CLI',
+                solution: 'Ejecuta firebase login --reauth y completa el inicio de sesión en el navegador.'
+            },
+            {
+                problem: 'El puerto 4000 está ocupado',
+                solution: 'Cambia el puerto de la interfaz del emulador en firebase.json.'
+            },
+            {
+                problem: 'Firestore no aparece en la consola',
+                solution: 'Comprueba que el proyecto correcto está seleccionado y que Firestore está activado.'
+            }
+        ],
+        security: [
+            'No dejes las reglas de prueba abiertas en un proyecto real.',
+            'No publiques claves de servicio ni archivos de configuración privados.',
+            'Configura reglas de Firestore antes de guardar datos reales.',
+            'Revisa la cuota y las condiciones del plan gratuito.'
+        ],
+        lastReviewed: '2026-11'
     }
 };

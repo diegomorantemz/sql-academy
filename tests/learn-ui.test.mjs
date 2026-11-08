@@ -69,10 +69,16 @@ test('la biblioteca muestra la pestaña y las tarjetas de instalación', () => {
 
     assert.equal(document.getElementById('learnInstallPanel').hidden, false);
     assert.equal(document.getElementById('learnGuidesPanel').hidden, true);
-    assert.equal(document.querySelectorAll('[data-install-card]').length, 6);
+    assert.equal(document.querySelectorAll('[data-install-card]').length, 12);
     assert.match(document.getElementById('learnInstallPanel').textContent, /No necesitas instalar nada/);
     assert.match(document.getElementById('learnInstallPanel').textContent, /PostgreSQL/);
     assert.match(document.getElementById('learnInstallPanel').textContent, /MongoDB/);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /MariaDB/);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /Redis/);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /Neo4j/);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /Cassandra/);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /Elasticsearch/);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /Firebase/);
 });
 
 test('los filtros de instalación funcionan por texto, tipo y sistema operativo', () => {
@@ -87,7 +93,7 @@ test('los filtros de instalación funcionan por texto, tipo y sistema operativo'
     search.value = '';
     window.setInstallFilter('sql');
     visible = [...document.querySelectorAll('[data-install-card]')].filter(card => !card.hidden);
-    assert.equal(visible.length, 5);
+    assert.equal(visible.length, 6);
     assert.ok(visible.every(card => card.dataset.type === 'sql'));
 
     window.setInstallFilter('recomendado');
@@ -99,8 +105,19 @@ test('los filtros de instalación funcionan por texto, tipo y sistema operativo'
     document.getElementById('installOsFilter').value = 'docker';
     window.filterInstallGuides();
     visible = [...document.querySelectorAll('[data-install-card]')].filter(card => !card.hidden);
-    assert.ok(visible.length >= 4);
+    assert.ok(visible.length >= 9);
     assert.ok(visible.every(card => card.dataset.os.includes('docker')));
+
+    const firebaseCard = [...document.querySelectorAll('[data-install-card]')]
+        .find(card => card.textContent.includes('Firebase'));
+    assert.ok(firebaseCard);
+    assert.equal(firebaseCard.hidden, true);
+
+    for (const os of ['windows', 'macos', 'linux']) {
+        document.getElementById('installOsFilter').value = os;
+        window.filterInstallGuides();
+        assert.equal(firebaseCard.hidden, false, `Firebase debería mostrarse en ${os}`);
+    }
 
     document.getElementById('installOsFilter').value = 'all';
     window.filterInstallGuides();
@@ -124,6 +141,38 @@ test('una guía de instalación muestra pasos, OS y comandos copiables', () => {
 
     window.closeInstallGuide();
     assert.equal(modal.classList.contains('active'), false);
+});
+
+test('una guía nueva muestra su ruta y comandos propios', () => {
+    window.openInstallGuide('mariadb', 'linux');
+
+    const modal = document.getElementById('installGuideModal');
+    const body = document.getElementById('installGuideBody');
+    assert.equal(modal.classList.contains('active'), true);
+    assert.match(document.getElementById('installGuideTitle').textContent, /Cómo instalar MariaDB/);
+    assert.match(body.textContent, /mariadb-secure-installation/);
+    assert.ok(body.querySelectorAll('.install-os-tab').length >= 3);
+
+    window.selectInstallOs('docker');
+    assert.match(body.textContent, /sql-academy-mariadb/);
+    assert.ok(body.querySelector('.install-copy-btn'));
+
+    window.closeInstallGuide();
+});
+
+test('Firebase muestra las rutas de consola y emulador local', () => {
+    window.openInstallGuide('firebase', 'web');
+
+    const body = document.getElementById('installGuideBody');
+    assert.match(document.getElementById('installGuideTitle').textContent, /Cómo instalar Firebase/);
+    assert.match(body.textContent, /Consola web/);
+    assert.match(body.textContent, /Emulador local/);
+
+    window.selectInstallOs('emulator');
+    assert.match(body.textContent, /firebase init emulators/);
+    assert.match(body.textContent, /firebase emulators:start --only firestore/);
+
+    window.closeInstallGuide();
 });
 
 test('la ficha de un gestor ofrece acceso a su guía de instalación', () => {
