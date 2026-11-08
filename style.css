@@ -8799,3 +8799,707 @@ button:disabled {
     gap: 8px;
     flex-wrap: wrap;
 }
+
+/* ===== GUÍAS DE INSTALACIÓN ===== */
+.install-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f3f0ff 100%);
+    border: 1px solid #d8d7f5;
+    border-left: 4px solid #6c5ce7;
+    border-radius: 10px;
+}
+
+.install-callout-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #ece9ff;
+    color: #6c5ce7;
+}
+
+.install-callout strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+.install-callout p {
+    margin: 3px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.install-os-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.install-os-filter select {
+    min-height: 36px;
+    padding: 7px 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.install-guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.install-guide-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 11px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.install-guide-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(47, 111, 159, 0.45);
+    box-shadow: var(--shadow-md);
+}
+
+.install-guide-card[hidden] {
+    display: none;
+}
+
+.install-guide-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.install-guide-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 10px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+}
+
+.install-guide-logo img {
+    display: block;
+    max-width: 34px;
+    max-height: 34px;
+    object-fit: contain;
+}
+
+.install-guide-recommended {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #eaf7ef;
+    color: #256b3d;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.install-guide-card h3 {
+    margin: 2px 0 0;
+    color: var(--text-strong);
+    font-size: 16px;
+}
+
+.install-guide-card p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.install-guide-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.install-difficulty {
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.install-difficulty-facil { background: #e8f7ee; color: #1f7a42; }
+.install-difficulty-facil-media { background: #eef7ff; color: #1d5f91; }
+.install-difficulty-media { background: #fff5e5; color: #9a6100; }
+.install-difficulty-alta { background: #fdeaea; color: #a12828; }
+
+.install-guide-os {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.install-guide-os span {
+    padding: 3px 6px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 5px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.install-guide-open {
+    justify-content: center;
+    margin-top: auto;
+}
+
+.install-guide-modal-content {
+    max-width: 720px;
+}
+
+.install-guide-eyebrow {
+    display: inline-flex;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.install-guide-detail-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--postgres-border);
+}
+
+.install-guide-logo-large {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+}
+
+.install-guide-logo-large img {
+    max-width: 46px;
+    max-height: 46px;
+}
+
+.install-guide-detail-copy {
+    min-width: 0;
+}
+
+#installGuideBody .install-guide-detail-copy h3 {
+    margin: 2px 0 4px;
+    color: var(--postgres-dark);
+    font-size: 1.35em;
+}
+
+#installGuideBody .install-guide-detail-copy p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.install-guide-detail-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.install-cloud-alternative {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid #cfe3f4;
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: 8px;
+    background: #f3f9ff;
+}
+
+.install-cloud-alternative > span {
+    display: block;
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+#installGuideBody .install-cloud-alternative strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+#installGuideBody .install-cloud-alternative p {
+    margin: 3px 0 8px;
+    color: var(--text-muted);
+    font-size: 11.5px;
+}
+
+.install-cloud-alternative a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.install-os-tabs {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding: 4px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+}
+
+.install-os-tab {
+    padding: 7px 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.install-os-tab:hover {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.install-os-tab.active {
+    background: var(--postgres-blue);
+    border-color: var(--postgres-blue);
+    color: white;
+}
+
+.install-guide-section {
+    margin-top: 18px;
+}
+
+#installGuideBody .install-guide-section h4 {
+    margin: 0 0 9px;
+    color: var(--text-strong);
+    font-size: 12px;
+}
+
+#installGuideBody .install-guide-section h4 i {
+    margin-right: 6px;
+    color: var(--postgres-blue);
+}
+
+.install-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.install-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.install-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.install-step-body {
+    flex: 1;
+    min-width: 0;
+}
+
+#installGuideBody .install-step-body strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 12.5px;
+}
+
+#installGuideBody .install-step-body p,
+#installGuideBody .install-verify-item p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.install-code-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 7px;
+    overflow: hidden;
+    border-radius: 7px;
+    background: #0f172a;
+}
+
+.install-code-row code {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    overflow-wrap: anywhere;
+    color: #dbeafe;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 10.5px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.install-copy-btn {
+    flex: 0 0 auto;
+    padding: 0 10px;
+    border: 0;
+    border-left: 1px solid #334155;
+    border-radius: 0;
+    background: #1e293b;
+    color: #dbeafe;
+    font-family: inherit;
+    font-size: 9.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.install-copy-btn:hover {
+    background: #334155;
+    transform: none;
+}
+
+.install-inline-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.install-inline-link:hover {
+    text-decoration: underline;
+}
+
+.install-verify {
+    padding: 12px 14px;
+    border-left: 4px solid #28a745;
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.install-verify-item + .install-verify-item {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--postgres-border);
+}
+
+#installGuideBody .install-verify-item strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 12px;
+}
+
+#installGuideBody .install-notes ul,
+#installGuideBody .install-security ul {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.install-guide-links {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.install-guide-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.install-guide-links a:hover {
+    background: var(--accent-soft);
+}
+
+.install-errors {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.install-error {
+    padding: 10px 12px;
+    border-left: 4px solid #e0a800;
+    border-radius: 7px;
+    background: #fff9e8;
+}
+
+#installGuideBody .install-error strong {
+    display: block;
+    color: #7a5a00;
+    font-size: 11.5px;
+}
+
+#installGuideBody .install-error p {
+    margin: 2px 0 0;
+    color: #7a5a00;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.install-security {
+    padding: 12px 14px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.install-empty-copy {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.install-guide-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding-top: 12px;
+    border-top: 1px solid var(--postgres-border);
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.install-guide-footer a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--postgres-blue);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.install-guide-footer a:hover {
+    text-decoration: underline;
+}
+
+.db-install-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding: 13px 14px;
+    border: 1px solid #d8e4f0;
+    border-left: 4px solid #6c5ce7;
+    border-radius: 8px;
+    background: #f8f7ff;
+}
+
+.db-install-cta strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 12.5px;
+}
+
+.db-install-cta p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+[data-theme="dark"] .install-callout {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .install-callout-icon {
+    background: #1e1b4b;
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .install-guide-card {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .install-guide-logo,
+[data-theme="dark"] .install-guide-os span,
+[data-theme="dark"] .install-os-tabs,
+[data-theme="dark"] .install-verify,
+[data-theme="dark"] .install-security {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .install-guide-recommended {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .install-difficulty-facil { background: #064e3b; color: #a7f3d0; }
+[data-theme="dark"] .install-difficulty-facil-media { background: #172554; color: #bfdbfe; }
+[data-theme="dark"] .install-difficulty-media { background: #78350f; color: #fde68a; }
+[data-theme="dark"] .install-difficulty-alta { background: #7f1d1d; color: #fecaca; }
+
+[data-theme="dark"] .install-os-filter select {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] #installGuideBody .install-guide-detail-copy h3,
+[data-theme="dark"] #installGuideBody .install-cloud-alternative strong,
+[data-theme="dark"] #installGuideBody .install-step-body strong,
+[data-theme="dark"] #installGuideBody .install-verify-item strong,
+[data-theme="dark"] #installGuideBody .install-guide-section h4,
+[data-theme="dark"] .db-install-cta strong {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] #installGuideBody .install-guide-detail-copy p,
+[data-theme="dark"] #installGuideBody .install-step-body p,
+[data-theme="dark"] #installGuideBody .install-verify-item p,
+[data-theme="dark"] #installGuideBody .install-notes ul,
+[data-theme="dark"] #installGuideBody .install-security ul,
+[data-theme="dark"] .db-install-cta p {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .install-cloud-alternative {
+    background: #0f1b2d;
+    border-color: #334155;
+    border-left-color: #60a5fa;
+}
+
+[data-theme="dark"] .install-cloud-alternative > span,
+[data-theme="dark"] .install-cloud-alternative a,
+[data-theme="dark"] .install-inline-link,
+[data-theme="dark"] .install-guide-footer a,
+[data-theme="dark"] .install-guide-links a {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .install-guide-links a {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .install-error {
+    background: #3b2f14;
+}
+
+[data-theme="dark"] #installGuideBody .install-error strong,
+[data-theme="dark"] #installGuideBody .install-error p {
+    color: #fde68a;
+}
+
+[data-theme="dark"] .db-install-cta {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+@media (max-width: 700px) {
+    .install-guide-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .install-guide-detail-head {
+        flex-direction: column;
+    }
+
+    .install-os-filter {
+        width: 100%;
+    }
+
+    .install-os-filter select {
+        flex: 1;
+    }
+
+    .install-guide-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .db-install-cta {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .db-install-cta .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+}

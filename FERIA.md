@@ -10,7 +10,7 @@ SQL Academy es una academia interactiva para aprender SQL y NoSQL con una base d
 
 Aprender SQL suele ser abstracto: muchos cursos muestran teoría, pero el estudiante no practica con datos reales ni sabe si está en el nivel correcto. SQL Academy resuelve eso con una experiencia guiada: un test adaptativo recomienda un nivel para SQL y otro para NoSQL; Practicar y el laboratorio filtran ejemplos y sintaxis; los retos validan resultados reales; y el panel de progreso muestra qué sigue.
 
-Todo funciona en el navegador con SQLite real y un motor NoSQL propio. La base de datos y el progreso se guardan localmente. El asistente IA es opcional y recibe solo la consulta, el error y el esquema, nunca los registros.
+Todo funciona en el navegador con SQLite real y un motor NoSQL propio. La base de datos y el progreso se guardan localmente. El asistente IA es opcional y recibe solo la consulta, el error y el esquema, nunca los registros. Si el estudiante quiere dar el salto a un gestor local, la pestaña Instalación reúne guías para seis motores con rutas por sistema operativo.
 
 ## Demo de 5 minutos
 
@@ -101,6 +101,7 @@ Mensaje clave:
 - **Bajo costo:** funciona en el navegador y no necesita servidores para las consultas.
 - **Privacidad:** los datos de práctica se quedan en el dispositivo.
 - **Accesibilidad:** interfaz responsive, modo oscuro y navegación por teclado.
+- **Continuidad:** guías de instalación para seis gestores, con rutas por sistema operativo, para pasar de practicar en el navegador a un entorno local.
 - **Escalabilidad educativa:** puede crecer hacia aulas, rutas personalizadas y reportes docentes.
 
 ## Roadmap
@@ -172,6 +173,7 @@ Donaciones voluntarias y, más adelante, licencias comerciales, planes para aula
 - 8 lecciones por dataset.
 - Retos SQL, NoSQL y de depuración.
 - 6 pisos en Torre de Datos.
+- 6 guías de instalación con rutas para Windows, macOS, Linux y Docker.
 - Más de 100 pruebas automatizadas.
 - PWA instalable.
 - Sin backend para ejecutar consultas.

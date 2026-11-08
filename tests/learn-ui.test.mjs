@@ -14,6 +14,7 @@ const { window } = dom;
 window.confirm = () => true;
 window.requestAnimationFrame = () => 0;
 window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../install-guides.js', import.meta.url), 'utf8'));
 window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 window.initLearnLibrary();
 
@@ -61,6 +62,83 @@ test('la búsqueda y los filtros de guías funcionan', () => {
     assert.ok(nosqlCards.every(card => card.dataset.tags.includes('nosql')));
 
     window.setGuideFilter('all');
+});
+
+test('la biblioteca muestra la pestaña y las tarjetas de instalación', () => {
+    document.getElementById('learnInstallTab').click();
+
+    assert.equal(document.getElementById('learnInstallPanel').hidden, false);
+    assert.equal(document.getElementById('learnGuidesPanel').hidden, true);
+    assert.equal(document.querySelectorAll('[data-install-card]').length, 6);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /No necesitas instalar nada/);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /PostgreSQL/);
+    assert.match(document.getElementById('learnInstallPanel').textContent, /MongoDB/);
+});
+
+test('los filtros de instalación funcionan por texto, tipo y sistema operativo', () => {
+    const search = document.getElementById('installSearch');
+    search.value = 'postgres';
+    window.filterInstallGuides();
+
+    let visible = [...document.querySelectorAll('[data-install-card]')].filter(card => !card.hidden);
+    assert.equal(visible.length, 1);
+    assert.match(visible[0].textContent, /PostgreSQL/);
+
+    search.value = '';
+    window.setInstallFilter('sql');
+    visible = [...document.querySelectorAll('[data-install-card]')].filter(card => !card.hidden);
+    assert.equal(visible.length, 5);
+    assert.ok(visible.every(card => card.dataset.type === 'sql'));
+
+    window.setInstallFilter('recomendado');
+    visible = [...document.querySelectorAll('[data-install-card]')].filter(card => !card.hidden);
+    assert.ok(visible.length >= 3);
+    assert.ok(visible.every(card => card.dataset.recommended === 'true'));
+
+    window.setInstallFilter('all');
+    document.getElementById('installOsFilter').value = 'docker';
+    window.filterInstallGuides();
+    visible = [...document.querySelectorAll('[data-install-card]')].filter(card => !card.hidden);
+    assert.ok(visible.length >= 4);
+    assert.ok(visible.every(card => card.dataset.os.includes('docker')));
+
+    document.getElementById('installOsFilter').value = 'all';
+    window.filterInstallGuides();
+});
+
+test('una guía de instalación muestra pasos, OS y comandos copiables', () => {
+    window.openInstallGuide('postgresql', 'windows');
+
+    const modal = document.getElementById('installGuideModal');
+    const body = document.getElementById('installGuideBody');
+    assert.equal(modal.classList.contains('active'), true);
+    assert.match(document.getElementById('installGuideTitle').textContent, /Cómo instalar PostgreSQL/);
+    assert.match(body.textContent, /psql --version/);
+    assert.ok(body.querySelectorAll('.install-os-tab').length >= 3);
+    assert.ok(body.querySelector('.install-copy-btn'));
+
+    const macTab = [...body.querySelectorAll('.install-os-tab')].find(tab => /macOS/.test(tab.textContent));
+    assert.ok(macTab);
+    window.selectInstallOs('macos');
+    assert.match(body.textContent, /brew install postgresql@16/);
+
+    window.closeInstallGuide();
+    assert.equal(modal.classList.contains('active'), false);
+});
+
+test('la ficha de un gestor ofrece acceso a su guía de instalación', () => {
+    window.openDBInfo('postgresql');
+
+    const installButton = document.querySelector('#modalBody .db-install-cta button');
+    assert.ok(installButton);
+    assert.match(installButton.textContent, /Cómo instalarlo/);
+
+    window.openInstallFromDBInfo('postgresql');
+    assert.equal(document.getElementById('dbModal').classList.contains('active'), false);
+    assert.equal(document.getElementById('installGuideModal').classList.contains('active'), true);
+    assert.match(document.getElementById('installGuideTitle').textContent, /Cómo instalar PostgreSQL/);
+
+    window.closeInstallGuide();
 });
 
 test('la búsqueda y los filtros de conceptos funcionan', () => {

@@ -4002,6 +4002,18 @@ function openDBInfo(dbKey) {
             <i class="fas fa-lightbulb" style="color: #336791;"></i>
             <strong>Tip:</strong> ${info.tip}
         </div>
+
+        ${window.INSTALL_GUIDES?.[dbKey] ? `
+            <div class="db-install-cta">
+                <div>
+                    <strong>¿Quieres instalarlo en tu equipo?</strong>
+                    <p>Guía paso a paso para Windows, macOS, Linux o Docker.</p>
+                </div>
+                <button type="button" class="btn-primary" onclick="openInstallFromDBInfo('${escapeHtml(dbKey)}')">
+                    <i class="fas fa-download"></i> Cómo instalarlo
+                </button>
+            </div>
+        ` : ''}
     `;
     
     body.innerHTML = html;
@@ -4369,6 +4381,9 @@ const CONCEPT_PROGRESS_KEY = 'sql-academy-concepts-v1';
 let conceptProgress = {};
 let activeGuideFilter = 'all';
 let activeConceptFilter = 'all';
+let activeInstallFilter = 'all';
+let currentInstallGuideId = null;
+let currentInstallPathId = null;
 let learnLibraryInitialized = false;
 
 function loadConceptProgress() {
@@ -4438,11 +4453,12 @@ function normalizeLibraryText(value) {
 }
 
 function activateLearnTab(tabName) {
-    const next = tabName === 'concepts' ? 'concepts' : 'guides';
+    const next = ['guides', 'concepts', 'install'].includes(tabName) ? tabName : 'guides';
     const tabs = Array.from(document.querySelectorAll('.learn-tab'));
     const panels = {
         guides: document.getElementById('learnGuidesPanel'),
-        concepts: document.getElementById('learnConceptsPanel')
+        concepts: document.getElementById('learnConceptsPanel'),
+        install: document.getElementById('learnInstallPanel')
     };
 
     tabs.forEach(tab => {
@@ -4460,6 +4476,7 @@ function activateLearnTab(tabName) {
     });
 
     if (next === 'concepts') updateConceptProgressUI();
+    if (next === 'install') filterInstallGuides();
 }
 
 function filterLearnGuides() {
@@ -4528,6 +4545,320 @@ function setConceptFilter(filter) {
         button.setAttribute('aria-pressed', String(active));
     });
     filterConcepts();
+}
+
+function getInstallDifficultyClass(difficulty) {
+    return normalizeLibraryText(difficulty).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'media';
+}
+
+function renderInstallGuides() {
+    const container = document.getElementById('installGuideGrid');
+    if (!container) return;
+
+    const guides = Object.values(window.INSTALL_GUIDES || {})
+        .filter(guide => guide && guide.id && guide.name)
+        .sort((a, b) => {
+            if (Boolean(a.recommended) !== Boolean(b.recommended)) return a.recommended ? -1 : 1;
+            return a.name.localeCompare(b.name, 'es');
+        });
+
+    container.innerHTML = guides.map(guide => {
+        const paths = Array.isArray(guide.paths) ? guide.paths : [];
+        const osIds = paths.map(path => path.id).join(' ');
+        const search = [
+            guide.name,
+            guide.summary,
+            guide.type,
+            guide.difficulty,
+            ...paths.map(path => path.label)
+        ].join(' ');
+        return `
+            <article class="install-guide-card"
+                data-install-card
+                data-type="${escapeHtml(String(guide.type || '').toLowerCase())}"
+                data-recommended="${guide.recommended ? 'true' : 'false'}"
+                data-os="${escapeHtml(osIds)}"
+                data-search="${escapeHtml(search)}">
+                <div class="install-guide-card-top">
+                    <span class="install-guide-logo${guide.logoDark ? ' has-dark-logo' : ''}">
+                        <img class="db-logo-light" src="${escapeHtml(guide.logo)}" alt="${escapeHtml(guide.name)}">
+                        ${guide.logoDark ? `<img class="db-logo-dark" src="${escapeHtml(guide.logoDark)}" alt="" aria-hidden="true">` : ''}
+                    </span>
+                    ${guide.recommended ? '<span class="install-guide-recommended">Recomendado</span>' : ''}
+                </div>
+                <h3>${escapeHtml(guide.name)}</h3>
+                <p>${escapeHtml(guide.summary)}</p>
+                <div class="install-guide-meta">
+                    <span class="install-difficulty install-difficulty-${getInstallDifficultyClass(guide.difficulty)}">${escapeHtml(guide.difficulty)}</span>
+                    <span><i class="fas fa-clock"></i> ${escapeHtml(guide.time)}</span>
+                </div>
+                <div class="install-guide-os">
+                    ${paths.map(path => `<span>${escapeHtml(path.label)}</span>`).join('')}
+                </div>
+                <button type="button" class="btn-secondary install-guide-open" onclick="openInstallGuide('${escapeHtml(guide.id)}')">
+                    Ver guía <i class="fas fa-arrow-right"></i>
+                </button>
+            </article>
+        `;
+    }).join('');
+}
+
+function filterInstallGuides() {
+    const search = document.getElementById('installSearch');
+    const osFilter = document.getElementById('installOsFilter');
+    const query = normalizeLibraryText(search?.value || '');
+    const selectedOs = osFilter?.value || 'all';
+    const cards = Array.from(document.querySelectorAll('[data-install-card]'));
+    let visible = 0;
+
+    cards.forEach(card => {
+        const type = card.dataset.type || '';
+        const recommended = card.dataset.recommended === 'true';
+        const osIds = (card.dataset.os || '').split(' ').filter(Boolean);
+        const matchesFilter = activeInstallFilter === 'all'
+            || (activeInstallFilter === 'recomendado' ? recommended : type === activeInstallFilter);
+        const matchesOs = selectedOs === 'all'
+            || osIds.includes(selectedOs)
+            || (osIds.includes('docker') && ['windows', 'macos', 'linux'].includes(selectedOs));
+        const haystack = normalizeLibraryText(`${card.dataset.search || ''} ${card.textContent}`);
+        const matchesQuery = !query || haystack.includes(query);
+        const match = matchesFilter && matchesOs && matchesQuery;
+        card.hidden = !match;
+        if (match) visible += 1;
+    });
+
+    const empty = document.getElementById('installEmptyState');
+    if (empty) empty.hidden = visible > 0;
+}
+
+function setInstallFilter(filter) {
+    activeInstallFilter = ['all', 'sql', 'nosql', 'recomendado'].includes(filter) ? filter : 'all';
+    document.querySelectorAll('[data-install-filter]').forEach(button => {
+        const active = button.dataset.installFilter === activeInstallFilter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    filterInstallGuides();
+}
+
+function getActiveInstallGuide() {
+    return window.INSTALL_GUIDES?.[currentInstallGuideId] || null;
+}
+
+function getActiveInstallPath(guide) {
+    if (!guide) return null;
+    return guide.paths.find(path => path.id === currentInstallPathId)
+        || guide.paths.find(path => path.recommended)
+        || guide.paths[0]
+        || null;
+}
+
+function renderInstallCode(code) {
+    if (!code) return '';
+    return `
+        <div class="install-code-row">
+            <code>${escapeHtml(code)}</code>
+            <button type="button" class="install-copy-btn" data-copy-code="${escapeHtml(code)}" onclick="copyInstallCommand(this)" aria-label="Copiar comando">
+                <i class="fas fa-copy"></i> Copiar
+            </button>
+        </div>
+    `;
+}
+
+function renderInstallLink(link) {
+    if (!link || !link.url) return '';
+    return `<a class="install-inline-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label || link.url)} <i class="fas fa-arrow-up-right-from-square"></i></a>`;
+}
+
+function renderInstallGuide() {
+    const guide = getActiveInstallGuide();
+    const body = document.getElementById('installGuideBody');
+    const title = document.getElementById('installGuideTitle');
+    const eyebrow = document.getElementById('installGuideEyebrow');
+    if (!guide || !body) return;
+
+    const path = getActiveInstallPath(guide);
+    currentInstallPathId = path?.id || null;
+    if (title) title.textContent = `Cómo instalar ${guide.name}`;
+    if (eyebrow) eyebrow.textContent = `Instalación · ${guide.type}`;
+
+    const paths = Array.isArray(guide.paths) ? guide.paths : [];
+    const osTabs = paths.length > 1 ? `
+        <div class="install-os-tabs" role="tablist" aria-label="Sistema operativo">
+            ${paths.map(item => `
+                <button type="button"
+                    class="install-os-tab${item.id === currentInstallPathId ? ' active' : ''}"
+                    role="tab"
+                    aria-selected="${item.id === currentInstallPathId}"
+                    onclick="selectInstallOs('${escapeHtml(item.id)}')">
+                    ${escapeHtml(item.label)}
+                </button>
+            `).join('')}
+        </div>
+    ` : '';
+
+    const steps = path?.steps?.length ? `
+        <section class="install-guide-section">
+            <h4><i class="fas fa-list-ol"></i> Pasos</h4>
+            <ol class="install-steps">
+                ${path.steps.map((step, index) => `
+                    <li class="install-step">
+                        <span class="install-step-number">${index + 1}</span>
+                        <div class="install-step-body">
+                            <strong>${escapeHtml(step.title)}</strong>
+                            <p>${escapeHtml(step.body)}</p>
+                            ${renderInstallCode(step.code)}
+                            ${renderInstallLink(step.link)}
+                        </div>
+                    </li>
+                `).join('')}
+            </ol>
+        </section>
+    ` : '<p class="install-empty-copy">No hay pasos disponibles para este sistema.</p>';
+
+    const verify = path?.verify?.length ? `
+        <section class="install-guide-section install-verify">
+            <h4><i class="fas fa-circle-check"></i> Cómo verificar</h4>
+            ${path.verify.map(step => `
+                <div class="install-verify-item">
+                    <strong>${escapeHtml(step.title)}</strong>
+                    <p>${escapeHtml(step.body)}</p>
+                    ${renderInstallCode(step.code)}
+                    ${renderInstallLink(step.link)}
+                </div>
+            `).join('')}
+        </section>
+    ` : '';
+
+    const notes = path?.notes?.length ? `
+        <section class="install-guide-section install-notes">
+            <h4><i class="fas fa-circle-info"></i> Notas</h4>
+            <ul>${path.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>
+        </section>
+    ` : '';
+
+    const clients = guide.clients?.length ? `
+        <section class="install-guide-section">
+            <h4><i class="fas fa-window-restore"></i> Cliente recomendado</h4>
+            <div class="install-guide-links">
+                ${guide.clients.map(client => `
+                    <a href="${escapeHtml(client.url)}" target="_blank" rel="noopener">
+                        ${escapeHtml(client.name)} <i class="fas fa-arrow-up-right-from-square"></i>
+                    </a>
+                `).join('')}
+            </div>
+        </section>
+    ` : '';
+
+    const cloud = guide.cloudAlternative ? `
+        <div class="install-cloud-alternative">
+            <span><i class="fas fa-cloud"></i> Alternativa sin instalar</span>
+            <strong>${escapeHtml(guide.cloudAlternative.label)}</strong>
+            <p>${escapeHtml(guide.cloudAlternative.note)}</p>
+            <a href="${escapeHtml(guide.cloudAlternative.url)}" target="_blank" rel="noopener">Abrir ${escapeHtml(guide.cloudAlternative.label)} <i class="fas fa-arrow-up-right-from-square"></i></a>
+        </div>
+    ` : '';
+
+    const commonErrors = guide.commonErrors?.length ? `
+        <section class="install-guide-section">
+            <h4><i class="fas fa-triangle-exclamation"></i> Errores comunes</h4>
+            <div class="install-errors">
+                ${guide.commonErrors.map(error => `
+                    <div class="install-error">
+                        <strong>${escapeHtml(error.problem)}</strong>
+                        <p>${escapeHtml(error.solution)}</p>
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+    ` : '';
+
+    const security = guide.security?.length ? `
+        <section class="install-guide-section install-security">
+            <h4><i class="fas fa-shield-halved"></i> Seguridad</h4>
+            <ul>${guide.security.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        </section>
+    ` : '';
+
+    body.innerHTML = `
+        <div class="install-guide-detail">
+            <div class="install-guide-detail-head">
+                <span class="install-guide-logo install-guide-logo-large${guide.logoDark ? ' has-dark-logo' : ''}">
+                    <img class="db-logo-light" src="${escapeHtml(guide.logo)}" alt="${escapeHtml(guide.name)}">
+                    ${guide.logoDark ? `<img class="db-logo-dark" src="${escapeHtml(guide.logoDark)}" alt="" aria-hidden="true">` : ''}
+                </span>
+                <div class="install-guide-detail-copy">
+                    <span class="install-guide-eyebrow">${escapeHtml(guide.type)} · ${escapeHtml(guide.difficulty)}</span>
+                    <h3>${escapeHtml(guide.name)}</h3>
+                    <p>${escapeHtml(guide.summary)}</p>
+                    <div class="install-guide-detail-meta">
+                        <span><i class="fas fa-clock"></i> ${escapeHtml(guide.time)}</span>
+                        <span>Revisado: ${escapeHtml(guide.lastReviewed)}</span>
+                    </div>
+                </div>
+            </div>
+
+            ${cloud}
+            ${osTabs}
+            ${steps}
+            ${verify}
+            ${notes}
+            ${clients}
+            ${commonErrors}
+            ${security}
+
+            <div class="install-guide-footer">
+                <a href="${escapeHtml(guide.officialUrl)}" target="_blank" rel="noopener">
+                    <i class="fas fa-download"></i> Descarga oficial
+                </a>
+                <a href="${escapeHtml(guide.docsUrl)}" target="_blank" rel="noopener">
+                    <i class="fas fa-book"></i> Documentación
+                </a>
+                <span><i class="fas fa-calendar"></i> Última revisión: ${escapeHtml(guide.lastReviewed)}</span>
+            </div>
+        </div>
+    `;
+}
+
+function openInstallGuide(id, pathId = '') {
+    const guide = window.INSTALL_GUIDES?.[id];
+    if (!guide) return;
+    currentInstallGuideId = id;
+    const requestedPath = pathId ? guide.paths.find(path => path.id === pathId) : null;
+    const activePath = requestedPath || guide.paths.find(path => path.recommended) || guide.paths[0];
+    currentInstallPathId = activePath?.id || null;
+    renderInstallGuide();
+    const modal = document.getElementById('installGuideModal');
+    if (modal && !modal.classList.contains('active')) openModal(modal);
+}
+
+function selectInstallOs(pathId) {
+    const guide = getActiveInstallGuide();
+    if (!guide || !guide.paths.some(path => path.id === pathId)) return;
+    currentInstallPathId = pathId;
+    renderInstallGuide();
+}
+
+async function copyInstallCommand(button) {
+    const code = button?.dataset.copyCode || '';
+    if (!code) return;
+    try {
+        await copyTextToClipboard(code);
+        showToast('success', 'Comando copiado.');
+    } catch (error) {
+        showToast('error', 'No se pudo copiar el comando.');
+    }
+}
+
+function openInstallFromDBInfo(dbKey) {
+    closeDBModal();
+    openInstallGuide(dbKey);
+}
+
+function closeInstallGuide() {
+    currentInstallGuideId = null;
+    currentInstallPathId = null;
+    closeModal(document.getElementById('installGuideModal'));
 }
 
 function openConceptLibrary() {
@@ -4943,9 +5274,11 @@ function initLearnLibrary() {
         });
     });
 
+    renderInstallGuides();
     activateLearnTab('guides');
     setGuideFilter('all');
     setConceptFilter('all');
+    setInstallFilter('all');
 }
 
 // ============================================
@@ -9245,6 +9578,14 @@ window.showDonationQR = showDonationQR;
 window.openDBInfo = openDBInfo;
 window.closeDBModal = closeDBModal;
 window.openConcept = openConcept;
+window.renderInstallGuides = renderInstallGuides;
+window.filterInstallGuides = filterInstallGuides;
+window.setInstallFilter = setInstallFilter;
+window.openInstallGuide = openInstallGuide;
+window.selectInstallOs = selectInstallOs;
+window.copyInstallCommand = copyInstallCommand;
+window.closeInstallGuide = closeInstallGuide;
+window.openInstallFromDBInfo = openInstallFromDBInfo;
 window.closeConceptModal = closeConceptModal;
 window.openSQLGuide = openSQLGuide;
 window.closeSQLGuide = closeSQLGuide;

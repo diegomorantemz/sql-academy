@@ -22,6 +22,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
 - Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
+- Guías de instalación paso a paso para SQLite, PostgreSQL, MySQL, SQL Server, MongoDB y Oracle, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
 - Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
 - **Torre de Datos:** minijuego deckbuilder con 6 pisos, cartas SQL, recompensas y soporte para teclado, ratón y mando.
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
@@ -96,6 +97,7 @@ sql-academy/
 ├── deckbuilder.js              # Minijuego Torre de Datos y soporte de mando
 ├── nosql-engine.js             # Motor documental seguro inspirado en MongoDB
 ├── nosql-datasets.js           # Documentos, ejemplos y retos NoSQL
+├── install-guides.js           # Guías de instalación por gestor y sistema operativo
 ├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
 ├── datasets.js                 # Datasets Tienda y Biblioteca
 ├── service-worker.js           # Caché PWA y estrategia de red
@@ -114,6 +116,7 @@ sql-academy/
 │   ├── autocomplete.test.mjs   # Sugerencias contextuales SQL y NoSQL
 │   ├── path.test.mjs           # Lecciones, progreso y validación de la ruta
 │   ├── learn-ui.test.mjs       # Biblioteca, filtros, asistente y mini-quizzes
+│   ├── install-guides.test.mjs # Catálogo, rutas y enlaces de instalación
 │   ├── deckbuilder.test.mjs    # Torre de Datos, cartas y validación de pisos
 │   ├── nosql.test.mjs          # Motor documental, filtros, CRUD y agregaciones
 │   ├── nosql-ui.test.mjs       # Interfaz y revelado progresivo NoSQL
@@ -253,6 +256,15 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Práctica conectada:** cada ficha enlaza con la ruta, el editor SQL, el ERD o el laboratorio NoSQL cuando tiene sentido.
 - **Mini-quiz de 2 preguntas:** al superarlo, el concepto se marca como dominado.
 - **Progreso persistente:** el avance de los conceptos se guarda en `localStorage` y aparece en Mi progreso.
+
+### Guías de instalación
+
+- **Seis gestores del MVP:** SQLite, PostgreSQL, MySQL, SQL Server, MongoDB y Oracle.
+- **Rutas por sistema:** pasos para Windows, macOS, Linux y Docker según el gestor; MongoDB y Oracle priorizan alternativas más ligeras.
+- **Contenido para principiantes:** requisitos, pasos, comandos copiables, verificación, notas, errores comunes y consejos de seguridad.
+- **Enlaces oficiales:** cada guía enlaza a la descarga y la documentación del fabricante; la app no aloja instaladores ni capturas.
+- **Acceso conectado:** pestaña **Instalación** en Aprender y botón **Cómo instalarlo** en la ficha de cada gestor.
+- **Fecha de revisión:** el contenido indica cuándo se revisó por última vez.
 
 ### Ruta de aprendizaje
 
@@ -396,7 +408,8 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 
 - `tests/core.test.mjs` cubre utilidades del frontend: escapado, modo seguro, formateo, comparación de retos, CSV/TSV, datasets y el panel de análisis.
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
-- `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor y el mini-quiz de conceptos.
+- `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor, la pestaña Instalación y el mini-quiz de conceptos.
+- `tests/install-guides.test.mjs` cubre el catálogo de los seis gestores, las rutas por sistema, los campos obligatorios, los logos y los enlaces oficiales.
 - `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
 - `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
@@ -431,8 +444,19 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - `sql.js` implementa SQLite, por lo que algunas funciones específicas de PostgreSQL, MySQL u Oracle no están disponibles.
 - La PWA necesita HTTPS (Netlify lo proporciona). El asistente IA requiere conexión y la Netlify Function desplegada.
 - En SQL, NoSQL y Depuración, los ejemplos y retos se adaptan al dataset activo. Al cambiar de dataset se muestra el contenido correspondiente a Escuela, Tienda o Biblioteca.
+- Las guías de instalación son orientativas y enlazan a sitios oficiales; no sustituyen la documentación del fabricante ni incluyen instaladores propios.
 
 ## Release Notes
+
+### v1.13.0
+
+- **Nueva pestaña Instalación:** tercera pestaña de Aprender con guías para SQLite, PostgreSQL, MySQL, SQL Server, MongoDB y Oracle.
+- **Rutas por sistema operativo:** Windows, macOS, Linux y Docker según el gestor, con pasos y verificación.
+- **Comandos copiables:** botón de copia en cada comando y enlaces a descargas y documentación oficial.
+- **Errores y seguridad:** solución de problemas comunes, notas y recomendaciones para no exponer servicios locales.
+- **Acceso desde las fichas:** botón **Cómo instalarlo** en el modal de cada gestor.
+- **Contenido mantenible:** catálogo separado en `install-guides.js` con fecha de revisión.
+- **Calidad:** nuevas pruebas del catálogo y de la interfaz, y caché PWA actualizada.
 
 ### v1.12.0
 

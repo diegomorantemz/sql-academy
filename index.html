@@ -114,6 +114,9 @@
                 <button type="button" id="learnConceptsTab" class="learn-tab" data-learn-tab="concepts" role="tab" aria-selected="false" aria-controls="learnConceptsPanel">
                     <i class="fas fa-graduation-cap"></i> Conceptos
                 </button>
+                <button type="button" id="learnInstallTab" class="learn-tab" data-learn-tab="install" role="tab" aria-selected="false" aria-controls="learnInstallPanel">
+                    <i class="fas fa-download"></i> Instalación
+                </button>
             </div>
 
             <div id="learnGuidesPanel" class="learn-tab-panel active" role="tabpanel" aria-labelledby="learnGuidesTab">
@@ -558,6 +561,46 @@
                         <span class="concept-tag">Distribución</span>
                         <span class="concept-level-tag">Avanzado</span>
                     </div>
+                </div>
+            </div>
+
+            <div id="learnInstallPanel" class="learn-tab-panel" role="tabpanel" aria-labelledby="learnInstallTab" hidden>
+                <div class="install-callout">
+                    <span class="install-callout-icon"><i class="fas fa-lightbulb"></i></span>
+                    <div>
+                        <strong>No necesitas instalar nada para practicar aquí</strong>
+                        <p>SQL Academy incluye una base SQLite real en el navegador. Estas guías son para cuando quieras instalar un gestor en tu equipo.</p>
+                    </div>
+                </div>
+
+                <div class="library-toolbar">
+                    <label class="library-search" for="installSearch">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input id="installSearch" type="search" placeholder="Buscar gestor o sistema operativo..." oninput="filterInstallGuides()">
+                    </label>
+                    <div class="library-filters" role="group" aria-label="Filtrar guías de instalación">
+                        <button type="button" class="library-filter active" data-install-filter="all" onclick="setInstallFilter('all')">Todos</button>
+                        <button type="button" class="library-filter" data-install-filter="sql" onclick="setInstallFilter('sql')">SQL</button>
+                        <button type="button" class="library-filter" data-install-filter="nosql" onclick="setInstallFilter('nosql')">NoSQL</button>
+                        <button type="button" class="library-filter" data-install-filter="recomendado" onclick="setInstallFilter('recomendado')">Recomendados</button>
+                    </div>
+                    <label class="install-os-filter" for="installOsFilter">
+                        <span>Sistema</span>
+                        <select id="installOsFilter" onchange="filterInstallGuides()">
+                            <option value="all">Todos</option>
+                            <option value="windows">Windows</option>
+                            <option value="macos">macOS</option>
+                            <option value="linux">Linux</option>
+                            <option value="docker">Docker</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div id="installGuideGrid" class="install-guide-grid"></div>
+
+                <div id="installEmptyState" class="library-empty" hidden>
+                    <i class="fas fa-magnifying-glass"></i>
+                    <p>No hay guías que coincidan con los filtros.</p>
                 </div>
             </div>
         </section>
@@ -1329,6 +1372,20 @@
         </div>
     </div>
 
+    <!-- ===== MODAL DE GUÍA DE INSTALACIÓN ===== -->
+    <div id="installGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="installGuideTitle">
+        <div class="modal-content install-guide-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span id="installGuideEyebrow" class="install-guide-eyebrow">Instalación</span>
+                    <h2 id="installGuideTitle">Guía de instalación</h2>
+                </div>
+                <button type="button" onclick="closeInstallGuide()" class="modal-close" aria-label="Cerrar guía de instalación">&times;</button>
+            </div>
+            <div class="modal-body" id="installGuideBody" aria-live="polite"></div>
+        </div>
+    </div>
+
     <!-- ===== GUÍA DE PRIMEROS PASOS EN SQL ===== -->
 <div id="sqlGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="sqlGuideTitle">
     <div class="modal-content" style="max-width: 750px; max-height: 90vh;">
@@ -1406,6 +1463,7 @@
     <!-- Datasets de práctica -->
     <script src="datasets.js"></script>
     <script src="nosql-datasets.js"></script>
+    <script src="install-guides.js"></script>
 
     <!-- Motor documental del laboratorio NoSQL -->
     <script src="nosql-engine.js"></script>
