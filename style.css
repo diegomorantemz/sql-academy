@@ -1737,3 +1737,141 @@ button {
 .branch-status.ok    { background: #e8f7ee; color: #1f7a42; }
 .branch-status.error { background: #fdeaea; color: #a12828; }
 .branch-status.warn  { background: #fff5e5; color: #9a6100; }
+
+/* ===== VISOR DE PIPELINES Y PASOS DE GITHUB ACTIONS ===== */
+.ci-pipeline-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.ci-pipeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+}
+
+.ci-workflow-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.ci-workflow-title i {
+    color: #2088ff;
+}
+
+.ci-trigger-event {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--text-secondary, #718096);
+    background: var(--bg-body);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+.ci-jobs-flow {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    padding: 10px 4px;
+}
+
+.ci-job-node {
+    flex: 0 0 280px;
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ci-job-node:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.ci-job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-main);
+}
+
+.ci-step-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px 0;
+}
+
+.ci-step-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    transition: background-color 0.15s ease;
+}
+
+.ci-step-item:last-child {
+    border-bottom: none;
+}
+
+.ci-step-item:hover {
+    background: rgba(51, 103, 145, 0.06);
+}
+
+.ci-step-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ci-step-status-icon {
+    font-size: 0.85rem;
+}
+
+.ci-step-status-icon.success {
+    color: #2ecc71;
+}
+
+.ci-step-status-icon.running {
+    color: #f39c12;
+    animation: ci-spin 1.2s linear infinite;
+}
+
+.ci-step-status-icon.failed {
+    color: #e74c3c;
+}
+
+.ci-step-status-icon.skipped {
+    color: #95a5a6;
+}
+
+.ci-step-duration {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #a0aec0);
+    font-family: 'Courier New', monospace;
+}
