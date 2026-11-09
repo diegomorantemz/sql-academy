@@ -1875,3 +1875,127 @@ button {
     color: var(--text-secondary, #a0aec0);
     font-family: 'Courier New', monospace;
 }
+
+/* ===== CONSOLA DE PRUEBAS UNITARIAS Y REPORTE DE CI ===== */
+.ci-test-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-top: 15px;
+}
+
+.ci-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+}
+
+.ci-metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.ci-metric-card:hover {
+    border-color: #336791;
+    transform: translateY(-2px);
+}
+
+.ci-metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary, #718096);
+}
+
+.ci-metric-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-main);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.ci-metric-value.passed { color: #2ecc71; }
+.ci-metric-value.failed { color: #e74c3c; }
+.ci-metric-value.duration { color: #3498db; }
+
+.ci-terminal-output {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.ci-terminal-header {
+    background: #161b22;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #30363d;
+    font-size: 0.78rem;
+    color: #8b949e;
+    font-family: 'Courier New', monospace;
+}
+
+.ci-terminal-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.ci-terminal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.ci-terminal-dot.close { background: #ff5f56; }
+.ci-terminal-dot.minimize { background: #ffbd2e; }
+.ci-terminal-dot.maximize { background: #27c93f; }
+
+.ci-terminal-body {
+    padding: 16px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: #c9d1d9;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.ci-log-line {
+    display: flex;
+    gap: 12px;
+}
+
+.ci-log-time {
+    color: #484f58;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.ci-log-text {
+    flex: 1;
+    word-break: break-word;
+}
+
+.ci-log-text.success { color: #56d364; }
+.ci-log-text.error   { color: #f85149; }
+.ci-log-text.info    { color: #58a6ff; }
+.ci-log-text.warning { color: #e3b341; }
+
+@media (max-width: 600px) {
+    .ci-metrics-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
