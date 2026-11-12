@@ -51,22 +51,30 @@ Mensaje: "También cubrimos el modelo documental, con una consola segura y sin e
 
 Mensaje: "No validamos texto: validamos el resultado real de la consulta."
 
-### 3:15 — Torre de Datos
+### 3:15 — Juegos: Torre de Datos
 
-1. Abrir **Juego**.
+1. Abrir **Juegos**.
 2. Mostrar el deckbuilder de 6 pisos.
 3. Señalar que se puede jugar con teclado, ratón o mando.
 
 Mensaje: "La práctica también puede ser un juego."
 
-### 3:45 — Analizar
+### 3:30 — Trompo
+
+1. Cambiar a la pestaña **Trompo**.
+2. Mostrar al elefante azul corriendo, saltando NULL y aplastando bugs.
+3. Señalar los cinco niveles y el uso de mando.
+
+Mensaje: "Cada nivel tiene una dificultad distinta y una referencia a una cláusula SQL."
+
+### 3:55 — Analizar
 
 1. Abrir **Analizar**.
 2. Mostrar el resumen, el diagrama ERD, el explorador de tablas y la calidad de los datos.
 
 Mensaje: "El estudiante puede entender el esquema y revisar la calidad del dataset."
 
-### 4:15 — Progreso
+### 4:25 — Progreso
 
 1. Abrir **Cursos → Mi progreso**.
 2. Mostrar niveles, avance por curso, actividades, conceptos y siguiente paso.
@@ -74,7 +82,7 @@ Mensaje: "El estudiante puede entender el esquema y revisar la calidad del datas
 
 Mensaje: "El estudiante ve su avance y puede imprimir un reporte tangible."
 
-### 4:45 — Cierre técnico
+### 4:50 — Cierre técnico
 
 - SQLite real en el navegador con `sql.js`.
 - Motor NoSQL documental propio.
@@ -183,6 +191,7 @@ Donaciones voluntarias y, más adelante, licencias comerciales, planes para aula
 - 4 cursos guiados y 15 lecciones teórico-prácticas con quiz.
 - Retos SQL, NoSQL y de depuración.
 - 6 pisos en Torre de Datos.
+- 5 niveles en Trompo.
 - 12 guías de instalación con rutas para Windows, macOS, Linux y Docker.
 - Más de 100 pruebas automatizadas.
 - PWA instalable.
