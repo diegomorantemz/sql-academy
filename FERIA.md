@@ -101,7 +101,7 @@ Mensaje clave:
 - **Bajo costo:** funciona en el navegador y no necesita servidores para las consultas.
 - **Privacidad:** los datos de práctica se quedan en el dispositivo.
 - **Accesibilidad:** interfaz responsive, modo oscuro y navegación por teclado.
-- **Cursos guiados:** cuatro itinerarios con teoría breve, demostraciones, práctica, quiz, proyectos finales y continuación clara hacia el siguiente curso, incluido NoSQL.
+- **Cursos guiados:** cuatro itinerarios con teoría breve, demostraciones, práctica, quiz, proyectos finales, selector de dataset y continuación clara hacia el siguiente curso, incluido NoSQL.
 - **Continuidad:** guías de instalación para doce gestores, con rutas por sistema operativo, para pasar de practicar en el navegador a un entorno local.
 - **Escalabilidad educativa:** puede crecer hacia aulas, rutas personalizadas y reportes docentes.
 

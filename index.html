@@ -89,7 +89,7 @@
                 <div>
                     <span class="path-cta-eyebrow"><i class="fas fa-graduation-cap"></i> Cursos guiados</span>
                     <h3>Aprende SQL y NoSQL con misiones cortas</h3>
-                    <p>Cuatro cursos con teoría breve, demostraciones, práctica y quiz. Avanza desde cero hasta CTE, rankings y documentos.</p>
+                    <p>Cuatro cursos con teoría breve, demostraciones, práctica y quiz. Elige Escuela, Tienda o Biblioteca y avanza desde cero hasta CTE, rankings y documentos.</p>
                 </div>
                 <button type="button" id="pathCtaBtn" class="btn-primary" onclick="openLearningPath()">
                     Explorar cursos <i class="fas fa-arrow-right"></i>
@@ -610,6 +610,26 @@
             <div class="section-header">
                 <h2><i class="fas fa-graduation-cap"></i> Cursos</h2>
                 <p>Itinerarios de SQL y NoSQL con teoría breve, demostraciones, práctica y comprobaciones</p>
+            </div>
+
+            <div class="course-dataset-toolbar">
+                <label class="course-dataset-control" for="courseSqlDatasetSelector">
+                    <span><i class="fas fa-database"></i> Dataset SQL</span>
+                    <select id="courseSqlDatasetSelector" onchange="changeCourseSqlDataset(this.value)">
+                        <option value="escuela">Escuela</option>
+                        <option value="tienda">Tienda</option>
+                        <option value="biblioteca">Biblioteca</option>
+                    </select>
+                </label>
+                <label class="course-dataset-control" for="courseNoSQLDatasetSelector">
+                    <span><i class="fas fa-leaf"></i> Dataset NoSQL</span>
+                    <select id="courseNoSQLDatasetSelector" onchange="changeCourseNoSQLDataset(this.value)">
+                        <option value="escuela">Escuela</option>
+                        <option value="tienda">Tienda</option>
+                        <option value="biblioteca">Biblioteca</option>
+                    </select>
+                </label>
+                <span class="course-dataset-hint">El curso y su progreso se adaptan al dataset elegido.</span>
             </div>
 
             <div class="path-tabs" role="tablist" aria-label="Cursos y progreso">

@@ -20,7 +20,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
-- Cursos guiados con tres itinerarios SQL y uno NoSQL, 15 lecciones teórico-prácticas, demostraciones ejecutables, quizzes y progreso por etapas.
+- Cursos guiados con tres itinerarios SQL y uno NoSQL, 15 lecciones teórico-prácticas, demostraciones ejecutables, quizzes, progreso por etapas y selector de dataset.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
 - Guías de instalación paso a paso para doce gestores SQL y NoSQL, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
 - Panel **Mi progreso** con avance por curso, dominio por concepto SQL, progreso por dataset, actividad reciente y recomendaciones.
@@ -273,6 +273,7 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 
 - **Cuatro itinerarios:** **SQL desde cero** (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`), **SQL intermedio** (`JOIN`, `GROUP BY`, `HAVING` y subconsultas), **SQL avanzado** (`CASE`, CTE y `ROW_NUMBER`) y **NoSQL esencial** (`find`, filtros, orden y agregaciones).
 - **Catálogo con progreso:** cada curso muestra nivel, duración, módulos, lecciones y avance en su dataset activo.
+- **Selector de dataset:** cambia Escuela, Tienda o Biblioteca para SQL y NoSQL sin salir de Cursos; los selectores de Practicar y del laboratorio se mantienen sincronizados.
 - **Lecciones en tres pasos:** **Concepto**, **Práctica** y **Comprobación**.
 - **Teoría breve:** objetivos, tarjetas de concepto, sintaxis, ejemplo anotado, demostración ejecutable y errores comunes.
 - **Práctica guiada:** editor propio, pista bajo demanda y validación por resultado.
@@ -457,6 +458,14 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.19.0
+
+- **Selector de dataset en Cursos:** dos controles, uno para SQL y otro para NoSQL, con Escuela, Tienda y Biblioteca.
+- **Sincronización:** el cambio se refleja en Practicar, en el laboratorio NoSQL y en el temario del curso.
+- **Progreso por dataset:** el catálogo y las lecciones muestran el avance correspondiente al dataset elegido.
+- **Continuidad:** cambiar de dataset conserva la vista de Cursos y actualiza la lección activa.
+- **Calidad:** pruebas de sincronización de selectores, teoría, práctica, quiz y progreso, y caché PWA `v36`.
 
 ### v1.18.0
 

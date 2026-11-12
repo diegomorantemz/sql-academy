@@ -319,3 +319,26 @@ test('la demostración NoSQL ejecuta el ejemplo del concepto', () => {
     assert.equal(result.hidden, false);
     assert.match(result.textContent, /est-001/);
 });
+
+test('Cursos sincroniza los selectores de dataset SQL y NoSQL', () => {
+    const sqlSelector = document.getElementById('courseSqlDatasetSelector');
+    const nosqlSelector = document.getElementById('courseNoSQLDatasetSelector');
+    const labSelector = document.getElementById('nosqlDatasetSelector');
+    assert.ok(sqlSelector);
+    assert.ok(nosqlSelector);
+
+    window.localStorage.setItem('sql-academy-preferences-v1', JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true }));
+    window.loadPreferences();
+    labSelector.value = 'biblioteca';
+    window.syncCourseDatasetControls();
+
+    assert.equal(sqlSelector.value, 'tienda');
+    assert.equal(nosqlSelector.value, 'biblioteca');
+
+    window.localStorage.setItem('sql-academy-preferences-v1', JSON.stringify({ dataset: 'escuela', theme: 'light', safeMode: true }));
+    window.loadPreferences();
+    labSelector.value = 'escuela';
+    window.syncCourseDatasetControls();
+    assert.equal(sqlSelector.value, 'escuela');
+    assert.equal(nosqlSelector.value, 'escuela');
+});

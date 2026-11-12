@@ -1787,9 +1787,53 @@ function getDangerousQueryReason(sql) {
     return '';
 }
 
+function syncCourseDatasetControls() {
+    const sqlSelector = document.getElementById('courseSqlDatasetSelector');
+    if (sqlSelector) sqlSelector.value = preferences.dataset;
+
+    const nosqlSelector = document.getElementById('courseNoSQLDatasetSelector');
+    if (nosqlSelector) nosqlSelector.value = getNoSQLActiveDatasetName();
+}
+
 function syncDatasetSelector() {
     const selector = document.getElementById('datasetSelector');
     if (selector) selector.value = preferences.dataset;
+    syncCourseDatasetControls();
+}
+
+async function changeCourseSqlDataset(name) {
+    if (!['escuela', 'tienda', 'biblioteca'].includes(name)) {
+        syncCourseDatasetControls();
+        return;
+    }
+    if (name === preferences.dataset) {
+        syncCourseDatasetControls();
+        return;
+    }
+    await loadDataset(name);
+    syncCourseDatasetControls();
+}
+
+function changeCourseNoSQLDataset(name) {
+    if (!['escuela', 'tienda', 'biblioteca'].includes(name)) {
+        syncCourseDatasetControls();
+        return;
+    }
+    if (getNoSQLActiveDatasetName() === name) {
+        syncCourseDatasetControls();
+        return;
+    }
+    if (typeof window.changeNoSQLDataset !== 'function') {
+        showToast('warning', 'El laboratorio NoSQL todavía no está listo.');
+        syncCourseDatasetControls();
+        return;
+    }
+    const previous = getNoSQLActiveDatasetName();
+    window.changeNoSQLDataset(name);
+    syncCourseDatasetControls();
+    if (getNoSQLActiveDatasetName() !== previous) {
+        refreshActiveCourseDataset();
+    }
 }
 
 function applyPreferences() {
@@ -9700,6 +9744,7 @@ function initLearningPath() {
     const nosqlSelector = document.getElementById('nosqlDatasetSelector');
     if (nosqlSelector) {
         nosqlSelector.addEventListener('change', () => {
+            syncCourseDatasetControls();
             setTimeout(refreshActiveCourseDataset, 0);
         });
     }
@@ -9712,7 +9757,10 @@ function initLearningPath() {
         }
     });
 
-    setTimeout(refreshActiveCourseDataset, 0);
+    setTimeout(() => {
+        syncCourseDatasetControls();
+        refreshActiveCourseDataset();
+    }, 0);
 }
 
 function selectLearningLesson(id) {
