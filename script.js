@@ -1848,7 +1848,7 @@ function applyPreferences() {
     const isDark = preferences.theme === 'dark';
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
     const themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeMeta) themeMeta.setAttribute('content', isDark ? '#111827' : '#336791');
+    if (themeMeta) themeMeta.setAttribute('content', isDark ? '#111827' : '#123b61');
 
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {

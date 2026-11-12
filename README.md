@@ -28,7 +28,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
-- Aplicación instalable (PWA), modo oscuro y mejoras de accesibilidad.
+- Aplicación instalable (PWA) con icono propio, modo oscuro, navegación táctil y mejoras de accesibilidad.
 - Sonido opcional: intro original sintetizada para el recorrido y feedback de aciertos/errores, apagado por defecto.
 - Donaciones voluntarias con Yape y Plin desde S/1, sin montos obligatorios ni funciones bloqueadas.
 - Tests automatizados, CI y escaneo de secretos con Gitleaks.
@@ -461,6 +461,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.21.0
+
+- **Nuevo icono de aplicación:** símbolo de base de datos con prompt, fondo degradado y versiones para PWA, Apple Touch y favicon.
+- **Logo de cabecera renovado:** la marca usa el nuevo símbolo vectorial y mantiene el nombre SQL Academy.
+- **Experiencia móvil:** navegación horizontal con desplazamiento táctil, objetivos de toque más cómodos y safe areas.
+- **Lecciones en móvil:** el editor aparece antes que la lista de lecciones en pantalla pequeña.
+- **Modales adaptados:** altura dinámica, padding reducido y contenido desplazable en móvil.
+- **Responsive general:** ajustes para 768, 600, 480 y 380 px en cabecera, secciones, cursos, evaluación y dataset.
+- **Calidad:** manifest e iconos actualizados, caché PWA `v38` y pruebas existentes verificadas.
 
 ### v1.20.0
 

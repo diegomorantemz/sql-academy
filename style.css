@@ -11247,3 +11247,215 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 }
+
+/* ===== MARCA E ICONO DE APLICACIÓN ===== */
+.logo-mark {
+    display: block;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 8px rgba(2, 6, 23, 0.28));
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body,
+.app-container {
+    min-height: 100dvh;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+button,
+.nav-btn,
+.header-icon-btn,
+.lesson-step {
+    touch-action: manipulation;
+}
+
+/* ===== AJUSTES RESPONSIVE DE EXPERIENCIA ===== */
+@media (max-width: 992px) {
+    .challenges-layout .challenge-play-panel {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-header {
+        padding-left: max(14px, env(safe-area-inset-left));
+        padding-right: max(14px, env(safe-area-inset-right));
+    }
+
+    .main-nav {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+        padding: 4px 2px 6px;
+    }
+
+    .nav-btn {
+        flex: 0 0 auto;
+        min-height: 38px;
+        scroll-snap-align: start;
+    }
+
+    .header-icon-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .section {
+        padding-left: max(18px, env(safe-area-inset-left));
+        padding-right: max(18px, env(safe-area-inset-right));
+    }
+
+    .course-player-view .challenge-list-panel {
+        order: 2;
+    }
+
+    .course-player-view .challenge-play-panel {
+        order: 1;
+    }
+}
+
+@media (max-width: 600px) {
+    .modal-content {
+        width: calc(100% - 16px);
+        max-height: calc(100dvh - 16px);
+        border-radius: 12px;
+    }
+
+    .modal-header {
+        padding: 12px 14px;
+    }
+
+    .modal-body {
+        padding: 16px 14px;
+        max-height: calc(100dvh - 82px);
+    }
+
+    .course-assessment-card {
+        padding: 13px;
+    }
+
+    .course-checkpoint-row {
+        flex-wrap: wrap;
+    }
+
+    .course-checkpoint-row .btn-sm {
+        width: 100%;
+    }
+
+    .course-checkpoint-copy {
+        flex-basis: calc(100% - 40px);
+    }
+
+    .course-dataset-toolbar {
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-header {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+    }
+
+    .logo {
+        gap: 8px;
+        font-size: 1.05em;
+    }
+
+    .logo-mark {
+        width: 30px;
+        height: 30px;
+        flex-basis: 30px;
+    }
+
+    .header-actions {
+        gap: 6px;
+    }
+
+    .header-icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .section {
+        padding: 18px 12px 28px;
+    }
+
+    .section-header h2 {
+        font-size: 1.25em;
+    }
+
+    .section-header p {
+        font-size: 0.9em;
+    }
+
+    .course-card,
+    .course-catalog-hero,
+    .course-detail-hero {
+        padding: 14px;
+    }
+
+    .lesson-stepper {
+        gap: 4px;
+        padding: 4px;
+    }
+
+    .lesson-step {
+        padding: 7px 8px;
+    }
+
+    .course-detail-actions,
+    .course-card-actions {
+        gap: 6px;
+    }
+}
+
+@media (max-width: 380px) {
+    .logo {
+        font-size: 0.98em;
+    }
+
+    .logo-mark {
+        width: 27px;
+        height: 27px;
+        flex-basis: 27px;
+    }
+
+    .header-icon-btn {
+        width: 33px;
+        height: 33px;
+    }
+
+    .section {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .nav-btn {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .course-dataset-control select {
+        min-width: 0;
+    }
+}
+
+@supports (padding: max(0px)) {
+    .footer-content {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+    }
+}

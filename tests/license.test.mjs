@@ -22,9 +22,14 @@ test('los assets están centralizados y las rutas de la PWA existen', () => {
     assert.equal(exists('assets/images/qr-yape.png'), true);
     assert.equal(exists('assets/images/qr-plin.png'), true);
     assert.equal(exists('assets/logos/postgresql.png'), true);
+    assert.equal(exists('assets/icons/icon.svg'), true);
+    assert.equal(exists('assets/icons/icon-32.png'), true);
+    assert.equal(exists('assets/icons/icon-96.png'), true);
+    assert.equal(exists('assets/icons/icon-180.png'), true);
     assert.equal(exists('assets/icons/icon-192.png'), true);
     assert.equal(exists('assets/icons/icon-512.png'), true);
     assert.equal(exists('assets/icons/icon-maskable-512.png'), true);
+    assert.equal(exists('assets/icons/logo-mark.svg'), true);
     assert.equal(exists('logos/sqlacademy.png'), false);
     assert.equal(exists('logos/sqlacademy2.png'), false);
 

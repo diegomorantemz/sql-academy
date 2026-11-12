@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sql-academy-v37';
+const CACHE_VERSION = 'sql-academy-v38';
 const APP_SHELL = [
     './',
     './index.html',
@@ -19,9 +19,14 @@ const APP_SHELL = [
     './assets/images/qr-yape.png',
     './assets/images/qr-plin.png',
     './assets/images/qr-demo.png',
+    './assets/icons/icon.svg',
+    './assets/icons/icon-32.png',
+    './assets/icons/icon-96.png',
+    './assets/icons/icon-180.png',
     './assets/icons/icon-192.png',
     './assets/icons/icon-512.png',
-    './assets/icons/icon-maskable-512.png'
+    './assets/icons/icon-maskable-512.png',
+    './assets/icons/logo-mark.svg'
 ];
 const CDN_HOSTS = new Set([
     'cdn.jsdelivr.net',
