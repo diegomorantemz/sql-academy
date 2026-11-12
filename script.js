@@ -7132,7 +7132,15 @@ const DEMO_TOUR_STEPS = [
         title: 'Juega con la Torre de Datos',
         description: 'Un deckbuilder de 6 pisos: construye consultas con cartas y supera cada piso. Funciona con teclado, ratón o mando.',
         section: 'game',
+        gameMode: 'deckbuilder',
         target: 'gameTower'
+    },
+    {
+        title: 'Corre con Trompo',
+        description: 'Un runner de cinco niveles: salta los NULL, aplasta bugs y recoge INDEX, CACHÉ y BACKUP. También se juega con mando.',
+        section: 'game',
+        gameMode: 'trompo',
+        target: 'trompoCanvas'
     },
     {
         title: 'Analiza el dataset',
@@ -7194,6 +7202,9 @@ function renderDemoTourStep() {
         if (step.courseCatalog) {
             activatePathTab('lessons');
             renderCourseCatalog();
+        }
+        if (step.gameMode && typeof window.switchGameMode === 'function') {
+            window.switchGameMode(step.gameMode);
         }
     }
     if (step.target) {
@@ -10605,6 +10616,10 @@ function activateSection(sectionName) {
         } else {
             renderCourseCatalog();
         }
+    }
+
+    if (sectionName !== 'game' && window.Trompo) {
+        window.Trompo.hide();
     }
 
     syncMobileNavigation(sectionName);

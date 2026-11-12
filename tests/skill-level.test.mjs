@@ -227,15 +227,15 @@ test('el recorrido guiado avanza por los pasos y se puede cerrar', () => {
     window.startDemoTour();
     const bar = window.document.getElementById('demoTourBar');
     assert.equal(bar.hidden, false);
-    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 10/);
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 11/);
     assert.ok(window.document.getElementById('demoTourTitle').textContent.length > 0);
 
     window.nextDemoTourStep();
-    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 2 de 10/);
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 2 de 11/);
     assert.equal(window.document.getElementById('demoTourPrevBtn').disabled, false);
 
     window.previousDemoTourStep();
-    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 10/);
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 11/);
     assert.equal(window.document.getElementById('demoTourPrevBtn').disabled, true);
 
     window.closeDemoTour();
@@ -248,6 +248,7 @@ test('el recorrido de feria cubre las secciones principales', () => {
         assert.match(source, new RegExp(`section: '${section}'`));
     }
     assert.match(source, /courseCatalog: true/);
+    assert.match(source, /gameMode: 'trompo'/);
 });
 
 test('el HTML incluye el recorrido de feria', () => {
