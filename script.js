@@ -5726,6 +5726,7 @@ let nosqlCourseProgress = {};
 let currentLearningLessonId = null;
 let currentCourseId = null;
 let currentCourseView = 'catalog';
+let currentLessonStep = 'concept';
 let learningPathEventsBound = false;
 
 function loadChallengeProgress() {
@@ -7634,6 +7635,26 @@ function getConceptLabel(conceptId) {
     return LEARNING_CONCEPTS.find(concept => concept.id === conceptId)?.label || conceptId;
 }
 
+function enrichLessonContent(lesson, profile, track) {
+    const factory = window.COURSE_CONTENT?.[track]?.[lesson.id];
+    const content = typeof factory === 'function' ? factory(profile) : {};
+    return {
+        ...lesson,
+        track,
+        objectives: content.objectives || [lesson.objective],
+        theory: content.theory || [{
+            title: 'Concepto',
+            body: lesson.explanation,
+            code: lesson.example
+        }],
+        commonMistakes: content.commonMistakes || [],
+        demoQuery: lesson.example,
+        demoNote: content.demoNote || 'Ejecuta el ejemplo y observa el resultado antes de practicar.',
+        quiz: content.quiz || [],
+        summary: content.summary || []
+    };
+}
+
 function buildLearningLessons(profile) {
     const main = profile.mainTable;
     const label = profile.labelColumn;
@@ -7660,7 +7681,7 @@ function buildLearningLessons(profile) {
     const firstCaseRule = advanced.caseRules?.[0] || { operator: '>=', value: 0, label: 'Alto' };
     const exampleCase = `CASE WHEN ${advanced.caseField} ${firstCaseRule.operator} ${firstCaseRule.value} THEN '${firstCaseRule.label}' ELSE '${advanced.caseElse}' END`;
 
-    return [
+    const lessons = [
         {
             id: 'select',
             title: 'Selecciona columnas',
@@ -7794,6 +7815,8 @@ function buildLearningLessons(profile) {
             ordered: true
         }
     ];
+
+    return lessons.map(lesson => enrichLessonContent(lesson, profile, 'sql'));
 }
 
 function getLearningDatasetName() {
@@ -7851,7 +7874,7 @@ function buildNoSQLCourseLessons(datasetName = getNoSQLActiveDatasetName()) {
     const groupId = "'$" + profile.groupField + "'";
     const groupStage = `{ $group: { _id: ${groupId}, total: { $sum: 1 } } }`;
 
-    return [
+    const lessons = [
         {
             id: 'nosql-find',
             track: 'nosql',
@@ -7905,6 +7928,8 @@ function buildNoSQLCourseLessons(datasetName = getNoSQLActiveDatasetName()) {
             ordered: true
         }
     ];
+
+    return lessons.map(lesson => enrichLessonContent(lesson, profile, 'nosql'));
 }
 
 function normalizeNoSQLCourseValue(value) {
@@ -8006,10 +8031,43 @@ function getCourseProgress(course = getActiveCourse(), datasetName = getCourseDa
     };
 }
 
+function getCourseLessonStages(course, lessonId) {
+    return course?.track === 'nosql'
+        ? getNoSQLCourseLessonStages(lessonId)
+        : getLearningLessonStages(lessonId);
+}
+
+function markCourseLessonTheoryRead(course, lessonId) {
+    const result = course?.track === 'nosql'
+        ? markNoSQLCourseTheoryRead(lessonId)
+        : markLearningTheoryRead(lessonId);
+    updateCourseCta();
+    return result;
+}
+
+function markCourseLessonPracticeCompleted(course, lessonId) {
+    return course?.track === 'nosql'
+        ? markNoSQLCoursePracticeCompleted(lessonId)
+        : markLearningPracticeCompleted(lessonId);
+}
+
+function markCourseLessonQuizPassed(course, lessonId) {
+    return course?.track === 'nosql'
+        ? markNoSQLCourseQuizPassed(lessonId)
+        : markLearningQuizPassed(lessonId);
+}
+
 function isCourseLessonCompleted(course, lessonId) {
     return course?.track === 'nosql'
         ? isNoSQLCourseLessonCompleted(lessonId)
         : isLearningLessonCompleted(lessonId);
+}
+
+function hasCourseStarted(course = getActiveCourse()) {
+    return getCourseLessons(course).some(lesson => {
+        const stages = getCourseLessonStages(course, lesson.id);
+        return stages.theoryRead || stages.practiceCompleted || stages.quizPassed;
+    });
 }
 
 function getNextCourse(courseId) {
@@ -8054,9 +8112,20 @@ function saveActiveCourse() {
     writeStoredJSON(STORAGE_KEYS.activeCourse, currentCourseId || '');
 }
 
+function migrateProgressEntries(progress) {
+    Object.values(progress || {}).forEach(entry => {
+        if (!entry?.completed) return;
+        entry.completedAt ||= new Date().toISOString();
+        entry.theoryReadAt ||= entry.completedAt;
+        entry.practiceCompletedAt ||= entry.completedAt;
+        entry.quizPassedAt ||= entry.completedAt;
+    });
+}
+
 function loadNoSQLCourseProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.nosqlCourse, {});
     nosqlCourseProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+    Object.values(nosqlCourseProgress).forEach(migrateProgressEntries);
 }
 
 function saveNoSQLCourseProgress() {
@@ -8070,15 +8139,65 @@ function getNoSQLCourseDatasetProgress(datasetName = getNoSQLActiveDatasetName()
     return nosqlCourseProgress[datasetName];
 }
 
+function getNoSQLCourseProgressEntry(id, datasetName = getNoSQLActiveDatasetName(), create = true) {
+    if (!create && !nosqlCourseProgress[datasetName]?.[id]) return null;
+    return getNoSQLCourseDatasetProgress(datasetName)[id] ||= {};
+}
+
+function getNoSQLCourseLessonStages(id, datasetName = getNoSQLActiveDatasetName()) {
+    const entry = nosqlCourseProgress[datasetName]?.[id] || {};
+    return {
+        theoryRead: Boolean(entry.theoryReadAt),
+        practiceCompleted: Boolean(entry.practiceCompletedAt),
+        quizPassed: Boolean(entry.quizPassedAt),
+        completed: Boolean(entry.completed)
+    };
+}
+
+function finalizeNoSQLCourseLesson(id, entry) {
+    if (!entry.theoryReadAt || !entry.practiceCompletedAt || !entry.quizPassedAt) return;
+    entry.completed = true;
+    entry.completedAt ||= new Date().toISOString();
+}
+
+function markNoSQLCourseTheoryRead(id) {
+    const entry = getNoSQLCourseProgressEntry(id);
+    entry.theoryReadAt ||= new Date().toISOString();
+    finalizeNoSQLCourseLesson(id, entry);
+    saveNoSQLCourseProgress();
+    return entry;
+}
+
+function markNoSQLCoursePracticeCompleted(id) {
+    const entry = getNoSQLCourseProgressEntry(id);
+    entry.practiceCompletedAt ||= new Date().toISOString();
+    finalizeNoSQLCourseLesson(id, entry);
+    saveNoSQLCourseProgress();
+    renderLearningProgressDashboard();
+    return entry;
+}
+
+function markNoSQLCourseQuizPassed(id) {
+    const entry = getNoSQLCourseProgressEntry(id);
+    entry.quizPassedAt ||= new Date().toISOString();
+    finalizeNoSQLCourseLesson(id, entry);
+    saveNoSQLCourseProgress();
+    renderLearningProgressDashboard();
+    return entry;
+}
+
 function isNoSQLCourseLessonCompleted(id, datasetName = getNoSQLActiveDatasetName()) {
     return Boolean(nosqlCourseProgress[datasetName]?.[id]?.completed);
 }
 
 function markNoSQLCourseLessonCompleted(id) {
-    getNoSQLCourseDatasetProgress()[id] = {
-        completed: true,
-        completedAt: new Date().toISOString()
-    };
+    const now = new Date().toISOString();
+    const entry = getNoSQLCourseProgressEntry(id);
+    entry.theoryReadAt ||= now;
+    entry.practiceCompletedAt ||= now;
+    entry.quizPassedAt ||= now;
+    entry.completed = true;
+    entry.completedAt ||= now;
     saveNoSQLCourseProgress();
     renderLearningProgressDashboard();
 }
@@ -8086,18 +8205,69 @@ function markNoSQLCourseLessonCompleted(id) {
 function loadLearningPathProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.learningPath, {});
     learningPathProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+    Object.values(learningPathProgress).forEach(migrateProgressEntries);
 }
 
 function saveLearningPathProgress() {
     writeStoredJSON(STORAGE_KEYS.learningPath, learningPathProgress);
 }
 
-function getLearningDatasetProgress() {
-    const dataset = getLearningDatasetName();
-    if (!learningPathProgress[dataset] || typeof learningPathProgress[dataset] !== 'object') {
-        learningPathProgress[dataset] = {};
+function getLearningDatasetProgressFor(datasetName = getLearningDatasetName()) {
+    if (!learningPathProgress[datasetName] || typeof learningPathProgress[datasetName] !== 'object') {
+        learningPathProgress[datasetName] = {};
     }
-    return learningPathProgress[dataset];
+    return learningPathProgress[datasetName];
+}
+
+function getLearningDatasetProgress() {
+    return getLearningDatasetProgressFor(getLearningDatasetName());
+}
+
+function getLearningProgressEntry(id, datasetName = getLearningDatasetName(), create = true) {
+    if (!create && !learningPathProgress[datasetName]?.[id]) return null;
+    return getLearningDatasetProgressFor(datasetName)[id] ||= {};
+}
+
+function getLearningLessonStages(id, datasetName = getLearningDatasetName()) {
+    const entry = learningPathProgress[datasetName]?.[id] || {};
+    return {
+        theoryRead: Boolean(entry.theoryReadAt),
+        practiceCompleted: Boolean(entry.practiceCompletedAt),
+        quizPassed: Boolean(entry.quizPassedAt),
+        completed: Boolean(entry.completed)
+    };
+}
+
+function finalizeLearningLesson(id, entry) {
+    if (!entry.theoryReadAt || !entry.practiceCompletedAt || !entry.quizPassedAt) return;
+    entry.completed = true;
+    entry.completedAt ||= new Date().toISOString();
+}
+
+function markLearningTheoryRead(id) {
+    const entry = getLearningProgressEntry(id);
+    entry.theoryReadAt ||= new Date().toISOString();
+    finalizeLearningLesson(id, entry);
+    saveLearningPathProgress();
+    return entry;
+}
+
+function markLearningPracticeCompleted(id) {
+    const entry = getLearningProgressEntry(id);
+    entry.practiceCompletedAt ||= new Date().toISOString();
+    finalizeLearningLesson(id, entry);
+    saveLearningPathProgress();
+    renderLearningProgressDashboard();
+    return entry;
+}
+
+function markLearningQuizPassed(id) {
+    const entry = getLearningProgressEntry(id);
+    entry.quizPassedAt ||= new Date().toISOString();
+    finalizeLearningLesson(id, entry);
+    saveLearningPathProgress();
+    renderLearningProgressDashboard();
+    return entry;
 }
 
 function isLearningLessonCompletedForDataset(id, datasetName) {
@@ -8109,10 +8279,13 @@ function isLearningLessonCompleted(id) {
 }
 
 function markLearningLessonCompleted(id) {
-    getLearningDatasetProgress()[id] = {
-        completed: true,
-        completedAt: new Date().toISOString()
-    };
+    const now = new Date().toISOString();
+    const entry = getLearningProgressEntry(id);
+    entry.theoryReadAt ||= now;
+    entry.practiceCompletedAt ||= now;
+    entry.quizPassedAt ||= now;
+    entry.completed = true;
+    entry.completedAt ||= now;
     saveLearningPathProgress();
     renderLearningProgressDashboard();
 }
@@ -8359,7 +8532,7 @@ function getLearningRecommendation() {
 function updateCourseCta() {
     const button = document.getElementById('pathCtaBtn');
     if (!button) return;
-    const started = getCourses().some(course => getCourseProgress(course).completed > 0);
+    const started = getCourses().some(course => hasCourseStarted(course));
     button.innerHTML = started
         ? 'Continuar cursos <i class="fas fa-arrow-right"></i>'
         : 'Explorar cursos <i class="fas fa-arrow-right"></i>';
@@ -8400,7 +8573,7 @@ function renderCourseCatalog() {
             <div>
                 <span class="course-eyebrow"><i class="fas fa-graduation-cap"></i> Aprende haciendo</span>
                 <h3>Elige tu siguiente misión</h3>
-                <p>Lecciones cortas, ejemplos que puedes ejecutar y un proyecto final. Tu progreso se guarda en cada dataset.</p>
+                <p>Teoría breve, demostraciones ejecutables, práctica guiada y comprobación. Tu progreso se guarda en cada dataset.</p>
             </div>
             <div class="course-catalog-dataset">
                 <span>Datasets activos</span>
@@ -8413,16 +8586,17 @@ function renderCourseCatalog() {
                 const progress = getCourseProgress(course);
                 const lessons = getCourseLessons(course);
                 const isActive = currentCourseId === course.id;
+                const started = hasCourseStarted(course);
                 const status = progress.total === 0
                     ? 'Sin lecciones'
                     : progress.percent === 100
                         ? 'Completado'
-                        : progress.completed > 0
+                        : started
                             ? 'En progreso'
                             : 'Sin empezar';
                 const cta = progress.percent === 100
                     ? 'Repasar curso'
-                    : progress.completed > 0
+                    : started
                         ? 'Continuar'
                         : 'Comenzar';
                 const prerequisites = (course.prerequisites || []).length
@@ -8508,7 +8682,9 @@ function renderCourseDetail(courseId) {
                 <div class="course-module-lessons">
                     ${moduleLessons.map(lesson => {
                         const index = lessonIndexById.get(lesson.id) ?? 0;
-                        const done = isCourseLessonCompleted(course, lesson.id);
+                        const stages = getCourseLessonStages(course, lesson.id);
+                        const done = stages.completed;
+                        const status = done ? 'Completada' : stages.practiceCompleted ? 'Por comprobar' : 'Abrir';
                         return `
                             <button type="button" class="course-lesson-row${done ? ' completed' : ''}" data-course-lesson="${escapeHtml(lesson.id)}">
                                 <span class="course-lesson-index">${done ? '<i class="fas fa-check"></i>' : index + 1}</span>
@@ -8516,7 +8692,7 @@ function renderCourseDetail(courseId) {
                                     <strong>${escapeHtml(lesson.title)}</strong>
                                     <span>${escapeHtml(lesson.level)} · Lección ${index + 1}</span>
                                 </span>
-                                <span class="course-lesson-status">${done ? 'Completada' : 'Abrir'}</span>
+                                <span class="course-lesson-status">${status}</span>
                             </button>
                         `;
                     }).join('')}
@@ -8557,7 +8733,7 @@ function renderCourseDetail(courseId) {
                     <span><i class="fas fa-layer-group"></i> ${course.modules.length} módulos</span>
                     <span><i class="fas fa-list-check"></i> ${lessons.length} lecciones</span>
                 </div>
-                <p class="course-detail-flow"><i class="fas fa-bolt"></i> Cada lección es una misión corta: objetivo, ejemplo ejecutable y comprobación inmediata.</p>
+                <p class="course-detail-flow"><i class="fas fa-bolt"></i> Cada lección combina teoría breve, demostración, práctica y comprobación.</p>
             </div>
             <div class="course-detail-score">
                 <strong>${progress.percent}%</strong>
@@ -8592,7 +8768,7 @@ function renderCourseDetail(courseId) {
         </div>
         <div class="course-detail-actions">
             <button type="button" class="btn-primary" data-course-start="${escapeHtml(course.id)}">
-                ${progress.percent === 100 ? 'Repasar curso' : progress.completed > 0 ? 'Continuar curso' : 'Comenzar curso'} <i class="fas fa-arrow-right"></i>
+                ${progress.percent === 100 ? 'Repasar curso' : hasCourseStarted(course) ? 'Continuar curso' : 'Comenzar curso'} <i class="fas fa-arrow-right"></i>
             </button>
             <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
         </div>
@@ -8638,6 +8814,8 @@ function startCourse(courseId = currentCourseId, lessonId = null) {
         || lessons[0]?.id
         || null;
     currentLearningLessonId = next;
+    const nextLesson = lessons.find(lesson => lesson.id === next);
+    currentLessonStep = nextLesson ? getDefaultLessonStep(course, nextLesson) : 'concept';
     setCourseView('player');
     renderCoursePlayer();
     const editor = document.getElementById('pathEditor');
@@ -8733,13 +8911,15 @@ function renderLearningPathList() {
     if (!currentLearningLessonId || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
         const next = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id)) || lessons[0];
         currentLearningLessonId = next.id;
+        currentLessonStep = getDefaultLessonStep(course, next);
     }
 
     const renderLessonRow = lesson => {
         const index = lessons.findIndex(item => item.id === lesson.id);
-        const completed = isCourseLessonCompleted(course, lesson.id);
+        const stages = getCourseLessonStages(course, lesson.id);
+        const completed = stages.completed;
         const active = lesson.id === currentLearningLessonId;
-        const status = completed ? 'Completada' : (active ? 'En curso' : 'Pendiente');
+        const status = completed ? 'Completada' : stages.practiceCompleted ? 'Por comprobar' : (active ? 'En curso' : 'Pendiente');
         return `
             <button type="button" class="challenge-card path-step${active ? ' active' : ''}${completed ? ' completed' : ''}" data-learning-lesson="${escapeHtml(lesson.id)}" aria-pressed="${active}">
                 <span class="challenge-card-title">
@@ -8801,7 +8981,7 @@ function renderCourseProgressSection() {
                     const progress = getCourseProgress(course);
                     const status = progress.percent === 100
                         ? 'Completado'
-                        : progress.completed > 0
+                        : hasCourseStarted(course)
                             ? 'En progreso'
                             : 'Sin empezar';
                     return `
@@ -9132,6 +9312,198 @@ function practiceLearningConcept(conceptId) {
     showToast('success', `¡Ya dominas ${getConceptLabel(conceptId)}!`);
 }
 
+function getDefaultLessonStep(course, lesson) {
+    const stages = getCourseLessonStages(course, lesson.id);
+    if (stages.completed) return 'concept';
+    if (stages.practiceCompleted) return 'check';
+    if (stages.theoryRead) return 'practice';
+    return 'concept';
+}
+
+function renderLessonStepButton(step, number, label, icon, done, disabled = false) {
+    const active = currentLessonStep === step;
+    return `
+        <button type="button" class="lesson-step${active ? ' active' : ''}${done ? ' completed' : ''}"
+            data-lesson-step="${step}" role="tab" aria-selected="${active}" aria-controls="lessonStepContent"
+            ${disabled ? 'disabled aria-disabled="true"' : ''}
+            onclick="goToLessonStep('${step}')">
+            <span class="lesson-step-number">${done ? '<i class="fas fa-check"></i>' : number}</span>
+            <span class="lesson-step-label"><i class="fas ${icon}"></i> ${label}</span>
+        </button>
+    `;
+}
+
+function renderLessonConceptStep(lesson, course, stages) {
+    const objectives = (lesson.objectives || []).map(item => `<li>${escapeHtml(item)}</li>`).join('');
+    const theory = (lesson.theory || []).map(card => `
+        <article class="lesson-theory-card">
+            <h4>${escapeHtml(card.title)}</h4>
+            <p>${escapeHtml(card.body)}</p>
+            ${card.code ? `<pre><code>${escapeHtml(card.code)}</code></pre>` : ''}
+        </article>
+    `).join('');
+    const mistakes = (lesson.commonMistakes || []).map(item => `
+        <div class="lesson-mistake">
+            <strong>${escapeHtml(item.mistake)}</strong>
+            <p>${escapeHtml(item.fix)}</p>
+        </div>
+    `).join('');
+
+    return `
+        <div class="lesson-objectives">
+            <span class="course-side-eyebrow"><i class="fas fa-bullseye"></i> Al terminar podrás</span>
+            <ul>${objectives}</ul>
+        </div>
+        <div class="lesson-theory-grid">${theory}</div>
+        <div class="lesson-demo-card">
+            <div class="lesson-demo-head">
+                <div>
+                    <span class="course-side-eyebrow"><i class="fas fa-play"></i> Demostración guiada</span>
+                    <p>Ejecuta el ejemplo y observa el resultado antes de escribir tu consulta.</p>
+                </div>
+                <button type="button" class="btn-secondary btn-sm" onclick="runLessonDemo()">
+                    <i class="fas fa-play"></i> Ejecutar ejemplo
+                </button>
+            </div>
+            <pre><code>${escapeHtml(lesson.demoQuery)}</code></pre>
+            <p class="lesson-demo-note">${escapeHtml(lesson.demoNote)}</p>
+            <div id="lessonDemoResult" class="lesson-demo-result" hidden></div>
+        </div>
+        ${mistakes ? `<div class="lesson-mistakes"><span class="course-side-eyebrow"><i class="fas fa-triangle-exclamation"></i> Errores comunes</span>${mistakes}</div>` : ''}
+        <div class="lesson-step-actions">
+            <button type="button" class="btn-primary" onclick="goToLessonStep('practice')">
+                Continuar a la práctica <i class="fas fa-arrow-right"></i>
+            </button>
+            ${stages.theoryRead ? '' : `
+                <button type="button" class="btn-ghost" onclick="markTheoryReadAndGoPractice()">
+                    Ya conozco esto: ir a la práctica
+                </button>
+            `}
+        </div>
+    `;
+}
+
+function renderLessonPracticeStep(lesson, course, stages) {
+    const isNoSQL = course?.track === 'nosql';
+    const initialResult = stages.practiceCompleted
+        ? '<strong><i class="fas fa-circle-check"></i> Práctica superada</strong> Puedes repetirla o continuar a la comprobación.'
+        : `<strong><i class="fas fa-circle-info"></i> Listo para practicar</strong> ${isNoSQL ? 'Escribe un comando NoSQL' : 'Escribe tu consulta'} y pulsa «Comprobar lección».`;
+
+    return `
+        <div class="lesson-practice-intro">
+            <span class="course-side-eyebrow"><i class="fas fa-laptop-code"></i> Tu turno</span>
+            <h4>${escapeHtml(lesson.title)}</h4>
+            <p>${escapeHtml(lesson.objective)}</p>
+            <ul class="lesson-practice-checklist">
+                <li>Revisa el concepto y la demostración si necesitas repasar.</li>
+                <li>Completa la plantilla del editor con lo que pide la misión.</li>
+                <li>Pulsa «Comprobar lección» y revisa el resultado.</li>
+            </ul>
+        </div>
+        <div class="path-example">
+            <div class="path-example-head">
+                <span><i class="fas fa-code"></i> Ejemplo de apoyo</span>
+                <button type="button" class="btn-ghost btn-sm" onclick="loadLearningExample()">
+                    <i class="fas fa-arrow-down"></i> Usar ejemplo
+                </button>
+            </div>
+            <pre><code>${escapeHtml(lesson.example)}</code></pre>
+        </div>
+        <label for="pathEditor" class="sr-only">${isNoSQL ? 'Comando NoSQL para la lección' : 'Consulta SQL para la lección'}</label>
+        <textarea id="pathEditor" spellcheck="false" placeholder="${isNoSQL ? 'Escribe un comando NoSQL...' : 'Escribe tu consulta SQL aquí...'}">${escapeHtml(lesson.starter)}</textarea>
+        <div class="challenge-actions">
+            <button type="button" id="pathRunBtn" onclick="runLearningLesson()">
+                <i class="fas fa-play"></i> Comprobar lección
+            </button>
+            <button type="button" id="pathHintBtn" class="btn-secondary" onclick="showLearningHint()">
+                <i class="fas fa-lightbulb"></i> Ver pista
+            </button>
+            <button type="button" class="btn-secondary" onclick="clearLearningEditor()">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+        </div>
+        <div id="pathHint" class="challenge-hint" hidden>${escapeHtml(lesson.hint)}</div>
+        <div id="pathResult" class="challenge-result" aria-live="polite">${initialResult}</div>
+        <div id="pathNext" class="path-next" ${stages.practiceCompleted ? '' : 'hidden'}>
+            ${stages.practiceCompleted ? '<button type="button" class="btn-primary" onclick="goToLessonStep(\'check\')">Ir a la comprobación <i class="fas fa-arrow-right"></i></button>' : ''}
+        </div>
+    `;
+}
+
+function renderLessonSummary(lesson) {
+    return `
+        <div class="lesson-summary-card">
+            <span class="course-side-eyebrow"><i class="fas fa-bookmark"></i> Resumen</span>
+            <ul>${(lesson.summary || []).map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        </div>
+    `;
+}
+
+function renderLessonCheckStep(lesson, course, lessons, stages, index) {
+    if (!stages.practiceCompleted) {
+        return '<div class="challenge-empty"><i class="fas fa-lock"></i><h3>Primero completa la práctica</h3><p>La comprobación se desbloquea cuando superas el laboratorio.</p></div>';
+    }
+
+    if (stages.completed) {
+        return `
+            ${renderLessonSummary(lesson)}
+            <div class="lesson-check-success">
+                <i class="fas fa-circle-check"></i>
+                <div>
+                    <strong>Lección completada</strong>
+                    <p>Has leído el concepto, superado la práctica y aprobado la comprobación.</p>
+                </div>
+            </div>
+            <div id="pathNext" class="path-next">
+                ${getCourseNextMarkup(course, lessons, lesson)}
+            </div>
+        `;
+    }
+
+    const quiz = lesson.quiz || [];
+    const quizMarkup = quiz.map((question, questionIndex) => `
+        <fieldset class="lesson-quiz-question">
+            <legend><span>${questionIndex + 1}</span> ${escapeHtml(question.question)}</legend>
+            <div class="lesson-quiz-options">
+                ${question.options.map((option, optionIndex) => `
+                    <label class="lesson-quiz-option">
+                        <input type="radio" name="lessonQuizQ${questionIndex}" value="${optionIndex}">
+                        <span>${escapeHtml(option)}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </fieldset>
+    `).join('');
+
+    return `
+        <div class="lesson-check-intro">
+            <span class="course-side-eyebrow"><i class="fas fa-circle-check"></i> Comprueba tu comprensión</span>
+            <h4>${escapeHtml(lesson.title)}</h4>
+            <p>Responde las ${quiz.length} preguntas. Si fallas alguna, puedes intentarlo de nuevo sin perder el progreso de la práctica.</p>
+        </div>
+        <form id="lessonQuizForm" class="lesson-quiz" onsubmit="submitLessonQuiz(event)">
+            ${quizMarkup}
+            <button type="submit" class="btn-primary">
+                Comprobar respuestas <i class="fas fa-arrow-right"></i>
+            </button>
+        </form>
+        <div id="lessonQuizResult" class="challenge-result" aria-live="polite" hidden></div>
+        <p class="lesson-check-hint"><i class="fas fa-lock"></i> La siguiente lección se desbloquea al aprobar esta comprobación.</p>
+    `;
+}
+
+function renderLessonStepContent(lesson, course, lessons, stages, index) {
+    const container = document.getElementById('lessonStepContent');
+    if (!container) return;
+    if (currentLessonStep === 'practice') {
+        container.innerHTML = renderLessonPracticeStep(lesson, course, stages);
+    } else if (currentLessonStep === 'check') {
+        container.innerHTML = renderLessonCheckStep(lesson, course, lessons, stages, index);
+    } else {
+        container.innerHTML = renderLessonConceptStep(lesson, course, stages);
+    }
+}
+
 function renderLearningLessonDetail() {
     const detail = document.getElementById('pathLessonDetail');
     if (!detail) return;
@@ -9150,28 +9522,26 @@ function renderLearningLessonDetail() {
         return;
     }
 
-    if (course?.track === 'nosql') {
-        renderNoSQLCourseLessonDetail(lesson, course, lessons);
-        return;
-    }
-
-    const profile = getLearningProfile();
-    const tables = dbInitialized && typeof getUserTables === 'function' ? getUserTables() : [];
-    if (tables.length > 0 && !tables.includes(profile.mainTable)) {
-        detail.innerHTML = `
-            <div class="challenge-empty">
-                <i class="fas fa-database"></i>
-                <h3>Dataset no compatible</h3>
-                <p>El curso de ${escapeHtml(profile.name)} necesita la tabla <code>${escapeHtml(profile.mainTable)}</code>. Cambia de dataset o reinicia la base para practicar.</p>
-            </div>
-        `;
-        return;
+    if (course?.track !== 'nosql') {
+        const profile = getLearningProfile();
+        const tables = dbInitialized && typeof getUserTables === 'function' ? getUserTables() : [];
+        if (tables.length > 0 && !tables.includes(profile.mainTable)) {
+            detail.innerHTML = `
+                <div class="challenge-empty">
+                    <i class="fas fa-database"></i>
+                    <h3>Dataset no compatible</h3>
+                    <p>El curso de ${escapeHtml(profile.name)} necesita la tabla <code>${escapeHtml(profile.mainTable)}</code>. Cambia de dataset o reinicia la base para practicar.</p>
+                </div>
+            `;
+            return;
+        }
     }
 
     const index = lessons.findIndex(item => item.id === lesson.id);
-    const completed = isCourseLessonCompleted(course, lesson.id);
+    const stages = getCourseLessonStages(course, lesson.id);
+    if (currentLessonStep === 'check' && !stages.practiceCompleted) currentLessonStep = 'practice';
     const module = getCourseModuleForLesson(course, lesson.id);
-    const nextMarkup = getCourseNextMarkup(course, lessons, lesson);
+    const completed = stages.completed;
 
     detail.innerHTML = `
         <div class="challenge-detail-header">
@@ -9185,99 +9555,85 @@ function renderLearningLessonDetail() {
                 </div>
             </div>
         </div>
-        <div class="path-objective">
-            <span>Misión de la lección</span>
-            <p>${escapeHtml(lesson.objective)}</p>
+        <div class="lesson-stepper" role="tablist" aria-label="Pasos de la lección">
+            ${renderLessonStepButton('concept', 1, 'Concepto', 'fa-book-open', stages.theoryRead)}
+            ${renderLessonStepButton('practice', 2, 'Práctica', 'fa-laptop-code', stages.practiceCompleted)}
+            ${renderLessonStepButton('check', 3, 'Comprobación', 'fa-circle-check', stages.quizPassed, !stages.practiceCompleted)}
         </div>
-        <div class="challenge-description">${escapeHtml(lesson.explanation)}</div>
-        <div class="path-example">
-            <div class="path-example-head">
-                <span><i class="fas fa-code"></i> Ejemplo</span>
-                <button type="button" class="btn-ghost btn-sm" onclick="loadLearningExample()">
-                    <i class="fas fa-arrow-down"></i> Usar ejemplo
-                </button>
-            </div>
-            <pre><code>${escapeHtml(lesson.example)}</code></pre>
+        <div id="lessonStepContent" role="tabpanel"></div>
+    `;
+
+    detail.querySelectorAll('[data-lesson-step]').forEach(button => {
+        button.addEventListener('click', () => goToLessonStep(button.dataset.lessonStep));
+    });
+    renderLessonStepContent(lesson, course, lessons, stages, index);
+}
+
+function goToLessonStep(step) {
+    const course = getActiveCourse();
+    const lesson = getActiveCourseLessonById(currentLearningLessonId);
+    if (!lesson) return;
+    const stages = getCourseLessonStages(course, lesson.id);
+    if (step === 'check' && !stages.practiceCompleted) {
+        showToast('info', 'Completa la práctica antes de abrir la comprobación.');
+        return;
+    }
+    if (step === 'practice' && !stages.theoryRead) {
+        markCourseLessonTheoryRead(course, lesson.id);
+    }
+    currentLessonStep = ['concept', 'practice', 'check'].includes(step) ? step : 'concept';
+    renderLearningLessonDetail();
+}
+
+function markTheoryReadAndGoPractice() {
+    const course = getActiveCourse();
+    const lesson = getActiveCourseLessonById(currentLearningLessonId);
+    if (!lesson) return;
+    markCourseLessonTheoryRead(course, lesson.id);
+    currentLessonStep = 'practice';
+    renderLearningLessonDetail();
+}
+
+function renderLessonDemoSets(sets) {
+    const set = sets?.[0];
+    if (!set || !Array.isArray(set.values) || set.values.length === 0) {
+        return '<p class="lesson-demo-empty">El ejemplo no devolvió filas.</p>';
+    }
+    const rows = set.values.slice(0, 6);
+    return `
+        <div class="lesson-demo-table-wrap">
+            <table>
+                <thead><tr>${set.columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr></thead>
+                <tbody>${rows.map(row => `<tr>${row.map(value => `<td>${escapeHtml(value === null ? '' : String(value))}</td>`).join('')}</tr>`).join('')}</tbody>
+            </table>
         </div>
-        <label for="pathEditor" class="sr-only">Consulta SQL para la lección</label>
-        <textarea id="pathEditor" spellcheck="false" placeholder="Escribe tu consulta SQL aquí...">${escapeHtml(lesson.starter)}</textarea>
-        <div class="challenge-actions">
-            <button type="button" id="pathRunBtn" onclick="runLearningLesson()">
-                <i class="fas fa-play"></i> Comprobar lección
-            </button>
-            <button type="button" id="pathHintBtn" class="btn-secondary" onclick="showLearningHint()">
-                <i class="fas fa-lightbulb"></i> Ver pista
-            </button>
-            <button type="button" class="btn-secondary" onclick="clearLearningEditor()">
-                <i class="fas fa-eraser"></i> Limpiar
-            </button>
-        </div>
-        <div id="pathHint" class="challenge-hint" hidden>${escapeHtml(lesson.hint)}</div>
-        <div id="pathResult" class="challenge-result" aria-live="polite">
-            <strong><i class="fas fa-circle-info"></i> Listo para practicar</strong>
-            Escribe tu consulta y pulsa «Comprobar lección».
-        </div>
-        <div id="pathNext" class="path-next" ${completed ? '' : 'hidden'}>${completed ? nextMarkup : ''}</div>
+        ${set.values.length > rows.length ? `<p class="lesson-demo-more">Mostrando ${rows.length} de ${set.values.length} filas.</p>` : ''}
     `;
 }
 
-function renderNoSQLCourseLessonDetail(lesson, course, lessons) {
-    const detail = document.getElementById('pathLessonDetail');
-    if (!detail) return;
+function runLessonDemo() {
+    const result = document.getElementById('lessonDemoResult');
+    const lesson = getActiveCourseLessonById(currentLearningLessonId);
+    const course = getActiveCourse();
+    if (!result || !lesson) return;
 
-    const index = lessons.findIndex(item => item.id === lesson.id);
-    const completed = isNoSQLCourseLessonCompleted(lesson.id);
-    const module = getCourseModuleForLesson(course, lesson.id);
-    const nextMarkup = getCourseNextMarkup(course, lessons, lesson);
-    const profile = getNoSQLCourseProfile();
-
-    detail.innerHTML = `
-        <div class="challenge-detail-header">
-            <div>
-                <span class="course-lesson-eyebrow">${escapeHtml(course?.title || 'NoSQL')}${module ? ` · ${escapeHtml(module.title)}` : ''}</span>
-                <h3>${index + 1}. ${escapeHtml(lesson.title)}</h3>
-                <div class="challenge-detail-meta">
-                    <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
-                    <span class="text-muted">Lección ${index + 1} de ${lessons.length}</span>
-                    <span class="text-muted">Dataset NoSQL: ${escapeHtml(profile?.name || getNoSQLActiveDatasetName())}</span>
-                    <span id="pathLessonStatus" class="path-completed-badge" ${completed ? '' : 'hidden'}><i class="fas fa-check"></i> Completada</span>
-                </div>
-            </div>
-        </div>
-        <div class="path-objective">
-            <span>Misión de la lección</span>
-            <p>${escapeHtml(lesson.objective)}</p>
-        </div>
-        <div class="challenge-description">${escapeHtml(lesson.explanation)}</div>
-        <div class="path-example">
-            <div class="path-example-head">
-                <span><i class="fas fa-code"></i> Ejemplo</span>
-                <button type="button" class="btn-ghost btn-sm" onclick="loadLearningExample()">
-                    <i class="fas fa-arrow-down"></i> Usar ejemplo
-                </button>
-            </div>
-            <pre><code>${escapeHtml(lesson.example)}</code></pre>
-        </div>
-        <label for="pathEditor" class="sr-only">Comando NoSQL para la lección</label>
-        <textarea id="pathEditor" spellcheck="false" placeholder="Escribe un comando NoSQL, por ejemplo: db.estudiantes.find({})">${escapeHtml(lesson.starter)}</textarea>
-        <div class="challenge-actions">
-            <button type="button" id="pathRunBtn" onclick="runNoSQLCourseLesson()">
-                <i class="fas fa-play"></i> Comprobar lección
-            </button>
-            <button type="button" id="pathHintBtn" class="btn-secondary" onclick="showLearningHint()">
-                <i class="fas fa-lightbulb"></i> Ver pista
-            </button>
-            <button type="button" class="btn-secondary" onclick="clearLearningEditor()">
-                <i class="fas fa-eraser"></i> Limpiar
-            </button>
-        </div>
-        <div id="pathHint" class="challenge-hint" hidden>${escapeHtml(lesson.hint)}</div>
-        <div id="pathResult" class="challenge-result" aria-live="polite">
-            <strong><i class="fas fa-circle-info"></i> Listo para practicar</strong>
-            Escribe un comando NoSQL y pulsa «Comprobar lección».
-        </div>
-        <div id="pathNext" class="path-next" ${completed ? '' : 'hidden'}>${completed ? nextMarkup : ''}</div>
-    `;
+    try {
+        if (course?.track === 'nosql') {
+            if (!window.NoSQL || !window.NOSQL_DATASETS) throw new Error('El motor NoSQL no está disponible.');
+            const command = window.NoSQL.createDatabase(window.NOSQL_DATASETS[getNoSQLActiveDatasetName()]);
+            const output = window.NoSQL.executeCommand(command, lesson.demoQuery);
+            const documents = output.documents || (output.document ? [output.document] : []);
+            result.innerHTML = `<pre>${escapeHtml(JSON.stringify(documents.slice(0, 5), null, 2))}</pre>`;
+        } else {
+            if (!dbInitialized || !db) throw new Error('La base de datos aún no está lista.');
+            if (!isReadOnlyQuery(lesson.demoQuery)) throw new Error('La demostración debe ser una consulta de lectura.');
+            result.innerHTML = renderLessonDemoSets(db.exec(lesson.demoQuery));
+        }
+        result.hidden = false;
+    } catch (error) {
+        result.hidden = false;
+        result.innerHTML = `<p class="lesson-demo-error">${escapeHtml(error.message || String(error))}</p>`;
+    }
 }
 
 function renderLearningPath() {
@@ -9306,6 +9662,7 @@ function refreshLearningPath(options = {}) {
     if (options.selectFirst || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
         const next = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id)) || lessons[0];
         currentLearningLessonId = next?.id || null;
+        currentLessonStep = next ? getDefaultLessonStep(course, next) : 'concept';
     }
     renderCoursePlayer();
 }
@@ -9367,7 +9724,12 @@ function selectLearningLesson(id) {
         startCourse(targetCourse.id, id);
         return;
     }
+    const changed = currentLearningLessonId !== id;
     currentLearningLessonId = id;
+    if (changed) {
+        const lesson = lessons.find(item => item.id === id);
+        currentLessonStep = lesson ? getDefaultLessonStep(course, lesson) : 'concept';
+    }
     renderCoursePlayer();
     const editor = document.getElementById('pathEditor');
     if (editor) editor.focus();
@@ -9402,6 +9764,55 @@ function learningComparisonMessage(comparison) {
         return 'Tu consulta no devolvió un conjunto de resultados.';
     }
     return 'Todavía no coincide con el resultado esperado.';
+}
+
+function showPracticeNext() {
+    const container = document.getElementById('pathNext');
+    if (!container) return;
+    container.hidden = false;
+    container.innerHTML = '<button type="button" class="btn-primary" onclick="goToLessonStep(\'check\')">Ir a la comprobación <i class="fas fa-arrow-right"></i></button>';
+}
+
+function submitLessonQuiz(event) {
+    event.preventDefault();
+    const course = getActiveCourse();
+    const lesson = getActiveCourseLessonById(currentLearningLessonId);
+    const form = event.currentTarget || document.getElementById('lessonQuizForm');
+    const result = document.getElementById('lessonQuizResult');
+    if (!lesson || !form || !result) return;
+
+    const quiz = lesson.quiz || [];
+    const answers = quiz.map((_, index) => (
+        form.querySelector(`input[name="lessonQuizQ${index}"]:checked`)
+    ));
+
+    result.hidden = false;
+    if (answers.some(answer => !answer)) {
+        result.className = 'challenge-result warning';
+        result.innerHTML = '<strong><i class="fas fa-circle-exclamation"></i> Faltan respuestas</strong> Responde todas las preguntas antes de comprobar.';
+        return;
+    }
+
+    const wrong = answers
+        .map((answer, index) => Number(answer.value) === quiz[index].answer ? null : index)
+        .filter(index => index !== null);
+
+    if (wrong.length) {
+        result.className = 'challenge-result error';
+        result.innerHTML = `
+            <strong><i class="fas fa-circle-xmark"></i> Revisa tus respuestas</strong>
+            <p>Preguntas por revisar: ${wrong.map(index => index + 1).join(', ')}.</p>
+            <ul>${wrong.map(index => `<li>${escapeHtml(quiz[index].explanation)}</li>`).join('')}</ul>
+        `;
+        playSound('error');
+        return;
+    }
+
+    markCourseLessonQuizPassed(course, lesson.id);
+    playSound('success');
+    renderLearningPathList();
+    renderLearningLessonDetail();
+    showToast('success', '¡Lección completada!');
 }
 
 function showLearningNext(lesson) {
@@ -9456,26 +9867,18 @@ function runNoSQLCourseLesson() {
         const comparison = compareNoSQLCourseResults(expected, actual);
 
         if (comparison.ok) {
-            markNoSQLCourseLessonCompleted(lesson.id);
+            markCourseLessonPracticeCompleted(course, lesson.id);
+            const stages = getCourseLessonStages(course, lesson.id);
             playSound('success');
             renderLearningPathList();
             const status = document.getElementById('pathLessonStatus');
-            if (status) status.hidden = false;
-            const stats = getCourseProgress(course);
-            const lessons = getCourseLessons(course);
-            const currentIndex = lessons.findIndex(item => item.id === lesson.id);
-            const hasNext = Boolean(lessons[currentIndex + 1]);
-            const nextMessage = stats.completed === stats.total
-                ? `Has terminado ${course.title}.`
-                : hasNext
-                    ? 'Puedes continuar con la siguiente lección.'
-                    : 'Has completado esta lección. Aún quedan pendientes en el curso.';
+            if (status) status.hidden = !stages.completed;
             setLearningResult('success', `
-                <strong><i class="fas fa-circle-check"></i> Lección completada</strong>
-                Tu comando devuelve los documentos esperados. ${nextMessage}
+                <strong><i class="fas fa-circle-check"></i> ${stages.completed ? 'Lección completada' : 'Práctica superada'}</strong>
+                ${stages.completed ? 'Ya puedes continuar con la siguiente lección.' : 'Tu comando devuelve los documentos esperados. Ahora completa la comprobación.'}
             `);
-            showLearningNext(lesson);
-            showToast('success', 'Lección completada.');
+            showPracticeNext();
+            showToast('success', stages.completed ? 'Lección completada.' : 'Práctica superada. Te falta la comprobación.');
             return;
         }
 
@@ -9524,27 +9927,18 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
         const comparison = compareChallengeResults(expected, actual, lesson.ordered);
 
         if (comparison.ok) {
-            markLearningLessonCompleted(lesson.id);
+            markCourseLessonPracticeCompleted(course, lesson.id);
+            const stages = getCourseLessonStages(course, lesson.id);
             playSound('success');
             renderLearningPathList();
             const status = document.getElementById('pathLessonStatus');
-            if (status) status.hidden = false;
-            const course = getActiveCourse();
-            const stats = course ? getCourseProgress(course) : getLearningProgressStats();
-            const lessons = course ? getCourseLessons(course) : getLearningLessons();
-            const currentIndex = lessons.findIndex(item => item.id === lesson.id);
-            const hasNext = Boolean(lessons[currentIndex + 1]);
-            const nextMessage = stats.completed === stats.total
-                ? (course ? `Has terminado ${course.title}.` : 'Has terminado la ruta.')
-                : hasNext
-                    ? 'Puedes continuar con la siguiente lección.'
-                    : 'Has completado esta lección. Aún quedan pendientes en el curso.';
+            if (status) status.hidden = !stages.completed;
             setLearningResult('success', `
-                <strong><i class="fas fa-circle-check"></i> Lección completada</strong>
-                Tu consulta devuelve el resultado esperado. ${nextMessage}
+                <strong><i class="fas fa-circle-check"></i> ${stages.completed ? 'Lección completada' : 'Práctica superada'}</strong>
+                ${stages.completed ? 'Ya puedes continuar con la siguiente lección.' : 'Tu consulta devuelve el resultado esperado. Ahora completa la comprobación.'}
             `);
-            showLearningNext(lesson);
-            showToast('success', 'Lección completada.');
+            showPracticeNext();
+            showToast('success', stages.completed ? 'Lección completada.' : 'Práctica superada. Te falta la comprobación.');
             return;
         }
 
@@ -9639,9 +10033,9 @@ function resetLearningProgress() {
     currentLearningLessonId = null;
     if (course) {
         const lessons = getCourseLessons(course);
-        currentLearningLessonId = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id))?.id
-            || lessons[0]?.id
-            || null;
+        const nextLesson = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id)) || lessons[0] || null;
+        currentLearningLessonId = nextLesson?.id || null;
+        currentLessonStep = nextLesson ? getDefaultLessonStep(course, nextLesson) : 'concept';
         renderCoursePlayer();
     } else {
         refreshLearningPath({ selectFirst: true });

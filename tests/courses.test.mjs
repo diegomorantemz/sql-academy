@@ -15,7 +15,7 @@ const { document } = window;
 window.confirm = () => true;
 window.requestAnimationFrame = () => 0;
 
-for (const file of ['datasets.js', 'nosql-datasets.js', 'install-guides.js', 'courses.js', 'nosql-engine.js', 'script.js']) {
+for (const file of ['datasets.js', 'nosql-datasets.js', 'install-guides.js', 'courses.js', 'course-content.js', 'nosql-engine.js', 'script.js']) {
     window.eval(fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'));
 }
 
@@ -137,7 +137,7 @@ test('al completar un curso se ofrece el siguiente', () => {
     }
     window.startCourse('sql-desde-cero');
     window.selectLearningLesson('limit');
-    window.showLearningNext(window.getLearningLessonById('limit'));
+    window.goToLessonStep('check');
 
     const next = document.getElementById('pathNext');
     assert.equal(next.hidden, false);
@@ -149,7 +149,7 @@ test('al completar un curso se ofrece el siguiente', () => {
     }
     window.startCourse('sql-intermedio');
     window.selectLearningLesson('subquery');
-    window.showLearningNext(window.getLearningLessonById('subquery'));
+    window.goToLessonStep('check');
 
     assert.match(document.getElementById('pathNext').textContent, /SQL avanzado/);
 
@@ -158,7 +158,7 @@ test('al completar un curso se ofrece el siguiente', () => {
     }
     window.startCourse('sql-avanzado');
     window.selectLearningLesson('rank');
-    window.showLearningNext(window.getLearningLessonById('rank'));
+    window.goToLessonStep('check');
 
     assert.match(document.getElementById('pathNext').textContent, /NoSQL esencial/);
 });
@@ -208,11 +208,17 @@ test('el curso NoSQL valida comandos y guarda progreso por dataset', () => {
     assert.match(document.getElementById('pathDatasetLabel').textContent, /NoSQL: Escuela/);
     assert.equal(document.querySelectorAll('#pathLessonList [data-learning-lesson]').length, 4);
 
+    window.goToLessonStep('practice');
     const editor = document.getElementById('pathEditor');
     editor.value = schoolLessons[0].expectedQuery;
     window.runNoSQLCourseLesson();
 
-    assert.match(document.getElementById('pathResult').textContent, /Lección completada/);
+    assert.match(document.getElementById('pathResult').textContent, /Práctica superada/);
+    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
+    assert.equal(window.getCourseProgress(course).completed, 0);
+
+    window.markNoSQLCourseQuizPassed('nosql-find');
+    window.renderLearningPathList();
     assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
     assert.equal(window.getCourseProgress(course).completed, 1);
 
@@ -238,4 +244,78 @@ test('al completar las lecciones SQL se recomienda el curso NoSQL', () => {
     assert.match(recommendation.title, /Consulta documentos/);
     assert.match(recommendation.onclick, /nosql-find/);
     assert.equal(recommendation.icon, 'fa-leaf');
+});
+
+test('todas las lecciones tienen teoría, errores y quiz válidos', () => {
+    const sqlLessons = ['escuela', 'tienda', 'biblioteca']
+        .flatMap(dataset => window.getLearningLessonsForDataset(dataset));
+    const nosqlLessons = ['escuela', 'tienda', 'biblioteca']
+        .flatMap(dataset => window.getCourseLessons(window.getCourseById('nosql-esencial'), dataset));
+    const allLessons = [...sqlLessons, ...nosqlLessons];
+
+    for (const lesson of allLessons) {
+        assert.ok(Array.isArray(lesson.objectives) && lesson.objectives.length > 0, `${lesson.id}: objetivos`);
+        assert.ok(lesson.theory.length >= 2, `${lesson.id}: teoría`);
+        assert.ok(lesson.theory.every(section => section.title && section.body), `${lesson.id}: secciones`);
+        assert.ok(lesson.commonMistakes.length > 0, `${lesson.id}: errores comunes`);
+        assert.ok(lesson.demoQuery, `${lesson.id}: demostración`);
+        assert.ok(lesson.demoNote, `${lesson.id}: nota de demostración`);
+        if (lesson.track === 'nosql') {
+            const command = window.NoSQL.parseCommand(lesson.demoQuery);
+            assert.ok(['find', 'findOne', 'aggregate'].includes(command.methods?.[0]?.name), `${lesson.id}: demostración NoSQL de lectura`);
+        } else {
+            assert.equal(window.isReadOnlyQuery(lesson.demoQuery), true, `${lesson.id}: demostración SQL de lectura`);
+        }
+        assert.equal(lesson.quiz.length, 2, `${lesson.id}: quiz`);
+        assert.ok(lesson.summary.length >= 2, `${lesson.id}: resumen`);
+        for (const question of lesson.quiz) {
+            assert.ok(question.question);
+            assert.ok(question.options.length >= 2);
+            assert.ok(Number.isInteger(question.answer));
+            assert.ok(question.answer >= 0 && question.answer < question.options.length);
+            assert.ok(question.explanation);
+        }
+    }
+});
+
+test('la lección exige concepto, práctica y comprobación', () => {
+    clearCourseProgress();
+    const course = window.getCourseById('sql-desde-cero');
+    const lesson = window.getCourseLessons(course)[0];
+    window.startCourse(course.id);
+
+    assert.ok(document.querySelector('#lessonStepContent .lesson-objectives'));
+    assert.equal(document.getElementById('pathEditor'), null);
+
+    window.goToLessonStep('check');
+    assert.equal(document.getElementById('lessonQuizForm'), null);
+
+    window.goToLessonStep('practice');
+    assert.ok(document.getElementById('pathEditor'));
+
+    window.markCourseLessonPracticeCompleted(course, lesson.id);
+    window.goToLessonStep('practice');
+    assert.equal(document.getElementById('pathNext').hidden, false);
+
+    window.goToLessonStep('check');
+    const form = document.getElementById('lessonQuizForm');
+    assert.ok(form);
+    lesson.quiz.forEach((question, index) => {
+        form.querySelector(`input[name="lessonQuizQ${index}"][value="${question.answer}"]`).checked = true;
+    });
+    window.submitLessonQuiz({ preventDefault() {}, currentTarget: form });
+
+    assert.equal(window.isCourseLessonCompleted(course, lesson.id), true);
+    assert.match(document.getElementById('pathLessonDetail').textContent, /Lección completada/);
+});
+
+test('la demostración NoSQL ejecuta el ejemplo del concepto', () => {
+    clearCourseProgress();
+    window.startCourse('nosql-esencial');
+
+    window.runLessonDemo();
+
+    const result = document.getElementById('lessonDemoResult');
+    assert.equal(result.hidden, false);
+    assert.match(result.textContent, /est-001/);
 });

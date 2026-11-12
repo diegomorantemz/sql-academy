@@ -20,7 +20,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
-- Cursos guiados con tres itinerarios SQL y uno NoSQL, 15 lecciones, editor propio, pistas, proyectos finales y progreso persistente por dataset.
+- Cursos guiados con tres itinerarios SQL y uno NoSQL, 15 lecciones teórico-prácticas, demostraciones ejecutables, quizzes y progreso por etapas.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
 - Guías de instalación paso a paso para doce gestores SQL y NoSQL, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
 - Panel **Mi progreso** con avance por curso, dominio por concepto SQL, progreso por dataset, actividad reciente y recomendaciones.
@@ -99,6 +99,7 @@ sql-academy/
 ├── nosql-datasets.js           # Documentos, ejemplos y retos NoSQL
 ├── install-guides.js           # Guías de instalación por gestor y sistema operativo
 ├── courses.js                  # Catálogo de cursos, módulos, proyectos y perfiles NoSQL
+├── course-content.js           # Teoría, demostraciones, errores y quizzes por lección
 ├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
 ├── datasets.js                 # Datasets Tienda y Biblioteca
 ├── service-worker.js           # Caché PWA y estrategia de red
@@ -272,9 +273,13 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 
 - **Cuatro itinerarios:** **SQL desde cero** (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`), **SQL intermedio** (`JOIN`, `GROUP BY`, `HAVING` y subconsultas), **SQL avanzado** (`CASE`, CTE y `ROW_NUMBER`) y **NoSQL esencial** (`find`, filtros, orden y agregaciones).
 - **Catálogo con progreso:** cada curso muestra nivel, duración, módulos, lecciones y avance en su dataset activo.
+- **Lecciones en tres pasos:** **Concepto**, **Práctica** y **Comprobación**.
+- **Teoría breve:** objetivos, tarjetas de concepto, sintaxis, ejemplo anotado, demostración ejecutable y errores comunes.
+- **Práctica guiada:** editor propio, pista bajo demanda y validación por resultado.
+- **Quiz obligatorio:** dos preguntas por lección con explicación; la lección se completa al aprobarlas.
+- **Progreso por etapas:** concepto leído, práctica superada y quiz aprobado se guardan por dataset.
 - **SQL y NoSQL en el mismo flujo:** las lecciones SQL usan la base relacional y **NoSQL esencial** usa la consola documental.
 - **Temario claro:** módulos con descripción, lecciones completadas y acceso directo a cada práctica.
-- **Aprendizaje activo:** objetivo, explicación, ejemplo ejecutable, editor propio, pista y validación por resultado.
 - **Proyecto final:** cada curso propone un mini reporte o catálogo para combinar lo aprendido y explicar la pregunta que responde.
 - **Continuidad:** al completar un curso se ofrece el siguiente; el curso activo se guarda en `localStorage`.
 - **Práctica conectada:** botones para reforzar conceptos con retos del dataset activo.
@@ -413,7 +418,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
 - `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor, la pestaña Instalación y el mini-quiz de conceptos.
 - `tests/install-guides.test.mjs` cubre el catálogo de los doce gestores, las rutas por sistema, las plataformas de Firebase, los campos obligatorios, los logos y los enlaces oficiales.
-- `tests/courses.test.mjs` cubre el catálogo de cursos, los módulos, las quince lecciones, el progreso compartido, el temario, el curso NoSQL y la navegación al siguiente curso.
+- `tests/courses.test.mjs` cubre el catálogo de cursos, los módulos, las quince lecciones teórico-prácticas, la teoría, los quizzes, el progreso por etapas, el curso NoSQL y la navegación al siguiente curso.
 - `tests/path.test.mjs` cubre las lecciones del curso, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
 - `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
@@ -452,6 +457,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.18.0
+
+- **Lecciones en tres pasos:** **Concepto**, **Práctica** y **Comprobación** en los cuatro cursos.
+- **Teoría antes de practicar:** objetivos, tarjetas de concepto, sintaxis, ejemplo anotado, demostración ejecutable y errores comunes.
+- **Quiz obligatorio:** dos preguntas por lección con explicación y reintento sin penalización.
+- **Progreso por etapas:** concepto leído, práctica superada y quiz aprobado se guardan por lección y dataset.
+- **Migración compatible:** los avances anteriores se conservan.
+- **Contenido completo:** teoría y quiz para las 15 lecciones SQL y NoSQL.
+- **Calidad:** pruebas de contenido, navegación entre pasos, bloqueo de la comprobación y finalización, y caché PWA `v35`.
 
 ### v1.17.0
 

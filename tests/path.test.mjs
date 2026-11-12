@@ -54,6 +54,7 @@ window.localStorage.setItem(
 );
 window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
 window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
 window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 await new Promise(resolve => setTimeout(resolve, 30));
@@ -219,6 +220,7 @@ test('el curso renderiza pasos, editor, dataset y progreso', () => {
     );
     window.loadPreferences();
     window.startCourse('sql-desde-cero');
+    window.goToLessonStep('practice');
 
     assert.equal(document.querySelectorAll('#pathLessonList [data-learning-lesson]').length, 4);
     assert.match(document.getElementById('pathDatasetLabel').textContent, /Tienda/);
@@ -298,15 +300,21 @@ test('runLearningLesson valida una consulta y muestra el siguiente paso', () => 
 
     try {
         window.startCourse('sql-desde-cero');
+        window.goToLessonStep('practice');
         const editor = document.getElementById('pathEditor');
         editor.value = 'SELECT nombre, precio FROM productos;';
         window.runLearningLesson(adapter, true);
 
-        assert.match(document.getElementById('pathResult').textContent, /Lección completada/);
-        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
+        assert.match(document.getElementById('pathResult').textContent, /Práctica superada/);
+        assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
         assert.equal(document.getElementById('pathNext').hidden, false);
 
+        window.markLearningQuizPassed('select');
+        window.renderLearningPathList();
+        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
+
         window.selectLearningLesson('where');
+        window.goToLessonStep('practice');
         document.getElementById('pathEditor').value = "SELECT nombre, categoria FROM productos WHERE categoria = 'Audio';";
         window.runLearningLesson(adapter, true);
 
