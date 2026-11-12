@@ -7093,8 +7093,8 @@ function closeSkillTest() {
 
 const DEMO_TOUR_STEPS = [
     {
-        title: 'Una academia que se adapta',
-        description: 'SQL Academy combina teoría, práctica y juego. El recorrido empieza en Aprender.',
+        title: 'Una academia para empezar',
+        description: 'Guías, conceptos e instalación para doce gestores. El recorrido empieza en Aprender.',
         section: 'learn'
     },
     {
@@ -7110,26 +7110,46 @@ const DEMO_TOUR_STEPS = [
         target: 'sqlEditor'
     },
     {
+        title: 'Cursos con proyecto final',
+        description: 'Cuatro itinerarios, 15 lecciones, quizzes, checkpoints y proyecto final. Cambia el dataset SQL o NoSQL y el avance se guarda por separado.',
+        section: 'path',
+        courseCatalog: true,
+        target: 'courseCatalogView'
+    },
+    {
         title: 'Explora el laboratorio NoSQL',
-        description: 'Los ejemplos y la sintaxis rápida también se filtran por nivel. La consola documental sigue disponible.',
+        description: 'Consola documental tipo MongoDB con CRUD, agregaciones y retos. Los ejemplos también se filtran por nivel.',
         section: 'nosql',
-        target: 'nosqlLevelBar'
+        target: 'nosqlEditor'
     },
     {
         title: 'Ponte a prueba',
-        description: 'Resuelve retos SQL, retos NoSQL o depuraciones con validación por resultado.',
-        section: 'challenges'
+        description: 'Retos SQL, retos NoSQL y depuraciones con validación por resultado, pistas y progreso guardado.',
+        section: 'challenges',
+        target: 'sqlChallengesTab'
     },
     {
-        title: 'Sigue tus cursos',
-        description: 'Consulta tu nivel, el avance por curso, las actividades completadas y el siguiente paso recomendado.',
+        title: 'Juega con la Torre de Datos',
+        description: 'Un deckbuilder de 6 pisos: construye consultas con cartas y supera cada piso. Funciona con teclado, ratón o mando.',
+        section: 'game',
+        target: 'gameTower'
+    },
+    {
+        title: 'Analiza el dataset',
+        description: 'Revisa el resumen, el diagrama ERD, el explorador y editor de tablas, y las comprobaciones de calidad.',
+        section: 'analyze',
+        target: 'analyzeSummary'
+    },
+    {
+        title: 'Sigue tu progreso',
+        description: 'Consulta tu nivel, el avance por curso, la actividad completada y el siguiente paso. También puedes generar un reporte imprimible.',
         section: 'path',
         progress: true,
         target: 'learningProgressDashboard'
     },
     {
         title: 'Tecnología y aprendizaje',
-        description: 'SQLite real en el navegador, PWA, pruebas automatizadas y un asistente IA opcional. Gracias por acompañar el recorrido.',
+        description: 'SQLite real en el navegador, PWA instalable, navegación móvil, accesibilidad y asistente IA opcional. Gracias por acompañar el recorrido.',
         section: null
     }
 ];
@@ -7171,6 +7191,10 @@ function renderDemoTourStep() {
     if (step.section) {
         activateSection(step.section);
         if (step.progress) activatePathTab('progress');
+        if (step.courseCatalog) {
+            activatePathTab('lessons');
+            renderCourseCatalog();
+        }
     }
     if (step.target) {
         setTimeout(() => scrollToDemoTarget(step.target), 80);
