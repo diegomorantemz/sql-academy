@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sql-academy-v40';
+const CACHE_VERSION = 'sql-academy-v41';
 const APP_SHELL = [
     './',
     './index.html',
@@ -35,9 +35,46 @@ const CDN_HOSTS = new Set([
 
 async function cacheResponse(request, response) {
     if (!response || (!response.ok && response.type !== 'opaque')) return response;
-    const cache = await caches.open(CACHE_VERSION);
-    await cache.put(request, response.clone());
+    try {
+        const cache = await caches.open(CACHE_VERSION);
+        await cache.put(request, response.clone());
+    } catch (error) {
+        // La respuesta se entrega aunque el navegador no permita escribir la caché.
+    }
     return response;
+}
+
+async function networkFirst(request, fallbackUrl) {
+    try {
+        return await cacheResponse(request, await fetch(request));
+    } catch (error) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+
+        if (fallbackUrl) {
+            const fallback = await caches.match(fallbackUrl);
+            if (fallback) return fallback;
+        }
+
+        return new Response('', {
+            status: 504,
+            statusText: 'Sin conexión'
+        });
+    }
+}
+
+async function cacheFirst(request) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    try {
+        return await cacheResponse(request, await fetch(request));
+    } catch (error) {
+        return new Response('', {
+            status: 504,
+            statusText: 'Sin conexión'
+        });
+    }
 }
 
 self.addEventListener('install', event => {
@@ -69,20 +106,17 @@ self.addEventListener('fetch', event => {
 
     if (url.origin === self.location.origin) {
         if (request.mode === 'navigate') {
-            event.respondWith(
-                fetch(request)
-                    .then(response => cacheResponse(request, response))
-                    .catch(() => caches.match('./index.html'))
-            );
+            event.respondWith(networkFirst(request, './index.html'));
             return;
         }
 
-        event.respondWith(
-            caches.match(request).then(cached => {
-                if (cached) return cached;
-                return fetch(request).then(response => cacheResponse(request, response));
-            })
-        );
+        // HTML, CSS y JS van primero a la red para evitar mezclar una versión
+        // nueva de la interfaz con estilos o scripts viejos de la caché.
+        if (url.pathname.startsWith('/assets/')) {
+            event.respondWith(cacheFirst(request));
+        } else {
+            event.respondWith(networkFirst(request));
+        }
         return;
     }
 

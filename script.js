@@ -1717,12 +1717,31 @@ async function installApp() {
 
 function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') return;
+
+    const isLocalHost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+    if (window.location.protocol !== 'https:' && !isLocalHost) return;
+
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let refreshing = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
 
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch(error => {
-            console.warn('No se pudo registrar el service worker:', error);
-        });
+        navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' })
+            .then(registration => {
+                const update = () => registration.update().catch(() => {});
+                update();
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') update();
+                });
+            })
+            .catch(error => {
+                console.warn('No se pudo registrar el service worker:', error);
+            });
     });
 }
 

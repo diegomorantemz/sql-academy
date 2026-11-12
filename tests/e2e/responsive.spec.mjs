@@ -50,6 +50,32 @@ test('la navegación cambia entre barra superior y barra inferior', async ({ pag
     }
 });
 
+test('la app prefiere la red antes que un CSS viejo en caché', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-390', 'Regresión de caché en móvil');
+
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+
+    await page.evaluate(async () => {
+        const keys = await caches.keys();
+        const cacheKey = keys.find(key => key.startsWith('sql-academy-'));
+        if (!cacheKey) throw new Error('No se encontró la caché de la app');
+
+        const cache = await caches.open(cacheKey);
+        const cssUrl = new URL('./style.css', window.location.href).href;
+        await cache.put(cssUrl, new Response(
+            '@media (max-width: 768px) { .main-nav { display: flex !important; } }',
+            { headers: { 'Content-Type': 'text/css' } }
+        ));
+    });
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.app-header')).toBeVisible();
+    await expect(page.locator('.main-nav')).toBeHidden();
+    await expect(page.locator('.mobile-nav')).toBeVisible();
+});
+
 test('los accesos táctiles de la barra inferior son cómodos', async ({ page }, testInfo) => {
     test.skip(!isMobileProject(testInfo), 'Solo aplica a viewports móviles');
     const heights = await page.locator('.mobile-nav-btn').evaluateAll(buttons => (
