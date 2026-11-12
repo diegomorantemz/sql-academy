@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Academy · QR de acceso</title>
+    <style>
+        :root {
+            --ink: #132a43;
+            --blue: #1f5f8b;
+            --muted: #5b6b7c;
+            --line: #dbe4ee;
+            --soft: #eef4fb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #e9eff6;
+            color: var(--ink);
+            font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 18mm 20mm;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.15);
+        }
+
+        .eyebrow {
+            margin: 0 0 3mm;
+            color: var(--muted);
+            font-size: 9pt;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            color: var(--ink);
+            font-size: 34pt;
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            max-width: 150mm;
+            margin: 5mm 0 0;
+            color: var(--muted);
+            font-size: 14pt;
+            line-height: 1.45;
+        }
+
+        .qr-card {
+            margin: 11mm 0 8mm;
+            padding: 7mm;
+            border: 1px solid var(--line);
+            border-radius: 7mm;
+            background: #fff;
+            box-shadow: 0 4mm 14mm rgba(15, 23, 42, 0.08);
+        }
+
+        .qr-image {
+            display: block;
+            width: 105mm;
+            height: 105mm;
+        }
+
+        .scan-title {
+            margin: 0;
+            color: var(--blue);
+            font-size: 17pt;
+            font-weight: 800;
+        }
+
+        .url {
+            margin: 3mm 0 0;
+            padding: 3mm 5mm;
+            border-radius: 999px;
+            background: var(--soft);
+            color: var(--ink);
+            font-family: "Courier New", monospace;
+            font-size: 12pt;
+            font-weight: 700;
+        }
+
+        .hint {
+            margin: 4mm 0 0;
+            color: var(--muted);
+            font-size: 10.5pt;
+            line-height: 1.45;
+        }
+
+        .footer {
+            margin-top: 10mm;
+            color: #7b8998;
+            font-size: 8.5pt;
+            letter-spacing: 0.04em;
+        }
+
+        .footer strong {
+            color: var(--blue);
+        }
+
+        @media print {
+            body {
+                background: #fff;
+            }
+
+            .page {
+                margin: 0;
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .page {
+                width: 100%;
+                min-height: 100vh;
+                padding: 28px 18px;
+                box-shadow: none;
+            }
+
+            h1 {
+                font-size: 42px;
+            }
+
+            .subtitle {
+                font-size: 17px;
+            }
+
+            .qr-card {
+                margin: 32px 0 24px;
+                padding: 18px;
+            }
+
+            .qr-image {
+                width: min(76vw, 320px);
+                height: min(76vw, 320px);
+            }
+
+            .scan-title {
+                font-size: 20px;
+            }
+
+            .url {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <p class="eyebrow">Feria universitaria · MNTWARE</p>
+        <h1>SQL Academy</h1>
+        <p class="subtitle">Aprende SQL y NoSQL practicando en el navegador.</p>
+
+        <div class="qr-card">
+            <img class="qr-image" src="assets/images/qr-sql-academy.svg" alt="Código QR para abrir SQL Academy">
+        </div>
+
+        <p class="scan-title">Escanea para entrar</p>
+        <p class="url">sql-academy.netlify.app</p>
+        <p class="hint">Abre la cámara de tu celular, apunta al código y empieza a practicar.</p>
+
+        <p class="footer"><strong>SQL Academy</strong> · Aprende, practica y comprueba resultados.</p>
+    </main>
+</body>
+</html>
