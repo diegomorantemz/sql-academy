@@ -18,6 +18,7 @@ const STORAGE_KEYS = {
     learningPath: 'sql-academy-path-v1',
     activeCourse: 'sql-academy-active-course-v1',
     nosqlCourse: 'sql-academy-nosql-course-v1',
+    courseAssessment: 'sql-academy-course-assessment-v1',
     skillProfile: 'sql-academy-skill-profile-v1'
 };
 const PERSIST_DB_NAME = 'sql-academy';
@@ -632,6 +633,9 @@ function closeModal(modal) {
     if (!modal) return;
     if (modal.id === 'aiHelpModal') {
         abortAIRequest();
+    }
+    if (modal.id === 'checkpointModal') {
+        currentCheckpoint = null;
     }
     modal.classList.remove('active');
     if (!document.querySelector('.modal.active')) {
@@ -5767,10 +5771,12 @@ let challengeProgress = {};
 let selectedNoSQLChallengeId = null;
 let learningPathProgress = {};
 let nosqlCourseProgress = {};
+let courseAssessment = {};
 let currentLearningLessonId = null;
 let currentCourseId = null;
 let currentCourseView = 'catalog';
 let currentLessonStep = 'concept';
+let currentCheckpoint = null;
 let learningPathEventsBound = false;
 
 function loadChallengeProgress() {
@@ -8111,7 +8117,16 @@ function hasCourseStarted(course = getActiveCourse()) {
     return getCourseLessons(course).some(lesson => {
         const stages = getCourseLessonStages(course, lesson.id);
         return stages.theoryRead || stages.practiceCompleted || stages.quizPassed;
-    });
+    }) || Boolean(course && getCourseAssessmentRecord(course).projects[course.id]?.completedAt);
+}
+
+function getCourseStatusLabel(course, progress = getCourseProgress(course)) {
+    if (!progress.total) return 'Sin lecciones';
+    const completion = getCourseCompletionState(course);
+    if (completion.complete) return 'Completado';
+    if (!completion.lessonsComplete) return hasCourseStarted(course) ? 'En progreso' : 'Sin empezar';
+    if (completion.checkpointsPassed < completion.checkpointsTotal) return 'Checkpoints pendientes';
+    return 'Proyecto pendiente';
 }
 
 function getNextCourse(courseId) {
@@ -8123,28 +8138,46 @@ function getNextCourse(courseId) {
 function getCourseNextMarkup(course, lessons, lesson) {
     const index = lessons.findIndex(item => item.id === lesson.id);
     const nextLesson = lessons[index + 1];
-    const stats = course ? getCourseProgress(course) : getLearningProgressStats();
     const nextCourse = getNextCourse(course?.id);
 
     if (nextLesson) {
         return `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`;
     }
-    if (stats.completed === stats.total) {
-        if (course && nextCourse) {
+
+    if (course) {
+        const completion = getCourseCompletionState(course);
+        if (!completion.lessonsComplete) {
+            return '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en el curso.</div>';
+        }
+        if (completion.checkpointsPassed < completion.checkpointsTotal) {
+            return `
+                <div class="path-complete"><i class="fas fa-circle-check"></i> Lecciones completadas. Quedan los checkpoints de módulo.</div>
+                <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(course.id)}')">Completar checkpoints <i class="fas fa-arrow-right"></i></button>
+            `;
+        }
+        if (!completion.projectComplete) {
+            return `
+                <div class="path-complete"><i class="fas fa-circle-check"></i> Checkpoints superados. Queda el proyecto final.</div>
+                <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(course.id)}')">Completar proyecto final <i class="fas fa-arrow-right"></i></button>
+            `;
+        }
+        if (nextCourse) {
             return `
                 <div class="path-complete"><i class="fas fa-trophy"></i> ¡Curso completado!</div>
                 <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(nextCourse.id)}')">Siguiente curso: ${escapeHtml(nextCourse.title)} <i class="fas fa-arrow-right"></i></button>
             `;
         }
-        if (course) {
-            return `
-                <div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste todos los cursos!</div>
-                <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
-            `;
-        }
+        return `
+            <div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste todos los cursos!</div>
+            <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
+        `;
+    }
+
+    const stats = getLearningProgressStats();
+    if (stats.completed === stats.total) {
         return '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
     }
-    return `<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en ${course ? 'el curso' : 'la ruta'}.</div>`;
+    return '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en la ruta.</div>';
 }
 
 function loadActiveCourse() {
@@ -8154,6 +8187,82 @@ function loadActiveCourse() {
 
 function saveActiveCourse() {
     writeStoredJSON(STORAGE_KEYS.activeCourse, currentCourseId || '');
+}
+
+function loadCourseAssessment() {
+    const stored = readStoredJSON(STORAGE_KEYS.courseAssessment, {});
+    courseAssessment = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+}
+
+function saveCourseAssessment() {
+    writeStoredJSON(STORAGE_KEYS.courseAssessment, courseAssessment);
+}
+
+function getCourseAssessmentRecord(course = getActiveCourse()) {
+    if (!course) return { checkpoints: {}, projects: {} };
+    const key = `${course.track === 'nosql' ? 'nosql' : 'sql'}|${getCourseDatasetName(course)}`;
+    if (!courseAssessment[key] || typeof courseAssessment[key] !== 'object') {
+        courseAssessment[key] = { checkpoints: {}, projects: {} };
+    }
+    const record = courseAssessment[key];
+    record.checkpoints ||= {};
+    record.projects ||= {};
+    return record;
+}
+
+function getModuleCheckpointQuestions(courseId, moduleId) {
+    return window.COURSE_CHECKPOINTS?.[courseId]?.[moduleId] || [];
+}
+
+function isModuleLessonsComplete(course, module) {
+    const lessons = getCourseLessons(course);
+    const moduleLessons = (module.lessonIds || [])
+        .map(id => lessons.find(lesson => lesson.id === id))
+        .filter(Boolean);
+    return moduleLessons.length > 0 && moduleLessons.every(lesson => isCourseLessonCompleted(course, lesson.id));
+}
+
+function isModuleCheckpointPassed(course, moduleId) {
+    return Boolean(getCourseAssessmentRecord(course).checkpoints[moduleId]?.passedAt);
+}
+
+function markModuleCheckpointPassed(course, moduleId) {
+    const record = getCourseAssessmentRecord(course);
+    record.checkpoints[moduleId] = {
+        passedAt: record.checkpoints[moduleId]?.passedAt || new Date().toISOString()
+    };
+    saveCourseAssessment();
+}
+
+function isCourseProjectCompleted(course) {
+    return Boolean(getCourseAssessmentRecord(course).projects[course.id]?.completedAt);
+}
+
+function markCourseProjectCompleted(course, criteria) {
+    const record = getCourseAssessmentRecord(course);
+    record.projects[course.id] = {
+        completedAt: new Date().toISOString(),
+        criteria: Array.isArray(criteria) ? criteria : []
+    };
+    saveCourseAssessment();
+}
+
+function getCourseCompletionState(course = getActiveCourse()) {
+    if (!course) {
+        return { lessonsComplete: false, checkpointsTotal: 0, checkpointsPassed: 0, projectComplete: false, complete: false };
+    }
+    const lessons = getCourseLessons(course);
+    const lessonsComplete = lessons.length > 0 && lessons.every(lesson => isCourseLessonCompleted(course, lesson.id));
+    const modules = course.modules || [];
+    const checkpointsPassed = modules.filter(module => isModuleCheckpointPassed(course, module.id)).length;
+    const projectComplete = isCourseProjectCompleted(course);
+    return {
+        lessonsComplete,
+        checkpointsTotal: modules.length,
+        checkpointsPassed,
+        projectComplete,
+        complete: lessonsComplete && checkpointsPassed === modules.length && projectComplete
+    };
 }
 
 function migrateProgressEntries(progress) {
@@ -8617,7 +8726,7 @@ function renderCourseCatalog() {
             <div>
                 <span class="course-eyebrow"><i class="fas fa-graduation-cap"></i> Aprende haciendo</span>
                 <h3>Elige tu siguiente misión</h3>
-                <p>Teoría breve, demostraciones ejecutables, práctica guiada y comprobación. Tu progreso se guarda en cada dataset.</p>
+                <p>Teoría breve, demostraciones, práctica, quiz, checkpoints y proyecto final. Tu progreso se guarda en cada dataset.</p>
             </div>
             <div class="course-catalog-dataset">
                 <span>Datasets activos</span>
@@ -8631,18 +8740,16 @@ function renderCourseCatalog() {
                 const lessons = getCourseLessons(course);
                 const isActive = currentCourseId === course.id;
                 const started = hasCourseStarted(course);
-                const status = progress.total === 0
-                    ? 'Sin lecciones'
-                    : progress.percent === 100
-                        ? 'Completado'
-                        : started
-                            ? 'En progreso'
-                            : 'Sin empezar';
-                const cta = progress.percent === 100
+                const completion = getCourseCompletionState(course);
+                const status = getCourseStatusLabel(course, progress);
+                const needsAssessment = progress.percent === 100 && !completion.complete;
+                const cta = completion.complete
                     ? 'Repasar curso'
-                    : started
-                        ? 'Continuar'
-                        : 'Comenzar';
+                    : needsAssessment
+                        ? 'Completar curso'
+                        : started
+                            ? 'Continuar'
+                            : 'Comenzar';
                 const prerequisites = (course.prerequisites || []).length
                     ? `<span class="course-card-prerequisite">Después de ${escapeHtml(course.prerequisites.join(', '))}</span>`
                     : '';
@@ -8676,7 +8783,7 @@ function renderCourseCatalog() {
                         ${prerequisites}
                         <div class="course-card-actions">
                             <button type="button" class="btn-secondary" data-course-open="${escapeHtml(course.id)}">Ver temario</button>
-                            <button type="button" class="btn-primary" data-course-start="${escapeHtml(course.id)}">${cta} <i class="fas fa-arrow-right"></i></button>
+                            <button type="button" class="btn-primary" ${needsAssessment ? `data-course-open="${escapeHtml(course.id)}"` : `data-course-start="${escapeHtml(course.id)}"`}>${cta} <i class="fas fa-arrow-right"></i></button>
                         </div>
                     </article>
                 `;
@@ -8690,6 +8797,230 @@ function renderCourseCatalog() {
     container.querySelectorAll('[data-course-start]').forEach(button => {
         button.addEventListener('click', () => startCourse(button.dataset.courseStart));
     });
+}
+
+function renderCourseAssessment(course) {
+    const completion = getCourseCompletionState(course);
+    const modules = course.modules || [];
+    const checkpointRows = modules.map((module, index) => {
+        const lessonsComplete = isModuleLessonsComplete(course, module);
+        const passed = isModuleCheckpointPassed(course, module.id);
+        const status = passed ? 'Superado' : lessonsComplete ? 'Listo para comprobar' : 'Completa las lecciones';
+        return `
+            <div class="course-checkpoint-row${passed ? ' passed' : ''}">
+                <span class="course-checkpoint-index">${passed ? '<i class="fas fa-check"></i>' : index + 1}</span>
+                <div class="course-checkpoint-copy">
+                    <strong>${escapeHtml(module.title)}</strong>
+                    <span>${status}</span>
+                </div>
+                <button type="button" class="btn-secondary btn-sm"
+                    ${!lessonsComplete || passed ? 'disabled aria-disabled="true"' : ''}
+                    onclick="openModuleCheckpoint('${escapeHtml(course.id)}', '${escapeHtml(module.id)}')">
+                    ${passed ? 'Superado' : lessonsComplete ? 'Abrir' : 'Bloqueado'}
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    const criteria = course.finalProject?.criteria || [];
+    const projectComplete = isCourseProjectCompleted(course);
+    const projectMarkup = criteria.length ? `
+        <div class="course-project-criteria">
+            ${criteria.map((criterion, index) => `
+                <label class="course-project-criterion">
+                    <input type="checkbox" id="projectCriterion-${escapeHtml(course.id)}-${index}"
+                        ${projectComplete ? 'checked disabled' : ''}>
+                    <span>${escapeHtml(criterion)}</span>
+                </label>
+            `).join('')}
+        </div>
+        <button type="button" class="btn-primary btn-sm" ${projectComplete ? 'disabled' : ''} onclick="completeCourseProject('${escapeHtml(course.id)}')">
+            <i class="fas fa-flag-checkered"></i> ${projectComplete ? 'Proyecto completado' : 'Marcar proyecto como completado'}
+        </button>
+    ` : '<p class="text-muted">Este curso no tiene criterios de proyecto.</p>';
+
+    return `
+        <div class="course-assessment-grid">
+            <section class="course-assessment-card">
+                <div class="course-assessment-head">
+                    <div>
+                        <span class="course-side-eyebrow"><i class="fas fa-circle-check"></i> Checkpoints de módulo</span>
+                        <h4>${completion.checkpointsPassed} de ${completion.checkpointsTotal} superados</h4>
+                    </div>
+                    <span class="course-assessment-badge">${completion.checkpointsPassed === completion.checkpointsTotal ? 'Completo' : 'Pendiente'}</span>
+                </div>
+                <p>Completa las lecciones de cada módulo y supera su checkpoint de tres preguntas.</p>
+                <div class="course-checkpoint-list">${checkpointRows || '<p class="text-muted">Este curso no tiene checkpoints.</p>'}</div>
+            </section>
+            <section class="course-assessment-card course-project-card">
+                <div class="course-assessment-head">
+                    <div>
+                        <span class="course-side-eyebrow"><i class="fas fa-flag-checkered"></i> Proyecto final</span>
+                        <h4>${escapeHtml(course.finalProject?.title || 'Proyecto final')}</h4>
+                    </div>
+                    <span class="course-assessment-badge${projectComplete ? ' is-complete' : ''}">${projectComplete ? 'Completado' : 'Pendiente'}</span>
+                </div>
+                <p>${escapeHtml(course.finalProject?.description || '')}</p>
+                ${projectMarkup}
+            </section>
+        </div>
+    `;
+}
+
+function openModuleCheckpoint(courseId, moduleId) {
+    const course = getCourseById(courseId);
+    const module = course?.modules?.find(item => item.id === moduleId);
+    const questions = getModuleCheckpointQuestions(courseId, moduleId);
+    const modal = document.getElementById('checkpointModal');
+    const body = document.getElementById('checkpointBody');
+    if (!course || !module || !modal || !body) return;
+    if (!questions.length) {
+        showToast('warning', 'Este checkpoint todavía no tiene preguntas.');
+        return;
+    }
+
+    if (!isModuleLessonsComplete(course, module)) {
+        showToast('info', 'Completa las lecciones del módulo antes de abrir su checkpoint.');
+        return;
+    }
+
+    currentCheckpoint = { courseId, moduleId };
+    document.getElementById('checkpointEyebrow').textContent = `${course.title} · ${module.title}`;
+    document.getElementById('checkpointTitle').textContent = isModuleCheckpointPassed(course, moduleId)
+        ? 'Checkpoint superado'
+        : 'Checkpoint del módulo';
+
+    if (isModuleCheckpointPassed(course, moduleId)) {
+        body.innerHTML = `
+            <div class="lesson-check-success">
+                <i class="fas fa-circle-check"></i>
+                <div>
+                    <strong>Checkpoint superado</strong>
+                    <p>Ya completaste esta comprobación. Puedes volver al temario para revisar el módulo.</p>
+                </div>
+            </div>
+            <div class="lesson-step-actions">
+                <button type="button" class="btn-secondary" onclick="closeCheckpointModal()">Cerrar</button>
+            </div>
+        `;
+        openModal(modal);
+        return;
+    }
+
+    const quizMarkup = questions.map((question, questionIndex) => `
+        <fieldset class="lesson-quiz-question">
+            <legend><span>${questionIndex + 1}</span> ${escapeHtml(question.question)}</legend>
+            <div class="lesson-quiz-options">
+                ${question.options.map((option, optionIndex) => `
+                    <label class="lesson-quiz-option">
+                        <input type="radio" name="checkpointQ${questionIndex}" value="${optionIndex}">
+                        <span>${escapeHtml(option)}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </fieldset>
+    `).join('');
+
+    body.innerHTML = `
+        <div class="lesson-check-intro">
+            <span class="course-side-eyebrow"><i class="fas fa-circle-check"></i> Checkpoint de ${escapeHtml(module.title)}</span>
+            <p>Responde las ${questions.length} preguntas. Puedes reintentarlo sin perder el progreso de las lecciones.</p>
+        </div>
+        <form id="checkpointForm" class="lesson-quiz" onsubmit="submitModuleCheckpoint(event)">
+            ${quizMarkup}
+            <button type="submit" class="btn-primary">Comprobar checkpoint <i class="fas fa-arrow-right"></i></button>
+        </form>
+        <div id="checkpointResult" class="challenge-result" aria-live="polite" hidden></div>
+    `;
+    openModal(modal);
+}
+
+function submitModuleCheckpoint(event) {
+    event.preventDefault();
+    const form = event.currentTarget || document.getElementById('checkpointForm');
+    const result = document.getElementById('checkpointResult');
+    if (!currentCheckpoint || !form || !result) return;
+
+    const course = getCourseById(currentCheckpoint.courseId);
+    const questions = getModuleCheckpointQuestions(currentCheckpoint.courseId, currentCheckpoint.moduleId);
+    const answers = questions.map((_, index) => (
+        form.querySelector(`input[name="checkpointQ${index}"]:checked`)
+    ));
+
+    result.hidden = false;
+    if (answers.some(answer => !answer)) {
+        result.className = 'challenge-result warning';
+        result.innerHTML = '<strong><i class="fas fa-circle-exclamation"></i> Faltan respuestas</strong> Responde todas las preguntas antes de comprobar.';
+        return;
+    }
+
+    const wrong = answers
+        .map((answer, index) => Number(answer.value) === questions[index].answer ? null : index)
+        .filter(index => index !== null);
+
+    if (wrong.length) {
+        result.className = 'challenge-result error';
+        result.innerHTML = `
+            <strong><i class="fas fa-circle-xmark"></i> Revisa tus respuestas</strong>
+            <p>Preguntas por revisar: ${wrong.map(index => index + 1).join(', ')}.</p>
+            <ul>${wrong.map(index => `<li>${escapeHtml(questions[index].explanation)}</li>`).join('')}</ul>
+        `;
+        playSound('error');
+        return;
+    }
+
+    markModuleCheckpointPassed(course, currentCheckpoint.moduleId);
+    playSound('success');
+    const courseId = currentCheckpoint.courseId;
+    closeCheckpointModal();
+    if (currentCourseView === 'detail' && currentCourseId === courseId) {
+        renderCourseDetail(courseId);
+    } else {
+        renderCourseCatalog();
+    }
+    showToast('success', 'Checkpoint superado.');
+}
+
+function closeCheckpointModal() {
+    currentCheckpoint = null;
+    closeModal(document.getElementById('checkpointModal'));
+}
+
+function focusCourseAssessment() {
+    const grid = document.querySelector('#courseDetailView .course-assessment-grid');
+    if (!grid) return;
+    if (typeof grid.scrollIntoView === 'function') {
+        grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const firstAction = grid.querySelector('.course-checkpoint-row button:not([disabled])');
+    if (firstAction) firstAction.focus();
+}
+
+function completeCourseProject(courseId) {
+    const course = getCourseById(courseId);
+    const criteria = course?.finalProject?.criteria || [];
+    if (!course) return;
+    if (!criteria.length) {
+        showToast('warning', 'Este curso no tiene criterios de proyecto.');
+        return;
+    }
+
+    const checked = criteria.map((_, index) => (
+        document.getElementById(`projectCriterion-${courseId}-${index}`)?.checked
+    ));
+    if (checked.some(value => !value)) {
+        showToast('warning', 'Marca todos los criterios del proyecto antes de completarlo.');
+        return;
+    }
+
+    markCourseProjectCompleted(course, criteria);
+    playSound('success');
+    if (currentCourseView === 'detail' && currentCourseId === courseId) {
+        renderCourseDetail(courseId);
+    } else {
+        renderCourseCatalog();
+    }
+    showToast('success', 'Proyecto final completado.');
 }
 
 function renderCourseDetail(courseId) {
@@ -8706,6 +9037,8 @@ function renderCourseDetail(courseId) {
     setCourseView('detail');
 
     const progress = getCourseProgress(course);
+    const completion = getCourseCompletionState(course);
+    const needsAssessment = progress.percent === 100 && !completion.complete;
     const lessons = getCourseLessons(course);
     const lessonIndexById = new Map(lessons.map((lesson, index) => [lesson.id, index]));
     const moduleMarkup = course.modules.map((module, moduleIndex) => {
@@ -8777,7 +9110,7 @@ function renderCourseDetail(courseId) {
                     <span><i class="fas fa-layer-group"></i> ${course.modules.length} módulos</span>
                     <span><i class="fas fa-list-check"></i> ${lessons.length} lecciones</span>
                 </div>
-                <p class="course-detail-flow"><i class="fas fa-bolt"></i> Cada lección combina teoría breve, demostración, práctica y comprobación.</p>
+                <p class="course-detail-flow"><i class="fas fa-bolt"></i> Cada lección combina teoría breve, demostración, práctica y comprobación; después, checkpoints y proyecto final.</p>
             </div>
             <div class="course-detail-score">
                 <strong>${progress.percent}%</strong>
@@ -8810,10 +9143,13 @@ function renderCourseDetail(courseId) {
                 ` : ''}
             </aside>
         </div>
+        ${renderCourseAssessment(course)}
         <div class="course-detail-actions">
-            <button type="button" class="btn-primary" data-course-start="${escapeHtml(course.id)}">
-                ${progress.percent === 100 ? 'Repasar curso' : hasCourseStarted(course) ? 'Continuar curso' : 'Comenzar curso'} <i class="fas fa-arrow-right"></i>
-            </button>
+            ${needsAssessment
+                ? `<button type="button" class="btn-primary" onclick="focusCourseAssessment()">Completar evaluación <i class="fas fa-arrow-down"></i></button>`
+                : `<button type="button" class="btn-primary" data-course-start="${escapeHtml(course.id)}">
+                    ${completion.complete ? 'Repasar curso' : hasCourseStarted(course) ? 'Continuar curso' : 'Comenzar curso'} <i class="fas fa-arrow-right"></i>
+                </button>`}
             <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
         </div>
     `;
@@ -9023,11 +9359,7 @@ function renderCourseProgressSection() {
             <div class="progress-course-grid">
                 ${courses.map(course => {
                     const progress = getCourseProgress(course);
-                    const status = progress.percent === 100
-                        ? 'Completado'
-                        : hasCourseStarted(course)
-                            ? 'En progreso'
-                            : 'Sin empezar';
+                    const status = getCourseStatusLabel(course, progress);
                     return `
                         <button type="button" class="progress-course-card" onclick="openCourse('${escapeHtml(course.id)}')">
                             <span class="progress-course-icon"><i class="fas ${escapeHtml(course.icon || 'fa-graduation-cap')}"></i></span>
@@ -9714,6 +10046,7 @@ function refreshLearningPath(options = {}) {
 function initLearningPath() {
     loadLearningPathProgress();
     loadNoSQLCourseProgress();
+    loadCourseAssessment();
     currentCourseId = loadActiveCourse()
         || getCourses().find(course => course.recommended)?.id
         || getCourses()[0]?.id

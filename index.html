@@ -89,7 +89,7 @@
                 <div>
                     <span class="path-cta-eyebrow"><i class="fas fa-graduation-cap"></i> Cursos guiados</span>
                     <h3>Aprende SQL y NoSQL con misiones cortas</h3>
-                    <p>Cuatro cursos con teoría breve, demostraciones, práctica y quiz. Elige Escuela, Tienda o Biblioteca y avanza desde cero hasta CTE, rankings y documentos.</p>
+                    <p>Cuatro cursos con teoría breve, práctica, quiz, checkpoints y proyecto final. Elige Escuela, Tienda o Biblioteca y avanza desde cero hasta CTE, rankings y documentos.</p>
                 </div>
                 <button type="button" id="pathCtaBtn" class="btn-primary" onclick="openLearningPath()">
                     Explorar cursos <i class="fas fa-arrow-right"></i>
@@ -1411,6 +1411,20 @@
         </div>
     </div>
 
+    <!-- ===== MODAL DE CHECKPOINT DE MÓDULO ===== -->
+    <div id="checkpointModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="checkpointTitle">
+        <div class="modal-content checkpoint-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span id="checkpointEyebrow" class="install-guide-eyebrow">Checkpoint</span>
+                    <h2 id="checkpointTitle">Checkpoint del módulo</h2>
+                </div>
+                <button type="button" onclick="closeCheckpointModal()" class="modal-close" aria-label="Cerrar checkpoint">&times;</button>
+            </div>
+            <div class="modal-body" id="checkpointBody" aria-live="polite"></div>
+        </div>
+    </div>
+
     <!-- ===== GUÍA DE PRIMEROS PASOS EN SQL ===== -->
 <div id="sqlGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="sqlGuideTitle">
     <div class="modal-content" style="max-width: 750px; max-height: 90vh;">
@@ -1491,6 +1505,7 @@
     <script src="install-guides.js"></script>
     <script src="courses.js"></script>
     <script src="course-content.js"></script>
+    <script src="checkpoint-content.js"></script>
 
     <!-- Motor documental del laboratorio NoSQL -->
     <script src="nosql-engine.js"></script>

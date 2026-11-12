@@ -15,7 +15,7 @@ const { document } = window;
 window.confirm = () => true;
 window.requestAnimationFrame = () => 0;
 
-for (const file of ['datasets.js', 'nosql-datasets.js', 'install-guides.js', 'courses.js', 'course-content.js', 'nosql-engine.js', 'script.js']) {
+for (const file of ['datasets.js', 'nosql-datasets.js', 'install-guides.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'nosql-engine.js', 'script.js']) {
     window.eval(fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'));
 }
 
@@ -26,9 +26,19 @@ function clearCourseProgress(dataset = 'escuela') {
     window.loadPreferences();
     window.localStorage.removeItem('sql-academy-path-v1');
     window.localStorage.removeItem('sql-academy-nosql-course-v1');
+    window.localStorage.removeItem('sql-academy-course-assessment-v1');
     window.loadLearningPathProgress();
     window.loadNoSQLCourseProgress();
+    window.loadCourseAssessment();
     window.startCourse('sql-desde-cero');
+}
+
+function completeCourseAssessments(courseId) {
+    const course = window.getCourseById(courseId);
+    for (const module of course.modules || []) {
+        window.markModuleCheckpointPassed(course, module.id);
+    }
+    window.markCourseProjectCompleted(course, course.finalProject?.criteria || []);
 }
 
 test('el catálogo de cursos usa las lecciones sin duplicados', () => {
@@ -135,6 +145,7 @@ test('al completar un curso se ofrece el siguiente', () => {
     for (const lessonId of ['select', 'where', 'order', 'limit']) {
         window.markLearningLessonCompleted(lessonId);
     }
+    completeCourseAssessments('sql-desde-cero');
     window.startCourse('sql-desde-cero');
     window.selectLearningLesson('limit');
     window.goToLessonStep('check');
@@ -147,6 +158,7 @@ test('al completar un curso se ofrece el siguiente', () => {
     for (const lessonId of ['join', 'group', 'having', 'subquery']) {
         window.markLearningLessonCompleted(lessonId);
     }
+    completeCourseAssessments('sql-intermedio');
     window.startCourse('sql-intermedio');
     window.selectLearningLesson('subquery');
     window.goToLessonStep('check');
@@ -156,6 +168,7 @@ test('al completar un curso se ofrece el siguiente', () => {
     for (const lessonId of ['case', 'cte', 'rank']) {
         window.markLearningLessonCompleted(lessonId);
     }
+    completeCourseAssessments('sql-avanzado');
     window.startCourse('sql-avanzado');
     window.selectLearningLesson('rank');
     window.goToLessonStep('check');
@@ -341,4 +354,60 @@ test('Cursos sincroniza los selectores de dataset SQL y NoSQL', () => {
     window.syncCourseDatasetControls();
     assert.equal(sqlSelector.value, 'escuela');
     assert.equal(nosqlSelector.value, 'escuela');
+});
+
+test('cada módulo tiene un checkpoint de tres preguntas válidas', () => {
+    for (const course of window.SQL_ACADEMY_COURSES) {
+        const courseCheckpoints = window.COURSE_CHECKPOINTS[course.id];
+        assert.ok(courseCheckpoints, `${course.id}: checkpoints`);
+        assert.ok(course.finalProject?.criteria?.length > 0, `${course.id}: criterios del proyecto`);
+        for (const module of course.modules) {
+            const questions = courseCheckpoints[module.id];
+            assert.equal(questions.length, 3, `${course.id}/${module.id}: preguntas`);
+            for (const question of questions) {
+                assert.ok(question.question);
+                assert.ok(question.options.length >= 2);
+                assert.ok(Number.isInteger(question.answer));
+                assert.ok(question.answer >= 0 && question.answer < question.options.length);
+                assert.ok(question.explanation);
+            }
+        }
+    }
+});
+
+test('un checkpoint se desbloquea tras el módulo y el proyecto exige sus criterios', () => {
+    clearCourseProgress();
+    const course = window.getCourseById('sql-desde-cero');
+
+    window.openModuleCheckpoint(course.id, 'primeros-pasos');
+    assert.equal(document.getElementById('checkpointModal').classList.contains('active'), false);
+
+    for (const lessonId of ['select', 'where']) {
+        window.markLearningLessonCompleted(lessonId);
+    }
+    window.renderCourseDetail(course.id);
+    window.openModuleCheckpoint(course.id, 'primeros-pasos');
+
+    const modal = document.getElementById('checkpointModal');
+    const form = document.getElementById('checkpointForm');
+    assert.equal(modal.classList.contains('active'), true);
+    assert.ok(form);
+
+    const questions = window.COURSE_CHECKPOINTS[course.id]['primeros-pasos'];
+    questions.forEach((question, index) => {
+        form.querySelector(`input[name="checkpointQ${index}"][value="${question.answer}"]`).checked = true;
+    });
+    window.submitModuleCheckpoint({ preventDefault() {}, currentTarget: form });
+
+    assert.equal(modal.classList.contains('active'), false);
+    assert.equal(window.isModuleCheckpointPassed(course, 'primeros-pasos'), true);
+
+    window.renderCourseDetail(course.id);
+    const criteria = course.finalProject.criteria;
+    criteria.forEach((_, index) => {
+        document.getElementById(`projectCriterion-${course.id}-${index}`).checked = true;
+    });
+    window.completeCourseProject(course.id);
+
+    assert.equal(window.isCourseProjectCompleted(course), true);
 });

@@ -20,7 +20,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
-- Cursos guiados con tres itinerarios SQL y uno NoSQL, 15 lecciones teórico-prácticas, demostraciones ejecutables, quizzes, progreso por etapas y selector de dataset.
+- Cursos guiados con tres itinerarios SQL y uno NoSQL, 15 lecciones teórico-prácticas, quizzes, checkpoints de módulo, proyecto final evaluable, progreso por etapas y selector de dataset.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
 - Guías de instalación paso a paso para doce gestores SQL y NoSQL, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
 - Panel **Mi progreso** con avance por curso, dominio por concepto SQL, progreso por dataset, actividad reciente y recomendaciones.
@@ -100,6 +100,7 @@ sql-academy/
 ├── install-guides.js           # Guías de instalación por gestor y sistema operativo
 ├── courses.js                  # Catálogo de cursos, módulos, proyectos y perfiles NoSQL
 ├── course-content.js           # Teoría, demostraciones, errores y quizzes por lección
+├── checkpoint-content.js       # Preguntas de los checkpoints de módulo
 ├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
 ├── datasets.js                 # Datasets Tienda y Biblioteca
 ├── service-worker.js           # Caché PWA y estrategia de red
@@ -278,7 +279,9 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Teoría breve:** objetivos, tarjetas de concepto, sintaxis, ejemplo anotado, demostración ejecutable y errores comunes.
 - **Práctica guiada:** editor propio, pista bajo demanda y validación por resultado.
 - **Quiz obligatorio:** dos preguntas por lección con explicación; la lección se completa al aprobarlas.
-- **Progreso por etapas:** concepto leído, práctica superada y quiz aprobado se guardan por dataset.
+- **Checkpoints de módulo:** tres preguntas por módulo que se desbloquean al completar sus lecciones.
+- **Proyecto final evaluable:** criterios comprobables por el estudiante antes de marcar el proyecto como completado.
+- **Progreso por etapas:** concepto leído, práctica superada, quiz aprobado, checkpoints y proyecto se guardan por dataset.
 - **SQL y NoSQL en el mismo flujo:** las lecciones SQL usan la base relacional y **NoSQL esencial** usa la consola documental.
 - **Temario claro:** módulos con descripción, lecciones completadas y acceso directo a cada práctica.
 - **Proyecto final:** cada curso propone un mini reporte o catálogo para combinar lo aprendido y explicar la pregunta que responde.
@@ -458,6 +461,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.20.0
+
+- **Checkpoints de módulo:** tres preguntas por módulo tras completar sus lecciones.
+- **Desbloqueo progresivo:** cada checkpoint se habilita cuando el módulo correspondiente está terminado.
+- **Proyecto final evaluable:** criterios por curso y confirmación del estudiante antes de completarlo.
+- **Curso completo:** el avance final exige lecciones, checkpoints y proyecto, no solo el editor.
+- **Progreso por dataset:** los checkpoints y el proyecto se guardan por separado para SQL y NoSQL.
+- **Interfaz:** nuevas tarjetas de evaluación en el temario y modal de checkpoint con reintento.
+- **Calidad:** pruebas de checkpoints, proyecto, desbloqueo y finalización, y caché PWA `v37`.
 
 ### v1.19.0
 

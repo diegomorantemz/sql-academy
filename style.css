@@ -11054,3 +11054,196 @@ button:disabled {
         margin-left: 0;
     }
 }
+
+/* ===== CHECKPOINTS DE MÓDULO Y PROYECTO FINAL ===== */
+.course-assessment-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    gap: 16px;
+    align-items: start;
+    margin-top: 16px;
+}
+
+.course-assessment-card {
+    padding: 15px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.course-assessment-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.course-assessment-head h4 {
+    margin: 3px 0 0;
+    color: var(--text-strong);
+    font-size: 14px;
+}
+
+.course-assessment-card > p {
+    margin: 7px 0 0;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.course-assessment-badge {
+    flex: 0 0 auto;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: #fff5e5;
+    color: #9a6100;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.course-assessment-badge.is-complete {
+    background: #e8f7ee;
+    color: #1e7e34;
+}
+
+.course-checkpoint-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.course-checkpoint-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 9px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+}
+
+.course-checkpoint-row.passed {
+    border-left: 3px solid #28a745;
+}
+
+.course-checkpoint-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface-strong);
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.course-checkpoint-row.passed .course-checkpoint-index {
+    background: #e8f7ee;
+    color: #1e7e34;
+}
+
+.course-checkpoint-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.course-checkpoint-copy strong {
+    overflow-wrap: anywhere;
+    color: var(--text-strong);
+    font-size: 11.5px;
+}
+
+.course-checkpoint-copy span {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.course-checkpoint-row .btn-sm {
+    flex: 0 0 auto;
+    padding: 4px 7px;
+    font-size: 9.5px;
+}
+
+.course-project-criteria {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.course-project-criterion {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 7px 8px;
+    color: var(--text-muted);
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    font-size: 11px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.course-project-criterion input {
+    margin-top: 2px;
+    accent-color: var(--postgres-blue);
+}
+
+.course-project-card .btn-primary {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.checkpoint-modal-content {
+    max-width: 700px;
+}
+
+[data-theme="dark"] .course-assessment-card {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .course-assessment-head h4,
+[data-theme="dark"] .course-checkpoint-copy strong {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .course-assessment-card > p,
+[data-theme="dark"] .course-checkpoint-copy span,
+[data-theme="dark"] .course-project-criterion {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .course-checkpoint-row,
+[data-theme="dark"] .course-project-criterion {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .course-assessment-badge {
+    background: #78350f;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .course-assessment-badge.is-complete {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+@media (max-width: 800px) {
+    .course-assessment-grid {
+        grid-template-columns: 1fr;
+    }
+}

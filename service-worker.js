@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'sql-academy-v36';
+const CACHE_VERSION = 'sql-academy-v37';
 const APP_SHELL = [
     './',
     './index.html',
@@ -8,6 +8,7 @@ const APP_SHELL = [
     './install-guides.js',
     './courses.js',
     './course-content.js',
+    './checkpoint-content.js',
     './nosql-engine.js',
     './script.js',
     './nosql.js',

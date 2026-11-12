@@ -36,7 +36,12 @@ window.SQL_ACADEMY_COURSES = [
         practiceConcepts: ['where', 'order'],
         finalProject: {
             title: 'Mini reporte de estudiantes',
-            description: 'Elige un dataset, muestra dos columnas útiles, filtra un grupo y presenta un top 5. No hay una única respuesta: combina lo aprendido y explica qué pregunta responde tu consulta.'
+            description: 'Elige un dataset, muestra dos columnas útiles, filtra un grupo y presenta un top 5. No hay una única respuesta: combina lo aprendido y explica qué pregunta responde tu consulta.',
+            criteria: [
+                'Usé SELECT con columnas concretas.',
+                'Apliqué un filtro con WHERE.',
+                'Ordené el resultado y expliqué qué pregunta responde.'
+            ]
         }
     },
     {
@@ -80,7 +85,12 @@ window.SQL_ACADEMY_COURSES = [
         practiceConcepts: ['join', 'group', 'having', 'subquery'],
         finalProject: {
             title: 'Panel de análisis',
-            description: 'Combina dos tablas, agrupa por una categoría, calcula un total y muestra solo los grupos que superan un umbral. Ordena el resultado para presentarlo como un pequeño panel de análisis.'
+            description: 'Combina dos tablas, agrupa por una categoría, calcula un total y muestra solo los grupos que superan un umbral. Ordena el resultado para presentarlo como un pequeño panel de análisis.',
+            criteria: [
+                'Usé JOIN con una condición válida.',
+                'Agrupé y filtré con GROUP BY y HAVING.',
+                'Presenté el resultado ordenado y expliqué el hallazgo.'
+            ]
         }
     },
     {
@@ -124,7 +134,12 @@ window.SQL_ACADEMY_COURSES = [
         practiceConcepts: [],
         finalProject: {
             title: 'Reporte avanzado',
-            description: 'Clasifica las filas de un dataset, resume sus grupos con una CTE y genera un ranking por categoría. Explica qué decisiones tomaste para ordenar y presentar el resultado.'
+            description: 'Clasifica las filas de un dataset, resume sus grupos con una CTE y genera un ranking por categoría. Explica qué decisiones tomaste para ordenar y presentar el resultado.',
+            criteria: [
+                'Clasifiqué filas con CASE.',
+                'Organicé un paso intermedio con una CTE.',
+                'Generé y ordené un ranking con ROW_NUMBER.'
+            ]
         }
     },
     {
@@ -174,7 +189,12 @@ window.SQL_ACADEMY_COURSES = [
         practiceConcepts: [],
         finalProject: {
             title: 'Mini catálogo documental',
-            description: 'Elige una colección, muestra solo los campos necesarios, filtra por una condición, ordena el resultado y agrupa por una categoría. Explica qué decisión de modelado tomaste y por qué.'
+            description: 'Elige una colección, muestra solo los campos necesarios, filtra por una condición, ordena el resultado y agrupa por una categoría. Explica qué decisión de modelado tomaste y por qué.',
+            criteria: [
+                'Usé find con una proyección de campos.',
+                'Apliqué un filtro y ordené los documentos.',
+                'Agrupé con aggregate y expliqué el resultado.'
+            ]
         }
     }
 ];
