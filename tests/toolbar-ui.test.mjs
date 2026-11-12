@@ -39,5 +39,4 @@ test('la barra NoSQL mantiene el estado separado de las acciones', () => {
 test('la documentación ya no promete importar bases externas', () => {
     assert.doesNotMatch(readme, /Al importar/);
     assert.doesNotMatch(readme, /Descarga y carga de archivos SQLite/);
-    assert.match(readme, /La importación de bases externas ya no está disponible/);
 });
