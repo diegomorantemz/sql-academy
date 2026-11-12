@@ -58,8 +58,8 @@ Mensaje: "No validamos texto: validamos el resultado real de la consulta."
 
 ### 4:15 — Progreso
 
-1. Abrir **Ruta → Mi progreso**.
-2. Mostrar el perfil SQL/NoSQL, actividades, conceptos y siguiente paso.
+1. Abrir **Cursos → Mi progreso**.
+2. Mostrar el avance por curso, el perfil SQL/NoSQL, actividades, conceptos y siguiente paso.
 3. Mostrar el reporte de aprendizaje.
 
 Mensaje: "El estudiante ve su avance y puede imprimir un reporte tangible."
@@ -101,6 +101,7 @@ Mensaje clave:
 - **Bajo costo:** funciona en el navegador y no necesita servidores para las consultas.
 - **Privacidad:** los datos de práctica se quedan en el dispositivo.
 - **Accesibilidad:** interfaz responsive, modo oscuro y navegación por teclado.
+- **Cursos guiados:** dos itinerarios SQL con misiones cortas, proyectos finales y continuación clara hacia el siguiente curso.
 - **Continuidad:** guías de instalación para doce gestores, con rutas por sistema operativo, para pasar de practicar en el navegador a un entorno local.
 - **Escalabilidad educativa:** puede crecer hacia aulas, rutas personalizadas y reportes docentes.
 
@@ -117,7 +118,7 @@ Mensaje clave:
 
 ### ¿Esto es solo un editor SQL?
 
-No. Incluye test de nivel, ruta guiada, ejemplos adaptados, retos, depuración, laboratorio NoSQL, juego, análisis de datos, progreso y reportes.
+No. Incluye test de nivel, cursos guiados, ejemplos adaptados, retos, depuración, laboratorio NoSQL, juego, análisis de datos, progreso y reportes.
 
 ### ¿Cómo se adapta al estudiante?
 
@@ -137,7 +138,7 @@ No. El asistente recibe la consulta, el error y el esquema de la base. Nunca los
 
 ### ¿En qué se diferencia de ChatGPT?
 
-SQL Academy tiene una secuencia pedagógica, ejercicios validados, una base de datos real y progreso persistente. ChatGPT puede explicar, pero no comprobar el resultado de una consulta contra una base real ni acompañar una ruta estructurada.
+SQL Academy tiene una secuencia pedagógica, ejercicios validados, una base de datos real y progreso persistente. ChatGPT puede explicar, pero no comprobar el resultado de una consulta contra una base real ni acompañar un curso estructurado.
 
 ### ¿Es gratis?
 
@@ -170,7 +171,7 @@ Donaciones voluntarias y, más adelante, licencias comerciales, planes para aula
 ## Métricas para mencionar
 
 - 3 datasets SQL y 3 datasets NoSQL.
-- 8 lecciones por dataset.
+- 2 cursos guiados y 8 lecciones por dataset.
 - Retos SQL, NoSQL y de depuración.
 - 6 pisos en Torre de Datos.
 - 12 guías de instalación con rutas para Windows, macOS, Linux y Docker.

@@ -53,6 +53,7 @@ window.localStorage.setItem(
     JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
 );
 window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
 window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 await new Promise(resolve => setTimeout(resolve, 30));
@@ -211,28 +212,28 @@ test('los ejemplos de la ruta no resuelven el ejercicio directamente', () => {
     }
 });
 
-test('la ruta renderiza pasos, editor, dataset y progreso', () => {
+test('el curso renderiza pasos, editor, dataset y progreso', () => {
     window.localStorage.setItem(
         'sql-academy-preferences-v1',
         JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
     );
     window.loadPreferences();
-    window.refreshLearningPath({ selectFirst: true });
+    window.startCourse('sql-desde-cero');
 
-    assert.equal(document.querySelectorAll('#pathLessonList [data-learning-lesson]').length, 8);
+    assert.equal(document.querySelectorAll('#pathLessonList [data-learning-lesson]').length, 4);
     assert.match(document.getElementById('pathDatasetLabel').textContent, /Tienda/);
-    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 8');
+    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
     assert.ok(document.getElementById('pathEditor'));
     assert.match(document.getElementById('pathEditor').value, /productos/);
 
     window.markLearningLessonCompleted('select');
     window.renderLearningPathList();
 
-    assert.equal(document.getElementById('pathProgressText').textContent, '1 de 8');
+    assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
     assert.equal(document.querySelectorAll('#pathLessonList .completed').length, 1);
 
     window.resetLearningProgress();
-    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 8');
+    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
 });
 
 test('el dashboard muestra progreso, conceptos, actividad y recomendación', () => {
@@ -296,13 +297,13 @@ test('runLearningLesson valida una consulta y muestra el siguiente paso', () => 
     const { database, adapter } = createSqliteAdapter(window.SQL_ACADEMY_DATASETS.tienda.sql);
 
     try {
-        window.refreshLearningPath({ selectFirst: true });
+        window.startCourse('sql-desde-cero');
         const editor = document.getElementById('pathEditor');
         editor.value = 'SELECT nombre, precio FROM productos;';
         window.runLearningLesson(adapter, true);
 
         assert.match(document.getElementById('pathResult').textContent, /Lección completada/);
-        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 8');
+        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
         assert.equal(document.getElementById('pathNext').hidden, false);
 
         window.selectLearningLesson('where');
@@ -310,7 +311,7 @@ test('runLearningLesson valida una consulta y muestra el siguiente paso', () => 
         window.runLearningLesson(adapter, true);
 
         assert.match(document.getElementById('pathResult').textContent, /Todavía no/);
-        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 8');
+        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
     } finally {
         database.close();
     }

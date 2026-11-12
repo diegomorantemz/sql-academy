@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
     preferences: 'sql-academy-preferences-v1',
     challenges: 'sql-academy-challenges-v1',
     learningPath: 'sql-academy-path-v1',
+    activeCourse: 'sql-academy-active-course-v1',
     skillProfile: 'sql-academy-skill-profile-v1'
 };
 const PERSIST_DB_NAME = 'sql-academy';
@@ -5721,6 +5722,8 @@ let challengeProgress = {};
 let selectedNoSQLChallengeId = null;
 let learningPathProgress = {};
 let currentLearningLessonId = null;
+let currentCourseId = null;
+let currentCourseView = 'catalog';
 let learningPathEventsBound = false;
 
 function loadChallengeProgress() {
@@ -7231,8 +7234,8 @@ const DEMO_TOUR_STEPS = [
         section: 'challenges'
     },
     {
-        title: 'Revisa tu progreso',
-        description: 'Consulta tu nivel, las actividades completadas, los conceptos dominados y el siguiente paso recomendado.',
+        title: 'Sigue tus cursos',
+        description: 'Consulta tu nivel, el avance por curso, las actividades completadas y el siguiente paso recomendado.',
         section: 'path',
         progress: true,
         target: 'learningProgressDashboard'
@@ -7733,6 +7736,72 @@ function getLearningLevelClass(level) {
     return 'avanzado';
 }
 
+function getCourses() {
+    return Array.isArray(window.SQL_ACADEMY_COURSES) ? window.SQL_ACADEMY_COURSES : [];
+}
+
+function getCourseById(id) {
+    return getCourses().find(course => course.id === id) || null;
+}
+
+function getCourseLessonIds(course) {
+    return (course?.modules || []).flatMap(module => Array.isArray(module.lessonIds) ? module.lessonIds : []);
+}
+
+function getCourseLessons(course = getActiveCourse(), datasetName = getLearningDatasetName()) {
+    if (!course) return [];
+    const lessonsById = new Map(getLearningLessonsForDataset(datasetName).map(lesson => [lesson.id, lesson]));
+    return getCourseLessonIds(course)
+        .map(id => lessonsById.get(id))
+        .filter(Boolean);
+}
+
+function getCourseForLesson(lessonId) {
+    return getCourses().find(course => getCourseLessonIds(course).includes(lessonId)) || null;
+}
+
+function getActiveCourse() {
+    return getCourseById(currentCourseId)
+        || getCourses().find(course => course.recommended)
+        || getCourses()[0]
+        || null;
+}
+
+function getActiveCourseLessons() {
+    return getCourseLessons(getActiveCourse());
+}
+
+function getCourseModuleForLesson(course, lessonId) {
+    return (course?.modules || []).find(module => (module.lessonIds || []).includes(lessonId)) || null;
+}
+
+function getCourseProgress(course = getActiveCourse(), datasetName = getLearningDatasetName()) {
+    const lessons = getCourseLessons(course, datasetName);
+    const completed = lessons.filter(lesson => (
+        isLearningLessonCompletedForDataset(lesson.id, datasetName)
+    )).length;
+    return {
+        total: lessons.length,
+        completed,
+        percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0
+    };
+}
+
+function getNextCourse(courseId) {
+    const courses = getCourses();
+    const index = courses.findIndex(course => course.id === courseId);
+    return index >= 0 ? courses[index + 1] || null : null;
+}
+
+function loadActiveCourse() {
+    const stored = readStoredJSON(STORAGE_KEYS.activeCourse, '');
+    return getCourseById(stored) ? stored : null;
+}
+
+function saveActiveCourse() {
+    writeStoredJSON(STORAGE_KEYS.activeCourse, currentCourseId || '');
+}
+
 function loadLearningPathProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.learningPath, {});
     learningPathProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
@@ -7914,18 +7983,21 @@ function getLearningRecommendation() {
         !isLearningLessonCompletedForDataset(lesson.id, datasetName)
     ));
     if (nextLesson) {
-        const completedLessons = lessons.filter(lesson => (
-            isLearningLessonCompletedForDataset(lesson.id, datasetName)
-        )).length;
+        const course = getCourseForLesson(nextLesson.id);
+        const courseLessons = course ? getCourseLessons(course, datasetName) : lessons;
+        const completedLessons = course
+            ? getCourseProgress(course, datasetName).completed
+            : lessons.filter(lesson => isLearningLessonCompletedForDataset(lesson.id, datasetName)).length;
+        const lessonIndex = Math.max(0, courseLessons.findIndex(lesson => lesson.id === nextLesson.id));
         return {
             kind: 'lesson',
             title: nextLesson.title,
             message: completedLessons > 0
-                ? `Continúa la ruta de ${profile.name} con la lección ${lessons.indexOf(nextLesson) + 1}.`
-                : `Empieza la ruta de ${profile.name} con la lección ${lessons.indexOf(nextLesson) + 1}.`,
+                ? `Continúa ${course?.title || 'tu curso'} en ${profile.name} con la lección ${lessonIndex + 1}.`
+                : `Empieza ${course?.title || 'tu curso'} en ${profile.name} con la lección ${lessonIndex + 1}.`,
             action: completedLessons > 0 ? 'Continuar lección' : 'Comenzar lección',
             onclick: `continueLearningLesson('${nextLesson.id}')`,
-            icon: 'fa-route'
+            icon: 'fa-graduation-cap'
         };
     }
 
@@ -7952,7 +8024,7 @@ function getLearningRecommendation() {
     if (otherDataset) {
         return {
             kind: 'dataset',
-            title: `Ruta de ${profile.name} completada`,
+            title: `Cursos de ${profile.name} completados`,
             message: `Ya completaste este dataset. Cambia a ${LEARNING_PATH_PROFILES[otherDataset].name} desde Practicar para seguir avanzando.`,
             action: 'Ir a Practicar',
             onclick: "activateSection('practice')",
@@ -7970,6 +8042,323 @@ function getLearningRecommendation() {
     };
 }
 
+function updateCourseCta() {
+    const button = document.getElementById('pathCtaBtn');
+    if (!button) return;
+    const started = getCourses().some(course => getCourseProgress(course).completed > 0);
+    button.innerHTML = started
+        ? 'Continuar cursos <i class="fas fa-arrow-right"></i>'
+        : 'Explorar cursos <i class="fas fa-arrow-right"></i>';
+}
+
+function setCourseView(view) {
+    currentCourseView = ['catalog', 'detail', 'player'].includes(view) ? view : 'catalog';
+    const views = {
+        catalog: document.getElementById('courseCatalogView'),
+        detail: document.getElementById('courseDetailView'),
+        player: document.getElementById('coursePlayerView')
+    };
+    Object.entries(views).forEach(([name, element]) => {
+        if (!element) return;
+        const active = name === currentCourseView;
+        element.hidden = !active;
+        element.classList.toggle('active', active);
+    });
+}
+
+function renderCourseCatalog() {
+    const container = document.getElementById('courseCatalogView');
+    if (!container) return;
+
+    const courses = getCourses();
+    const profile = getLearningProfile();
+    setCourseView('catalog');
+    updateCourseCta();
+
+    if (!courses.length) {
+        container.innerHTML = '<div class="challenge-empty"><i class="fas fa-graduation-cap"></i><h3>No hay cursos disponibles.</h3><p>Vuelve a cargar la página para preparar el catálogo.</p></div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="course-catalog-hero">
+            <div>
+                <span class="course-eyebrow"><i class="fas fa-graduation-cap"></i> Aprende haciendo</span>
+                <h3>Elige tu siguiente misión</h3>
+                <p>Lecciones cortas, ejemplos que puedes ejecutar y un proyecto final. Tu progreso se guarda en cada dataset.</p>
+            </div>
+            <div class="course-catalog-dataset">
+                <span>Dataset activo</span>
+                <strong>${escapeHtml(profile.name)}</strong>
+            </div>
+        </div>
+        <div class="course-grid">
+            ${courses.map(course => {
+                const progress = getCourseProgress(course);
+                const lessons = getCourseLessons(course);
+                const isActive = currentCourseId === course.id;
+                const status = progress.total === 0
+                    ? 'Sin lecciones'
+                    : progress.percent === 100
+                        ? 'Completado'
+                        : progress.completed > 0
+                            ? 'En progreso'
+                            : 'Sin empezar';
+                const cta = progress.percent === 100
+                    ? 'Repasar curso'
+                    : progress.completed > 0
+                        ? 'Continuar'
+                        : 'Comenzar';
+                const prerequisites = (course.prerequisites || []).length
+                    ? `<span class="course-card-prerequisite">Después de ${escapeHtml(course.prerequisites.join(', '))}</span>`
+                    : '';
+                return `
+                    <article class="course-card course-card-${escapeHtml(course.tone || 'blue')}${isActive ? ' is-active' : ''}">
+                        <div class="course-card-top">
+                            <span class="course-card-icon"><i class="fas ${escapeHtml(course.icon || 'fa-graduation-cap')}"></i></span>
+                            <div class="course-card-badges">
+                                ${course.recommended ? '<span class="course-card-recommended">Empieza aquí</span>' : ''}
+                                <span class="challenge-level ${getLearningLevelClass(course.level)}">${escapeHtml(course.level)}</span>
+                            </div>
+                        </div>
+                        <h3>${escapeHtml(course.title)}</h3>
+                        <p class="course-card-subtitle">${escapeHtml(course.subtitle)}</p>
+                        <p class="course-card-description">${escapeHtml(course.description)}</p>
+                        <div class="course-card-meta">
+                            <span><i class="fas fa-clock"></i> ${escapeHtml(course.duration)}</span>
+                            <span><i class="fas fa-layer-group"></i> ${course.modules.length} módulos</span>
+                            <span><i class="fas fa-list-check"></i> ${lessons.length} lecciones</span>
+                        </div>
+                        <div class="course-card-progress">
+                            <div class="course-card-progress-head">
+                                <span>${escapeHtml(status)}</span>
+                                <strong>${progress.completed} de ${progress.total}</strong>
+                            </div>
+                            <div class="course-card-progress-track" role="progressbar" aria-label="Progreso de ${escapeHtml(course.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}">
+                                <span style="width:${progress.percent}%"></span>
+                            </div>
+                        </div>
+                        ${prerequisites}
+                        <div class="course-card-actions">
+                            <button type="button" class="btn-secondary" data-course-open="${escapeHtml(course.id)}">Ver temario</button>
+                            <button type="button" class="btn-primary" data-course-start="${escapeHtml(course.id)}">${cta} <i class="fas fa-arrow-right"></i></button>
+                        </div>
+                    </article>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    container.querySelectorAll('[data-course-open]').forEach(button => {
+        button.addEventListener('click', () => openCourse(button.dataset.courseOpen));
+    });
+    container.querySelectorAll('[data-course-start]').forEach(button => {
+        button.addEventListener('click', () => startCourse(button.dataset.courseStart));
+    });
+}
+
+function renderCourseDetail(courseId) {
+    const container = document.getElementById('courseDetailView');
+    const course = getCourseById(courseId);
+    if (!container || !course) {
+        showCourseCatalog();
+        return;
+    }
+
+    currentCourseId = course.id;
+    saveActiveCourse();
+    updateCourseCta();
+    setCourseView('detail');
+
+    const progress = getCourseProgress(course);
+    const lessons = getCourseLessons(course);
+    const lessonIndexById = new Map(lessons.map((lesson, index) => [lesson.id, index]));
+    const moduleMarkup = course.modules.map((module, moduleIndex) => {
+        const moduleLessons = (module.lessonIds || [])
+            .map(id => lessons.find(lesson => lesson.id === id))
+            .filter(Boolean);
+        const completed = moduleLessons.filter(lesson => isLearningLessonCompleted(lesson.id)).length;
+        return `
+            <section class="course-module">
+                <div class="course-module-head">
+                    <div>
+                        <span>Módulo ${moduleIndex + 1}</span>
+                        <h4>${escapeHtml(module.title)}</h4>
+                        <p>${escapeHtml(module.description || '')}</p>
+                    </div>
+                    <strong>${completed}/${moduleLessons.length}</strong>
+                </div>
+                <div class="course-module-lessons">
+                    ${moduleLessons.map(lesson => {
+                        const index = lessonIndexById.get(lesson.id) ?? 0;
+                        const done = isLearningLessonCompleted(lesson.id);
+                        return `
+                            <button type="button" class="course-lesson-row${done ? ' completed' : ''}" data-course-lesson="${escapeHtml(lesson.id)}">
+                                <span class="course-lesson-index">${done ? '<i class="fas fa-check"></i>' : index + 1}</span>
+                                <span class="course-lesson-copy">
+                                    <strong>${escapeHtml(lesson.title)}</strong>
+                                    <span>${escapeHtml(lesson.level)} · Lección ${index + 1}</span>
+                                </span>
+                                <span class="course-lesson-status">${done ? 'Completada' : 'Abrir'}</span>
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            </section>
+        `;
+    }).join('');
+
+    const practiceButtons = (course.practiceConcepts || []).length ? `
+        <div class="course-practice-card">
+            <span class="course-side-eyebrow"><i class="fas fa-bullseye"></i> Práctica recomendada</span>
+            <p>Refuerza estos conceptos con práctica del dataset activo.</p>
+            <div class="course-practice-buttons">
+                ${course.practiceConcepts.map(concept => `
+                    <button type="button" class="btn-ghost btn-sm" data-course-practice="${escapeHtml(concept)}">
+                        ${escapeHtml(getConceptLabel(concept))} <i class="fas fa-arrow-right"></i>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    ` : '';
+
+    const finalProject = course.finalProject || null;
+    container.innerHTML = `
+        <button type="button" class="course-back-btn" onclick="showCourseCatalog()">
+            <i class="fas fa-arrow-left"></i> Volver a cursos
+        </button>
+        <div class="course-detail-hero course-detail-hero-${escapeHtml(course.tone || 'blue')}">
+            <div class="course-detail-icon"><i class="fas ${escapeHtml(course.icon || 'fa-graduation-cap')}"></i></div>
+            <div class="course-detail-copy">
+                <span class="course-eyebrow">${course.recommended ? 'Curso recomendado' : 'Curso guiado'}</span>
+                <h3>${escapeHtml(course.title)}</h3>
+                <p>${escapeHtml(course.description)}</p>
+                <div class="course-detail-meta">
+                    <span class="challenge-level ${getLearningLevelClass(course.level)}">${escapeHtml(course.level)}</span>
+                    <span><i class="fas fa-clock"></i> ${escapeHtml(course.duration)}</span>
+                    <span><i class="fas fa-layer-group"></i> ${course.modules.length} módulos</span>
+                    <span><i class="fas fa-list-check"></i> ${lessons.length} lecciones</span>
+                </div>
+                <p class="course-detail-flow"><i class="fas fa-bolt"></i> Cada lección es una misión corta: objetivo, ejemplo ejecutable y comprobación inmediata.</p>
+            </div>
+            <div class="course-detail-score">
+                <strong>${progress.percent}%</strong>
+                <span>${progress.completed} de ${progress.total}</span>
+            </div>
+        </div>
+        <div class="course-detail-grid">
+            <section class="course-syllabus">
+                <div class="course-syllabus-head">
+                    <div>
+                        <span class="course-side-eyebrow"><i class="fas fa-map"></i> Tu recorrido</span>
+                        <h4>Temario</h4>
+                    </div>
+                    <span>${progress.completed} de ${progress.total} lecciones</span>
+                </div>
+                ${moduleMarkup}
+            </section>
+            <aside class="course-detail-side">
+                <div class="course-outcomes">
+                    <span class="course-side-eyebrow"><i class="fas fa-check-double"></i> Al terminar podrás</span>
+                    <ul>${(course.outcomes || []).map(outcome => `<li>${escapeHtml(outcome)}</li>`).join('')}</ul>
+                </div>
+                ${practiceButtons}
+                ${finalProject ? `
+                    <div class="course-final-project">
+                        <span class="course-side-eyebrow"><i class="fas fa-flag-checkered"></i> Proyecto final</span>
+                        <h4>${escapeHtml(finalProject.title || 'Proyecto final')}</h4>
+                        <p>${escapeHtml(finalProject.description || '')}</p>
+                    </div>
+                ` : ''}
+            </aside>
+        </div>
+        <div class="course-detail-actions">
+            <button type="button" class="btn-primary" data-course-start="${escapeHtml(course.id)}">
+                ${progress.percent === 100 ? 'Repasar curso' : progress.completed > 0 ? 'Continuar curso' : 'Comenzar curso'} <i class="fas fa-arrow-right"></i>
+            </button>
+            <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
+        </div>
+    `;
+
+    container.querySelectorAll('[data-course-lesson]').forEach(button => {
+        button.addEventListener('click', () => startCourse(course.id, button.dataset.courseLesson));
+    });
+    container.querySelectorAll('[data-course-start]').forEach(button => {
+        button.addEventListener('click', () => startCourse(course.id));
+    });
+    container.querySelectorAll('[data-course-practice]').forEach(button => {
+        button.addEventListener('click', () => practiceCourseConcept(button.dataset.coursePractice));
+    });
+}
+
+function showCourseCatalog() {
+    activateSection('path');
+    activatePathTab('lessons');
+    renderCourseCatalog();
+}
+
+function openCourse(courseId) {
+    const course = getCourseById(courseId);
+    if (!course) return;
+    activateSection('path');
+    activatePathTab('lessons');
+    renderCourseDetail(course.id);
+}
+
+function startCourse(courseId = currentCourseId, lessonId = null) {
+    const course = getCourseById(courseId) || getActiveCourse();
+    if (!course) return;
+
+    activateSection('path');
+    activatePathTab('lessons');
+    currentCourseId = course.id;
+    saveActiveCourse();
+    const lessons = getCourseLessons(course);
+    const requested = lessonId && lessons.some(lesson => lesson.id === lessonId) ? lessonId : null;
+    const next = requested
+        || lessons.find(lesson => !isLearningLessonCompleted(lesson.id))?.id
+        || lessons[0]?.id
+        || null;
+    currentLearningLessonId = next;
+    setCourseView('player');
+    renderCoursePlayer();
+    const editor = document.getElementById('pathEditor');
+    if (editor) editor.focus();
+}
+
+function renderCoursePlayer() {
+    const course = getActiveCourse();
+    const breadcrumb = document.getElementById('coursePlayerBreadcrumb');
+    if (breadcrumb && course) {
+        const lesson = getLearningLessonById(currentLearningLessonId);
+        breadcrumb.innerHTML = `
+            <button type="button" class="course-back-btn" onclick="showCourseCatalog()">
+                <i class="fas fa-arrow-left"></i> Cursos
+            </button>
+            <span class="course-breadcrumb-sep">/</span>
+            <button type="button" class="course-back-btn" onclick="openCourse('${escapeHtml(course.id)}')">${escapeHtml(course.title)}</button>
+            ${lesson ? `<span class="course-breadcrumb-sep">/</span><span>${escapeHtml(lesson.title)}</span>` : ''}
+        `;
+    }
+    renderLearningPathList();
+    renderLearningLessonDetail();
+}
+
+function practiceCourseConcept(conceptId) {
+    const course = getActiveCourse();
+    if (course) {
+        currentCourseId = course.id;
+        saveActiveCourse();
+        const pendingLesson = getCourseLessons(course)
+            .find(lesson => lesson.id === conceptId && !isLearningLessonCompleted(lesson.id));
+        if (pendingLesson) {
+            startCourse(course.id, pendingLesson.id);
+            return;
+        }
+    }
+    practiceLearningConcept(conceptId);
+}
+
 function formatLearningActivityDate(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
@@ -7982,31 +8371,27 @@ function renderLearningPathList() {
     const list = document.getElementById('pathLessonList');
     if (!list) return;
 
-    const lessons = getLearningLessons();
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
     const profile = getLearningProfile();
-    const stats = getLearningProgressStats();
+    const stats = course ? getCourseProgress(course) : getLearningProgressStats();
     const progressText = document.getElementById('pathProgressText');
     const progressBar = document.getElementById('pathProgressBar');
     const progressTrack = document.getElementById('pathProgressTrack');
+    const progressLabel = document.getElementById('pathCourseProgressLabel');
     const datasetLabel = document.getElementById('pathDatasetLabel');
 
     if (progressText) progressText.textContent = `${stats.completed} de ${stats.total}`;
     if (progressBar) progressBar.style.width = `${stats.percent}%`;
-    if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(stats.percent));
+    if (progressTrack) {
+        progressTrack.setAttribute('aria-valuenow', String(stats.percent));
+        progressTrack.setAttribute('aria-label', course ? `Progreso de ${course.title}` : 'Progreso del curso');
+    }
+    if (progressLabel) progressLabel.textContent = course ? 'Progreso del curso' : 'Tu progreso';
     if (datasetLabel) datasetLabel.textContent = `Dataset SQL: ${profile.name}`;
 
-    const ctaButton = document.getElementById('pathCtaBtn');
-    if (ctaButton) {
-        const ctaLabel = stats.completed === stats.total
-            ? 'Repasar ruta'
-            : stats.completed > 0
-                ? 'Continuar ruta'
-                : 'Comenzar ruta';
-        ctaButton.innerHTML = `${ctaLabel} <i class="fas fa-arrow-right"></i>`;
-    }
-
     if (!lessons.length) {
-        list.innerHTML = '<p class="text-muted">No hay lecciones disponibles.</p>';
+        list.innerHTML = '<p class="text-muted">Este curso no tiene lecciones disponibles.</p>';
         return;
     }
 
@@ -8015,7 +8400,8 @@ function renderLearningPathList() {
         currentLearningLessonId = next.id;
     }
 
-    list.innerHTML = lessons.map((lesson, index) => {
+    const renderLessonRow = lesson => {
+        const index = lessons.findIndex(item => item.id === lesson.id);
         const completed = isLearningLessonCompleted(lesson.id);
         const active = lesson.id === currentLearningLessonId;
         const status = completed ? 'Completada' : (active ? 'En curso' : 'Pendiente');
@@ -8031,13 +8417,75 @@ function renderLearningPathList() {
                 </span>
             </button>
         `;
-    }).join('');
+    };
+
+    if (course) {
+        list.innerHTML = course.modules.map(module => {
+            const moduleLessons = (module.lessonIds || [])
+                .map(id => lessons.find(lesson => lesson.id === id))
+                .filter(Boolean);
+            const completed = moduleLessons.filter(lesson => isLearningLessonCompleted(lesson.id)).length;
+            return `
+                <div class="course-lesson-group">
+                    <div class="course-lesson-group-head">
+                        <span>${escapeHtml(module.title)}</span>
+                        <span>${completed}/${moduleLessons.length}</span>
+                    </div>
+                    ${moduleLessons.map(renderLessonRow).join('')}
+                </div>
+            `;
+        }).join('');
+    } else {
+        list.innerHTML = lessons.map(renderLessonRow).join('');
+    }
 
     list.querySelectorAll('[data-learning-lesson]').forEach(button => {
         button.addEventListener('click', () => selectLearningLesson(button.dataset.learningLesson));
     });
 
+    updateCourseCta();
     renderLearningProgressDashboard();
+}
+
+function renderCourseProgressSection() {
+    const courses = getCourses();
+    if (!courses.length) return '';
+    return `
+        <div class="progress-section course-progress-section">
+            <div class="progress-section-head">
+                <div>
+                    <h3>Tus cursos</h3>
+                    <p>Avance de cada itinerario en el dataset activo.</p>
+                </div>
+                <button type="button" class="btn-secondary" onclick="showCourseCatalog()">
+                    Ver cursos <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+            <div class="progress-course-grid">
+                ${courses.map(course => {
+                    const progress = getCourseProgress(course);
+                    const status = progress.percent === 100
+                        ? 'Completado'
+                        : progress.completed > 0
+                            ? 'En progreso'
+                            : 'Sin empezar';
+                    return `
+                        <button type="button" class="progress-course-card" onclick="openCourse('${escapeHtml(course.id)}')">
+                            <span class="progress-course-icon"><i class="fas ${escapeHtml(course.icon || 'fa-graduation-cap')}"></i></span>
+                            <span class="progress-course-copy">
+                                <strong>${escapeHtml(course.title)}</strong>
+                                <span>${progress.completed} de ${progress.total} lecciones · ${status}</span>
+                                <span class="progress-course-track" role="progressbar" aria-label="${escapeHtml(course.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}">
+                                    <span style="width:${progress.percent}%"></span>
+                                </span>
+                            </span>
+                            <span class="progress-course-percent">${progress.percent}%</span>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
 }
 
 function renderLearningProgressDashboard() {
@@ -8052,6 +8500,7 @@ function renderLearningProgressDashboard() {
     const started = conceptStats.filter(concept => concept.percent > 0).length;
     const profile = getLearningProfile();
     const conceptLibrary = getConceptMasteryStats();
+    const courseCount = getCourses().length;
 
     const metrics = [
         {
@@ -8059,7 +8508,7 @@ function renderLearningProgressDashboard() {
             value: `${globalStats.lessonsCompleted}/${globalStats.lessonsTotal}`,
             icon: 'fa-book-open',
             tone: 'tone-blue',
-            hint: 'Ruta de aprendizaje'
+            hint: `${globalStats.lessonsTotal} lecciones en ${courseCount} cursos`
         },
         {
             label: 'Retos',
@@ -8076,7 +8525,7 @@ function renderLearningProgressDashboard() {
             hint: 'Lecciones + retos'
         },
         {
-            label: 'Conceptos de ruta',
+            label: 'Conceptos de cursos',
             value: `${dominated}/${conceptStats.length}`,
             icon: 'fa-graduation-cap',
             tone: 'tone-violet',
@@ -8101,6 +8550,8 @@ function renderLearningProgressDashboard() {
         </div>
 
         ${renderSkillProfileCards()}
+
+        ${renderCourseProgressSection()}
 
         <div class="progress-recommendation progress-recommendation-${recommendation.kind}">
             <span class="progress-recommendation-icon"><i class="fas ${recommendation.icon}"></i></span>
@@ -8285,9 +8736,17 @@ function activatePathTab(tabName) {
 function openLearningPath() {
     activateSection('path');
     activatePathTab('lessons');
+    showCourseCatalog();
 }
 
 function continueLearningLesson(id) {
+    const course = getCourseForLesson(id);
+    if (course) {
+        activateSection('path');
+        activatePathTab('lessons');
+        startCourse(course.id, id);
+        return;
+    }
     openLearningPath();
     selectLearningLesson(id);
 }
@@ -8342,14 +8801,15 @@ function renderLearningLessonDetail() {
     const detail = document.getElementById('pathLessonDetail');
     if (!detail) return;
 
-    const lessons = getLearningLessons();
-    const lesson = getLearningLessonById(currentLearningLessonId);
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
+    const lesson = lessons.find(item => item.id === currentLearningLessonId);
     if (!lesson) {
         detail.innerHTML = `
             <div class="challenge-empty">
-                <i class="fas fa-route"></i>
+                <i class="fas fa-graduation-cap"></i>
                 <h3>Elige una lección</h3>
-                <p>Selecciona un paso de la ruta para empezar a practicar.</p>
+                <p>Selecciona una lección del curso para empezar a practicar.</p>
             </div>
         `;
         return;
@@ -8362,7 +8822,7 @@ function renderLearningLessonDetail() {
             <div class="challenge-empty">
                 <i class="fas fa-database"></i>
                 <h3>Dataset no compatible</h3>
-                <p>La ruta de ${escapeHtml(profile.name)} necesita la tabla <code>${escapeHtml(profile.mainTable)}</code>. Cambia de dataset o reinicia la base para practicar.</p>
+                <p>El curso de ${escapeHtml(profile.name)} necesita la tabla <code>${escapeHtml(profile.mainTable)}</code>. Cambia de dataset o reinicia la base para practicar.</p>
             </div>
         `;
         return;
@@ -8371,17 +8831,24 @@ function renderLearningLessonDetail() {
     const index = lessons.findIndex(item => item.id === lesson.id);
     const completed = isLearningLessonCompleted(lesson.id);
     const nextLesson = lessons[index + 1];
-    const stats = getLearningProgressStats();
+    const stats = course ? getCourseProgress(course) : getLearningProgressStats();
     const allComplete = stats.completed === stats.total;
+    const module = getCourseModuleForLesson(course, lesson.id);
+    const nextCourse = getNextCourse(course?.id);
     const nextMarkup = nextLesson
         ? `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`
         : allComplete
-            ? '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>'
-            : '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes.</div>';
+            ? course && nextCourse
+                ? `<div class="path-complete"><i class="fas fa-trophy"></i> ¡Curso completado!</div>
+                   <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(nextCourse.id)}')">Siguiente curso: ${escapeHtml(nextCourse.title)} <i class="fas fa-arrow-right"></i></button>`
+                : `<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste todos los cursos!</div>
+                   <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>`
+            : '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en el curso.</div>';
 
     detail.innerHTML = `
         <div class="challenge-detail-header">
             <div>
+                <span class="course-lesson-eyebrow">${escapeHtml(course?.title || 'Curso')}${module ? ` · ${escapeHtml(module.title)}` : ''}</span>
                 <h3>${index + 1}. ${escapeHtml(lesson.title)}</h3>
                 <div class="challenge-detail-meta">
                     <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
@@ -8391,7 +8858,7 @@ function renderLearningLessonDetail() {
             </div>
         </div>
         <div class="path-objective">
-            <span>Objetivo</span>
+            <span>Misión de la lección</span>
             <p>${escapeHtml(lesson.objective)}</p>
         </div>
         <div class="challenge-description">${escapeHtml(lesson.explanation)}</div>
@@ -8432,18 +8899,39 @@ function renderLearningPath() {
 }
 
 function refreshLearningPath(options = {}) {
-    const lessons = getLearningLessons();
+    const course = getActiveCourse();
+    if (!course) {
+        renderCourseCatalog();
+        return;
+    }
+
+    const player = document.getElementById('coursePlayerView');
+    if (player && player.hidden) {
+        if (currentCourseView === 'detail') {
+            renderCourseDetail(course.id);
+        } else {
+            renderCourseCatalog();
+        }
+        return;
+    }
+
+    const lessons = getCourseLessons(course);
     if (options.selectFirst || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
         const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
         currentLearningLessonId = next?.id || null;
     }
-    renderLearningPath();
+    renderCoursePlayer();
 }
 
 function initLearningPath() {
     loadLearningPathProgress();
+    currentCourseId = loadActiveCourse()
+        || getCourses().find(course => course.recommended)?.id
+        || getCourses()[0]?.id
+        || null;
     currentLearningLessonId = null;
-    refreshLearningPath({ selectFirst: true });
+    currentCourseView = 'catalog';
+    renderCourseCatalog();
     activatePathTab('lessons');
 
     if (learningPathEventsBound) return;
@@ -8474,9 +8962,16 @@ function initLearningPath() {
 }
 
 function selectLearningLesson(id) {
-    if (!getLearningLessonById(id)) return;
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
+    if (!lessons.some(lesson => lesson.id === id)) {
+        const targetCourse = getCourseForLesson(id);
+        if (!targetCourse) return;
+        startCourse(targetCourse.id, id);
+        return;
+    }
     currentLearningLessonId = id;
-    renderLearningPath();
+    renderCoursePlayer();
     const editor = document.getElementById('pathEditor');
     if (editor) editor.focus();
 }
@@ -8514,18 +9009,32 @@ function learningComparisonMessage(comparison) {
 function showLearningNext(lesson) {
     const container = document.getElementById('pathNext');
     if (!container) return;
-    const lessons = getLearningLessons();
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
     const index = lessons.findIndex(item => item.id === lesson.id);
     const nextLesson = lessons[index + 1];
-    const stats = getLearningProgressStats();
+    const stats = course ? getCourseProgress(course) : getLearningProgressStats();
+    const nextCourse = getNextCourse(course?.id);
 
     container.hidden = false;
     if (nextLesson) {
         container.innerHTML = `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`;
     } else if (stats.completed === stats.total) {
-        container.innerHTML = '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
+        if (course && nextCourse) {
+            container.innerHTML = `
+                <div class="path-complete"><i class="fas fa-trophy"></i> ¡Curso completado!</div>
+                <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(nextCourse.id)}')">Siguiente curso: ${escapeHtml(nextCourse.title)} <i class="fas fa-arrow-right"></i></button>
+            `;
+        } else if (course) {
+            container.innerHTML = `
+                <div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste todos los cursos!</div>
+                <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
+            `;
+        } else {
+            container.innerHTML = '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
+        }
     } else {
-        container.innerHTML = '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes.</div>';
+        container.innerHTML = '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en el curso.</div>';
     }
 }
 
@@ -8540,7 +9049,7 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
         return;
     }
     if (!isReadOnlyQuery(query)) {
-        setLearningResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> La ruta solo permite consultas <code>SELECT</code> o <code>WITH</code>.');
+        setLearningResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> El curso solo permite consultas <code>SELECT</code> o <code>WITH</code>.');
         return;
     }
     if (!initialized || !database) {
@@ -8559,15 +9068,16 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
             renderLearningPathList();
             const status = document.getElementById('pathLessonStatus');
             if (status) status.hidden = false;
-            const stats = getLearningProgressStats();
-            const lessons = getLearningLessons();
+            const course = getActiveCourse();
+            const stats = course ? getCourseProgress(course) : getLearningProgressStats();
+            const lessons = course ? getCourseLessons(course) : getLearningLessons();
             const currentIndex = lessons.findIndex(item => item.id === lesson.id);
             const hasNext = Boolean(lessons[currentIndex + 1]);
             const nextMessage = stats.completed === stats.total
-                ? 'Has terminado la ruta.'
+                ? (course ? `Has terminado ${course.title}.` : 'Has terminado la ruta.')
                 : hasNext
                     ? 'Puedes continuar con la siguiente lección.'
-                    : 'Has completado esta lección. Aún quedan pendientes en la ruta.';
+                    : 'Has completado esta lección. Aún quedan pendientes en el curso.';
             setLearningResult('success', `
                 <strong><i class="fas fa-circle-check"></i> Lección completada</strong>
                 Tu consulta devuelve el resultado esperado. ${nextMessage}
@@ -8592,13 +9102,14 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
 }
 
 function nextLearningLesson() {
-    const lessons = getLearningLessons();
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
     const index = lessons.findIndex(lesson => lesson.id === currentLearningLessonId);
     const next = lessons[index + 1];
     if (next) {
         selectLearningLesson(next.id);
     } else {
-        showToast('success', '¡Has llegado al final de la ruta!');
+        showToast('success', course ? '¡Has llegado al final del curso!' : '¡Has llegado al final de la ruta!');
     }
 }
 
@@ -8634,13 +9145,33 @@ function loadLearningExample() {
 
 function resetLearningProgress() {
     const profile = getLearningProfile();
-    if (!confirm(`¿Reiniciar tu progreso de la ruta de ${profile.name}?`)) return;
+    const course = getActiveCourse();
+    const datasetName = getLearningDatasetName();
+    const scope = course ? `el curso ${course.title}` : `la ruta de ${profile.name}`;
+    if (!confirm(`¿Reiniciar tu progreso de ${scope} en ${profile.name}?`)) return;
 
-    delete learningPathProgress[getLearningDatasetName()];
+    if (course) {
+        const datasetProgress = learningPathProgress[datasetName];
+        if (datasetProgress) {
+            getCourseLessonIds(course).forEach(id => delete datasetProgress[id]);
+            if (!Object.keys(datasetProgress).length) delete learningPathProgress[datasetName];
+        }
+    } else {
+        delete learningPathProgress[datasetName];
+    }
+
     saveLearningPathProgress();
     currentLearningLessonId = null;
-    refreshLearningPath({ selectFirst: true });
-    showToast('info', `Progreso de la ruta de ${profile.name} reiniciado.`);
+    if (course) {
+        const lessons = getCourseLessons(course);
+        currentLearningLessonId = lessons.find(lesson => !isLearningLessonCompleted(lesson.id))?.id
+            || lessons[0]?.id
+            || null;
+        renderCoursePlayer();
+    } else {
+        refreshLearningPath({ selectFirst: true });
+    }
+    showToast('info', `Progreso de ${scope} en ${profile.name} reiniciado.`);
 }
 
 // ============================================

@@ -11,7 +11,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 ## Puntos destacados
 
 - Base de datos SQLite real en el navegador, sin backend para las consultas.
-- Persistencia automática del archivo SQLite en IndexedDB y del historial, preferencias y progreso de retos, ruta y conceptos en `localStorage`.
+- Persistencia automática del archivo SQLite en IndexedDB y del historial, preferencias y progreso de retos, cursos y conceptos en `localStorage`.
 - Modo seguro activado por defecto para confirmar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, `UPDATE` sin `WHERE` y `ALTER TABLE ... DROP`.
 - Resultados paginados, ordenables, copiables y exportables a CSV o JSON.
 - Retos SQL y NoSQL por dataset con validación por resultados, pistas y progreso guardado.
@@ -20,7 +20,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
-- Ruta de aprendizaje guiada con 8 lecciones SQL, editor propio, pistas y progreso persistente por dataset.
+- Cursos guiados con dos itinerarios SQL, 8 lecciones, editor propio, pistas, proyectos finales y progreso persistente por dataset.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
 - Guías de instalación paso a paso para doce gestores SQL y NoSQL, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
 - Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
@@ -98,6 +98,7 @@ sql-academy/
 ├── nosql-engine.js             # Motor documental seguro inspirado en MongoDB
 ├── nosql-datasets.js           # Documentos, ejemplos y retos NoSQL
 ├── install-guides.js           # Guías de instalación por gestor y sistema operativo
+├── courses.js                  # Catálogo de cursos, módulos y proyectos finales
 ├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
 ├── datasets.js                 # Datasets Tienda y Biblioteca
 ├── service-worker.js           # Caché PWA y estrategia de red
@@ -114,7 +115,8 @@ sql-academy/
 ├── tests/
 │   ├── core.test.mjs           # Utilidades del frontend con jsdom
 │   ├── autocomplete.test.mjs   # Sugerencias contextuales SQL y NoSQL
-│   ├── path.test.mjs           # Lecciones, progreso y validación de la ruta
+│   ├── courses.test.mjs        # Catálogo, temario, progreso y navegación de cursos
+│   ├── path.test.mjs           # Lecciones, progreso y validación del curso
 │   ├── learn-ui.test.mjs       # Biblioteca, filtros, asistente y mini-quizzes
 │   ├── install-guides.test.mjs # Catálogo, rutas y enlaces de instalación
 │   ├── deckbuilder.test.mjs    # Torre de Datos, cartas y validación de pisos
@@ -253,7 +255,7 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Buscador y filtros:** por tecnología, tipo de base de datos, licencia, nivel o tema.
 - **Asistente “¿Qué motor me conviene?”:** cuatro preguntas para recomendar PostgreSQL, MySQL, MongoDB, Redis, Neo4j, Cassandra, Firebase o Elasticsearch.
 - **Fichas de concepto:** diagramas, ideas clave, errores comunes, ejemplo copiable y conceptos relacionados.
-- **Práctica conectada:** cada ficha enlaza con la ruta, el editor SQL, el ERD o el laboratorio NoSQL cuando tiene sentido.
+- **Práctica conectada:** cada ficha enlaza con los cursos, el editor SQL, el ERD o el laboratorio NoSQL cuando tiene sentido.
 - **Mini-quiz de 2 preguntas:** al superarlo, el concepto se marca como dominado.
 - **Progreso persistente:** el avance de los conceptos se guarda en `localStorage` y aparece en Mi progreso.
 
@@ -266,16 +268,16 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 - **Acceso conectado:** pestaña **Instalación** en Aprender y botón **Cómo instalarlo** en la ficha de cada gestor.
 - **Fecha de revisión:** el contenido indica cuándo se revisó por última vez.
 
-### Ruta de aprendizaje
+### Cursos guiados
 
-- **8 lecciones progresivas:** `SELECT`, `WHERE`, `ORDER BY`, `LIMIT`, `JOIN`, `GROUP BY`, `HAVING` y subconsultas.
-- **Contenido adaptado al dataset activo:** las tablas, columnas y ejercicios cambian para Escuela, Tienda y Biblioteca.
-- **Editor propio por lección:** cada ejercicio se resuelve sin salir de la ruta.
-- **Ayudas:** objetivo, explicación, ejemplo de referencia y pista.
-- **Validación por resultado:** se compara la consulta con el resultado esperado y se indica si faltan filas, columnas o valores.
-- **Progreso persistente:** cada lección completada se guarda por dataset en `localStorage`.
-- **Navegación guiada:** botón para pasar a la siguiente lección y opción de reiniciar la ruta.
-- **Panel Mi progreso:** dominio por concepto, avance por dataset, actividad reciente y siguiente paso recomendado.
+- **Dos itinerarios:** **SQL desde cero** (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`) y **SQL intermedio** (`JOIN`, `GROUP BY`, `HAVING` y subconsultas).
+- **Catálogo con progreso:** cada curso muestra nivel, duración, módulos, lecciones y avance en el dataset activo.
+- **Temario claro:** módulos con descripción, lecciones completadas y acceso directo a cada práctica.
+- **Aprendizaje activo:** objetivo, explicación, ejemplo ejecutable, editor propio, pista y validación por resultado.
+- **Proyecto final:** cada curso propone un mini reporte para combinar lo aprendido y explicar la pregunta que responde.
+- **Continuidad:** al completar un curso se ofrece el siguiente; el curso activo se guarda en `localStorage`.
+- **Práctica conectada:** botones para reforzar conceptos con retos del dataset activo.
+- **Panel Mi progreso:** avance por curso, dominio por concepto, progreso por dataset, actividad reciente y siguiente paso recomendado.
 - **Recomendaciones accionables:** el panel propone continuar una lección, practicar un reto o cambiar de dataset.
 
 ### Torre de Datos (minijuego)
@@ -317,7 +319,7 @@ El modo se valida en el backend con una allowlist. El frontend envía la consult
 - Ejecución con `Ctrl+Enter`.
 - Si hay texto seleccionado, se ejecuta solo esa selección.
 - **Formatear** consulta con el botón o con `Ctrl+Shift+F`; también formatea solo la selección.
-- **Autocompletado contextual:** sugiere tablas después de `FROM`/`JOIN`, columnas después de un alias o en cláusulas como `SELECT`, `WHERE` y `ORDER BY`, además de palabras clave y funciones. Funciona en práctica, retos SQL, ruta de aprendizaje y editores NoSQL.
+- **Autocompletado contextual:** sugiere tablas después de `FROM`/`JOIN`, columnas después de un alias o en cláusulas como `SELECT`, `WHERE` y `ORDER BY`, además de palabras clave y funciones. Funciona en práctica, retos SQL, cursos guiados y editores NoSQL.
 - Navegación con `↑`/`↓`, `Enter` o `Tab` para aceptar y `Esc` para cerrar.
 - Historial persistente con recarga de consultas.
 - Ejemplos guiados por categoría.
@@ -410,7 +412,8 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
 - `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor, la pestaña Instalación y el mini-quiz de conceptos.
 - `tests/install-guides.test.mjs` cubre el catálogo de los doce gestores, las rutas por sistema, las plataformas de Firebase, los campos obligatorios, los logos y los enlaces oficiales.
-- `tests/path.test.mjs` cubre las lecciones de la ruta, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
+- `tests/courses.test.mjs` cubre el catálogo de cursos, los módulos, las ocho lecciones, el progreso compartido, el temario y la navegación al siguiente curso.
+- `tests/path.test.mjs` cubre las lecciones del curso, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
 - `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
 - `tests/nosql-ui.test.mjs` cubre la interfaz NoSQL, las plantillas sin solución y el revelado progresivo.
@@ -448,6 +451,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.15.0
+
+- **Sección Cursos:** la antigua Ruta se convierte en un catálogo de cursos guiados con progreso compartido.
+- **Dos itinerarios:** **SQL desde cero** y **SQL intermedio**, con cuatro lecciones cada uno.
+- **Temario y proyectos:** módulos, objetivos, resultados de aprendizaje y un proyecto final por curso.
+- **Aprendizaje activo:** las lecciones conservan editor, ejemplo, pista y validación por resultado, con mensajes de avance por curso.
+- **Continuidad:** al terminar un curso se recomienda el siguiente y el curso activo se guarda en `localStorage`.
+- **Mi progreso:** nueva tarjeta de avance por curso dentro del panel global.
+- **Calidad:** pruebas del catálogo, la navegación, el progreso compartido y el reinicio por curso, y caché PWA `v32`.
 
 ### v1.14.0
 

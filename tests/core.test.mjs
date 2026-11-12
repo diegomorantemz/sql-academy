@@ -32,6 +32,7 @@ const dom = new JSDOM(
 
 const { window } = dom;
 window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
 window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 test('escapeHtml escapa caracteres peligrosos', () => {

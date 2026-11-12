@@ -45,7 +45,7 @@
                         <i class="fas fa-book"></i> Aprender
                     </button>
                     <button class="nav-btn" data-section="path">
-                        <i class="fas fa-route"></i> Ruta
+                        <i class="fas fa-graduation-cap"></i> Cursos
                     </button>
                     <button class="nav-btn" data-section="game">
                         <i class="fas fa-gamepad"></i> Juego
@@ -87,12 +87,12 @@
 
             <div class="path-cta">
                 <div>
-                    <span class="path-cta-eyebrow"><i class="fas fa-route"></i> Ruta guiada</span>
-                    <h3>Aprende SQL paso a paso</h3>
-                    <p>8 lecciones cortas con editor, ejemplos, pistas y validación automática.</p>
+                    <span class="path-cta-eyebrow"><i class="fas fa-graduation-cap"></i> Cursos guiados</span>
+                    <h3>Aprende SQL con misiones cortas</h3>
+                    <p>Dos cursos, 8 lecciones y proyectos finales. Empieza desde cero o refuerza lo intermedio.</p>
                 </div>
                 <button type="button" id="pathCtaBtn" class="btn-primary" onclick="openLearningPath()">
-                    Comenzar ruta <i class="fas fa-arrow-right"></i>
+                    Explorar cursos <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
 
@@ -608,13 +608,13 @@
         <!-- ===== SECCIÓN: RUTA DE APRENDIZAJE ===== -->
         <section id="section-path" class="section">
             <div class="section-header">
-                <h2><i class="fas fa-route"></i> Ruta de Aprendizaje</h2>
-                <p>Aprende SQL paso a paso y revisa tu dominio por concepto</p>
+                <h2><i class="fas fa-graduation-cap"></i> Cursos</h2>
+                <p>Itinerarios guiados con ejemplos, práctica y proyectos para aprender haciendo</p>
             </div>
 
-            <div class="path-tabs" role="tablist" aria-label="Ruta de aprendizaje">
+            <div class="path-tabs" role="tablist" aria-label="Cursos y progreso">
                 <button type="button" id="pathLessonsTab" class="path-tab active" data-path-tab="lessons" role="tab" aria-selected="true" aria-controls="pathLessonsPanel">
-                    <i class="fas fa-list-check"></i> Lecciones
+                    <i class="fas fa-layer-group"></i> Cursos
                 </button>
                 <button type="button" id="pathProgressTab" class="path-tab" data-path-tab="progress" role="tab" aria-selected="false" aria-controls="pathProgressPanel">
                     <i class="fas fa-chart-simple"></i> Mi progreso
@@ -622,34 +622,39 @@
             </div>
 
             <div id="pathLessonsPanel" class="path-tab-panel active" role="tabpanel" aria-labelledby="pathLessonsTab">
-                <div class="challenges-layout">
-                    <aside class="challenge-list-panel" aria-label="Lecciones de la ruta">
-                        <div class="challenge-progress">
-                            <div class="challenge-progress-head">
-                                <span>Tu progreso</span>
-                                <strong id="pathProgressText">0 de 8</strong>
+                <div id="courseCatalogView" class="course-catalog-view"></div>
+
+                <div id="courseDetailView" class="course-detail-view" hidden></div>
+
+                <div id="coursePlayerView" class="course-player-view" hidden>
+                    <div id="coursePlayerBreadcrumb" class="course-breadcrumb" aria-label="Ubicación del curso"></div>
+                    <div class="challenges-layout">
+                        <aside class="challenge-list-panel" aria-label="Lecciones del curso">
+                            <div class="challenge-progress">
+                                <div class="challenge-progress-head">
+                                    <span id="pathCourseProgressLabel">Tu progreso</span>
+                                    <strong id="pathProgressText">0 de 4</strong>
+                                </div>
+                                <div class="challenge-progress-track" role="progressbar" aria-label="Progreso del curso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pathProgressTrack">
+                                    <div id="pathProgressBar"></div>
+                                </div>
                             </div>
-                            <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de la ruta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pathProgressTrack">
-                                <div id="pathProgressBar"></div>
-                            </div>
-                        </div>
 
-                        <p id="pathDatasetLabel" class="path-dataset-label">Dataset SQL: Escuela</p>
-                        <div id="pathLessonList" class="challenge-list">
-                            <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando ruta...</p>
-                        </div>
+                            <p id="pathDatasetLabel" class="path-dataset-label">Dataset SQL: Escuela</p>
+                            <div id="pathLessonList" class="challenge-list"></div>
 
-                        <button type="button" onclick="resetLearningProgress()" class="btn-secondary challenge-reset-btn">
-                            <i class="fas fa-rotate-left"></i> Reiniciar ruta
-                        </button>
-                    </aside>
+                            <button type="button" onclick="resetLearningProgress()" class="btn-secondary challenge-reset-btn">
+                                <i class="fas fa-rotate-left"></i> Reiniciar curso
+                            </button>
+                        </aside>
 
-                    <div class="challenge-play-panel">
-                        <div id="pathLessonDetail" class="challenge-detail">
-                            <div class="challenge-empty">
-                                <i class="fas fa-route"></i>
-                                <h3>Cargando ruta...</h3>
-                                <p>Preparando las lecciones para el dataset activo.</p>
+                        <div class="challenge-play-panel">
+                            <div id="pathLessonDetail" class="challenge-detail">
+                                <div class="challenge-empty">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <h3>Cargando curso...</h3>
+                                    <p>Preparando las lecciones para el dataset activo.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1464,6 +1469,7 @@
     <script src="datasets.js"></script>
     <script src="nosql-datasets.js"></script>
     <script src="install-guides.js"></script>
+    <script src="courses.js"></script>
 
     <!-- Motor documental del laboratorio NoSQL -->
     <script src="nosql-engine.js"></script>
