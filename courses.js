@@ -3,6 +3,7 @@
 window.SQL_ACADEMY_COURSES = [
     {
         id: 'sql-desde-cero',
+        track: 'sql',
         title: 'SQL desde cero',
         subtitle: 'Tu primera conversación con los datos',
         description: 'Aprende a pedir datos, filtrar lo que importa y presentar resultados claros con lecciones cortas y ejemplos que puedes ejecutar.',
@@ -40,6 +41,7 @@ window.SQL_ACADEMY_COURSES = [
     },
     {
         id: 'sql-intermedio',
+        track: 'sql',
         title: 'SQL intermedio',
         subtitle: 'Combina, resume y compara',
         description: 'Da el salto a consultas que cruzan tablas, resumen información y comparan resultados para responder preguntas de negocio.',
@@ -80,5 +82,100 @@ window.SQL_ACADEMY_COURSES = [
             title: 'Panel de análisis',
             description: 'Combina dos tablas, agrupa por una categoría, calcula un total y muestra solo los grupos que superan un umbral. Ordena el resultado para presentarlo como un pequeño panel de análisis.'
         }
+    },
+    {
+        id: 'nosql-esencial',
+        track: 'nosql',
+        title: 'NoSQL esencial',
+        subtitle: 'Piensa en documentos, no en tablas',
+        description: 'Aprende a leer, filtrar, ordenar y agrupar documentos con una consola guiada. Es la base para trabajar con MongoDB y bases documentales.',
+        level: 'Básico',
+        duration: '25-35 min',
+        icon: 'fa-leaf',
+        tone: 'green',
+        recommended: false,
+        prerequisites: [],
+        outcomes: [
+            'Leer documentos y elegir solo los campos necesarios.',
+            'Filtrar con operadores como $gt, $lte e $in.',
+            'Ordenar y limitar resultados para obtener un top.',
+            'Agrupar documentos y contar cuántos hay por categoría.'
+        ],
+        modules: [
+            {
+                id: 'documentos',
+                title: 'Documentos y colecciones',
+                description: 'Consulta una colección y decide qué campos devolver.',
+                lessonIds: ['nosql-find']
+            },
+            {
+                id: 'filtros-nosql',
+                title: 'Filtra lo que importa',
+                description: 'Usa operadores para quedarte con los documentos relevantes.',
+                lessonIds: ['nosql-filter']
+            },
+            {
+                id: 'orden-nosql',
+                title: 'Ordena resultados',
+                description: 'Ordena y limita para construir un top útil.',
+                lessonIds: ['nosql-sort']
+            },
+            {
+                id: 'agregaciones-nosql',
+                title: 'Agrupa y cuenta',
+                description: 'Resume una colección con el pipeline de agregación.',
+                lessonIds: ['nosql-aggregate']
+            }
+        ],
+        practiceConcepts: [],
+        finalProject: {
+            title: 'Mini catálogo documental',
+            description: 'Elige una colección, muestra solo los campos necesarios, filtra por una condición, ordena el resultado y agrupa por una categoría. Explica qué decisión de modelado tomaste y por qué.'
+        }
     }
 ];
+
+window.NOSQL_COURSE_PROFILES = {
+    escuela: {
+        name: 'Escuela',
+        collection: 'estudiantes',
+        labelField: 'nombre',
+        fields: ['nombre', 'carrera', 'promedio'],
+        filterField: 'promedio',
+        filterOperator: '$gte',
+        filterValue: 17,
+        filterDescription: 'promedio mayor o igual a 17',
+        sortField: 'promedio',
+        sortLabel: 'promedio',
+        groupField: 'carrera',
+        groupDescription: 'carrera'
+    },
+    tienda: {
+        name: 'Tienda',
+        collection: 'productos',
+        labelField: 'nombre',
+        fields: ['nombre', 'categoria', 'precio'],
+        filterField: 'stock',
+        filterOperator: '$lte',
+        filterValue: 10,
+        filterDescription: 'stock menor o igual a 10',
+        sortField: 'precio',
+        sortLabel: 'precio',
+        groupField: 'categoria',
+        groupDescription: 'categoría'
+    },
+    biblioteca: {
+        name: 'Biblioteca',
+        collection: 'libros',
+        labelField: 'titulo',
+        fields: ['titulo', 'genero', 'disponibles'],
+        filterField: 'disponibles',
+        filterOperator: '$gt',
+        filterValue: 0,
+        filterDescription: 'disponibles mayor que 0',
+        sortField: 'anio',
+        sortLabel: 'año',
+        groupField: 'genero',
+        groupDescription: 'género'
+    }
+};

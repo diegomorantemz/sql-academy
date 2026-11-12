@@ -101,7 +101,7 @@ Mensaje clave:
 - **Bajo costo:** funciona en el navegador y no necesita servidores para las consultas.
 - **Privacidad:** los datos de práctica se quedan en el dispositivo.
 - **Accesibilidad:** interfaz responsive, modo oscuro y navegación por teclado.
-- **Cursos guiados:** dos itinerarios SQL con misiones cortas, proyectos finales y continuación clara hacia el siguiente curso.
+- **Cursos guiados:** tres itinerarios con misiones cortas, proyectos finales y continuación clara hacia el siguiente curso, incluido NoSQL.
 - **Continuidad:** guías de instalación para doce gestores, con rutas por sistema operativo, para pasar de practicar en el navegador a un entorno local.
 - **Escalabilidad educativa:** puede crecer hacia aulas, rutas personalizadas y reportes docentes.
 
@@ -171,7 +171,7 @@ Donaciones voluntarias y, más adelante, licencias comerciales, planes para aula
 ## Métricas para mencionar
 
 - 3 datasets SQL y 3 datasets NoSQL.
-- 2 cursos guiados y 8 lecciones por dataset.
+- 3 cursos guiados, 8 lecciones SQL y 4 lecciones NoSQL.
 - Retos SQL, NoSQL y de depuración.
 - 6 pisos en Torre de Datos.
 - 12 guías de instalación con rutas para Windows, macOS, Linux y Docker.

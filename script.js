@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
     challenges: 'sql-academy-challenges-v1',
     learningPath: 'sql-academy-path-v1',
     activeCourse: 'sql-academy-active-course-v1',
+    nosqlCourse: 'sql-academy-nosql-course-v1',
     skillProfile: 'sql-academy-skill-profile-v1'
 };
 const PERSIST_DB_NAME = 'sql-academy';
@@ -5721,6 +5722,7 @@ let challengeAttempts = 0;
 let challengeProgress = {};
 let selectedNoSQLChallengeId = null;
 let learningPathProgress = {};
+let nosqlCourseProgress = {};
 let currentLearningLessonId = null;
 let currentCourseId = null;
 let currentCourseView = 'catalog';
@@ -7748,12 +7750,143 @@ function getCourseLessonIds(course) {
     return (course?.modules || []).flatMap(module => Array.isArray(module.lessonIds) ? module.lessonIds : []);
 }
 
-function getCourseLessons(course = getActiveCourse(), datasetName = getLearningDatasetName()) {
+function getNoSQLCourseProfile(datasetName = getNoSQLActiveDatasetName()) {
+    return window.NOSQL_COURSE_PROFILES?.[datasetName]
+        || window.NOSQL_COURSE_PROFILES?.escuela
+        || null;
+}
+
+function buildNoSQLCourseLessons(datasetName = getNoSQLActiveDatasetName()) {
+    const profile = getNoSQLCourseProfile(datasetName);
+    if (!profile) return [];
+
+    const collection = profile.collection;
+    const projection = profile.fields.map(field => `${field}: 1`).join(', ');
+    const sortProjection = `${profile.labelField}: 1, ${profile.sortField}: 1`;
+    const filterClause = `{ ${profile.filterField}: { ${profile.filterOperator}: ${profile.filterValue} } }`;
+    const groupId = "'$" + profile.groupField + "'";
+    const groupStage = `{ $group: { _id: ${groupId}, total: { $sum: 1 } } }`;
+
+    return [
+        {
+            id: 'nosql-find',
+            track: 'nosql',
+            title: 'Consulta documentos',
+            level: 'Básico',
+            objective: `Muestra solo ${profile.fields.join(', ')} de cada documento de ${collection}.`,
+            explanation: 'find recibe un filtro y una proyección. El filtro decide qué documentos entran; la proyección decide qué campos salen. Así evitas traer datos que no necesitas.',
+            example: `db.${collection}.findOne({})`,
+            starter: `db.${collection}.find({})`,
+            expectedQuery: `db.${collection}.find({}, { ${projection} })`,
+            hint: `Añade un segundo argumento con ${profile.fields.map(field => `${field}: 1`).join(', ')}.`,
+            ordered: true
+        },
+        {
+            id: 'nosql-filter',
+            track: 'nosql',
+            title: 'Filtra con operadores',
+            level: 'Básico',
+            objective: `Encuentra los documentos con ${profile.filterDescription} y muestra ${profile.fields.join(', ')}.`,
+            explanation: 'Los operadores $gt, $gte, $lt, $lte e $in comparan valores dentro del filtro. Es la forma documental de construir un WHERE.',
+            example: `db.${collection}.find(${filterClause}, { ${projection} }).limit(1)`,
+            starter: `db.${collection}.find({}, { ${projection} })`,
+            expectedQuery: `db.${collection}.find(${filterClause}, { ${projection} })`,
+            hint: `Usa ${filterClause} como primer argumento de find.`,
+            ordered: true
+        },
+        {
+            id: 'nosql-sort',
+            track: 'nosql',
+            title: 'Ordena y limita',
+            level: 'Intermedio',
+            objective: `Muestra los 3 documentos con ${profile.sortLabel} más alto, ordenados de mayor a menor.`,
+            explanation: 'sort ordena los documentos y limit corta el resultado. Juntos construyen un top: primero ordenas por el criterio importante y después eliges cuántos quieres ver.',
+            example: `db.${collection}.find({}, { ${sortProjection} }).sort({ ${profile.sortField}: 1 }).limit(2)`,
+            starter: `db.${collection}.find({}, { ${sortProjection} }).limit(3)`,
+            expectedQuery: `db.${collection}.find({}, { ${sortProjection} }).sort({ ${profile.sortField}: -1 }).limit(3)`,
+            hint: `Encadena .sort({ ${profile.sortField}: -1 }) antes de .limit(3).`,
+            ordered: true
+        },
+        {
+            id: 'nosql-aggregate',
+            track: 'nosql',
+            title: 'Agrupa y cuenta',
+            level: 'Intermedio',
+            objective: `Cuenta cuántos documentos hay por ${profile.groupDescription} y ordena de mayor a menor por total.`,
+            explanation: 'aggregate ejecuta un pipeline de etapas. $group crea un documento por categoría y $sum acumula el total. $sort ordena el resultado final, no los documentos originales.',
+            example: `db.${collection}.aggregate([${groupStage}, { $limit: 1 }])`,
+            starter: `db.${collection}.aggregate([${groupStage}, { $sort: { _id: 1 } }])`,
+            expectedQuery: `db.${collection}.aggregate([${groupStage}, { $sort: { total: -1, _id: 1 } }])`,
+            hint: `Añade { $sort: { total: -1, _id: 1 } } al final del pipeline.`,
+            ordered: true
+        }
+    ];
+}
+
+function normalizeNoSQLCourseValue(value) {
+    if (Array.isArray(value)) return value.map(normalizeNoSQLCourseValue);
+    if (value && typeof value === 'object') {
+        return Object.keys(value).sort().reduce((result, key) => {
+            result[key] = normalizeNoSQLCourseValue(value[key]);
+            return result;
+        }, {});
+    }
+    return value;
+}
+
+function compareNoSQLCourseResults(expected, actual) {
+    if (!Array.isArray(expected?.documents) || !Array.isArray(actual?.documents)) {
+        return {
+            ok: false,
+            message: 'La consulta debe devolver una lista de documentos con find o aggregate.'
+        };
+    }
+
+    if (expected.documents.length !== actual.documents.length) {
+        return {
+            ok: false,
+            message: `Se esperaban ${expected.documents.length} documentos y tu consulta devolvió ${actual.documents.length}. Revisa el filtro y el límite.`
+        };
+    }
+
+    const expectedValue = JSON.stringify(normalizeNoSQLCourseValue(expected.documents));
+    const actualValue = JSON.stringify(normalizeNoSQLCourseValue(actual.documents));
+    if (expectedValue === actualValue) {
+        return { ok: true, message: '¡Correcto! Los documentos coinciden.' };
+    }
+
+    return {
+        ok: false,
+        message: 'Los documentos no coinciden. Revisa la proyección, el filtro y el orden.'
+    };
+}
+
+function getCourseDatasetName(course = getActiveCourse()) {
+    return course?.track === 'nosql' ? getNoSQLActiveDatasetName() : getLearningDatasetName();
+}
+
+function getCourseDatasetLabel(course = getActiveCourse()) {
+    if (course?.track === 'nosql') {
+        const profile = getNoSQLCourseProfile(getCourseDatasetName(course));
+        return `Dataset NoSQL: ${profile?.name || getCourseDatasetName(course)}`;
+    }
+    return `Dataset SQL: ${getLearningProfile().name}`;
+}
+
+function getCourseLessons(course = getActiveCourse(), datasetName = getCourseDatasetName(course)) {
     if (!course) return [];
+    if (course.track === 'nosql') return buildNoSQLCourseLessons(datasetName);
+
     const lessonsById = new Map(getLearningLessonsForDataset(datasetName).map(lesson => [lesson.id, lesson]));
     return getCourseLessonIds(course)
         .map(id => lessonsById.get(id))
         .filter(Boolean);
+}
+
+function getActiveCourseLessonById(id) {
+    const course = getActiveCourse();
+    if (!course) return getLearningLessonById(id);
+    return getCourseLessons(course).find(lesson => lesson.id === id) || null;
 }
 
 function getCourseForLesson(lessonId) {
@@ -7775,10 +7908,12 @@ function getCourseModuleForLesson(course, lessonId) {
     return (course?.modules || []).find(module => (module.lessonIds || []).includes(lessonId)) || null;
 }
 
-function getCourseProgress(course = getActiveCourse(), datasetName = getLearningDatasetName()) {
+function getCourseProgress(course = getActiveCourse(), datasetName = getCourseDatasetName(course)) {
     const lessons = getCourseLessons(course, datasetName);
     const completed = lessons.filter(lesson => (
-        isLearningLessonCompletedForDataset(lesson.id, datasetName)
+        course?.track === 'nosql'
+            ? isNoSQLCourseLessonCompleted(lesson.id, datasetName)
+            : isLearningLessonCompletedForDataset(lesson.id, datasetName)
     )).length;
     return {
         total: lessons.length,
@@ -7787,10 +7922,43 @@ function getCourseProgress(course = getActiveCourse(), datasetName = getLearning
     };
 }
 
+function isCourseLessonCompleted(course, lessonId) {
+    return course?.track === 'nosql'
+        ? isNoSQLCourseLessonCompleted(lessonId)
+        : isLearningLessonCompleted(lessonId);
+}
+
 function getNextCourse(courseId) {
     const courses = getCourses();
     const index = courses.findIndex(course => course.id === courseId);
     return index >= 0 ? courses[index + 1] || null : null;
+}
+
+function getCourseNextMarkup(course, lessons, lesson) {
+    const index = lessons.findIndex(item => item.id === lesson.id);
+    const nextLesson = lessons[index + 1];
+    const stats = course ? getCourseProgress(course) : getLearningProgressStats();
+    const nextCourse = getNextCourse(course?.id);
+
+    if (nextLesson) {
+        return `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`;
+    }
+    if (stats.completed === stats.total) {
+        if (course && nextCourse) {
+            return `
+                <div class="path-complete"><i class="fas fa-trophy"></i> ¡Curso completado!</div>
+                <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(nextCourse.id)}')">Siguiente curso: ${escapeHtml(nextCourse.title)} <i class="fas fa-arrow-right"></i></button>
+            `;
+        }
+        if (course) {
+            return `
+                <div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste todos los cursos!</div>
+                <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
+            `;
+        }
+        return '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
+    }
+    return `<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en ${course ? 'el curso' : 'la ruta'}.</div>`;
 }
 
 function loadActiveCourse() {
@@ -7800,6 +7968,35 @@ function loadActiveCourse() {
 
 function saveActiveCourse() {
     writeStoredJSON(STORAGE_KEYS.activeCourse, currentCourseId || '');
+}
+
+function loadNoSQLCourseProgress() {
+    const stored = readStoredJSON(STORAGE_KEYS.nosqlCourse, {});
+    nosqlCourseProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+}
+
+function saveNoSQLCourseProgress() {
+    writeStoredJSON(STORAGE_KEYS.nosqlCourse, nosqlCourseProgress);
+}
+
+function getNoSQLCourseDatasetProgress(datasetName = getNoSQLActiveDatasetName()) {
+    if (!nosqlCourseProgress[datasetName] || typeof nosqlCourseProgress[datasetName] !== 'object') {
+        nosqlCourseProgress[datasetName] = {};
+    }
+    return nosqlCourseProgress[datasetName];
+}
+
+function isNoSQLCourseLessonCompleted(id, datasetName = getNoSQLActiveDatasetName()) {
+    return Boolean(nosqlCourseProgress[datasetName]?.[id]?.completed);
+}
+
+function markNoSQLCourseLessonCompleted(id) {
+    getNoSQLCourseDatasetProgress()[id] = {
+        completed: true,
+        completedAt: new Date().toISOString()
+    };
+    saveNoSQLCourseProgress();
+    renderLearningProgressDashboard();
 }
 
 function loadLearningPathProgress() {
@@ -7952,6 +8149,22 @@ function getRecentLearningActivity() {
         });
     });
 
+    Object.entries(nosqlCourseProgress).forEach(([datasetName, progress]) => {
+        Object.entries(progress || {}).forEach(([lessonId, data]) => {
+            if (!data?.completedAt) return;
+            const lesson = buildNoSQLCourseLessons(datasetName)
+                .find(item => item.id === lessonId);
+            if (!lesson) return;
+            activity.push({
+                type: 'Lección NoSQL',
+                title: lesson.title,
+                datasetName,
+                icon: 'fa-leaf',
+                completedAt: data.completedAt
+            });
+        });
+    });
+
     Object.entries(challengeProgress).forEach(([challengeId, data]) => {
         if (!data?.completedAt) return;
         const datasetName = Object.keys(LEARNING_PATH_PROFILES).find(name => (
@@ -7999,6 +8212,23 @@ function getLearningRecommendation() {
             onclick: `continueLearningLesson('${nextLesson.id}')`,
             icon: 'fa-graduation-cap'
         };
+    }
+
+    const nosqlCourse = getCourseById('nosql-esencial');
+    if (nosqlCourse) {
+        const nosqlLessons = getCourseLessons(nosqlCourse);
+        const nextNoSQLLesson = nosqlLessons.find(lesson => !isNoSQLCourseLessonCompleted(lesson.id));
+        if (nextNoSQLLesson) {
+            const nosqlProfile = getNoSQLCourseProfile();
+            return {
+                kind: 'lesson',
+                title: nextNoSQLLesson.title,
+                message: `Explora ${nosqlCourse.title} en ${nosqlProfile?.name || getNoSQLActiveDatasetName()} con una lección corta.`,
+                action: 'Continuar NoSQL',
+                onclick: `continueLearningLesson('${nextNoSQLLesson.id}')`,
+                icon: 'fa-leaf'
+            };
+        }
     }
 
     const challenges = getChallengeCatalog(datasetName);
@@ -8072,6 +8302,7 @@ function renderCourseCatalog() {
 
     const courses = getCourses();
     const profile = getLearningProfile();
+    const nosqlProfile = getNoSQLCourseProfile();
     setCourseView('catalog');
     updateCourseCta();
 
@@ -8088,8 +8319,9 @@ function renderCourseCatalog() {
                 <p>Lecciones cortas, ejemplos que puedes ejecutar y un proyecto final. Tu progreso se guarda en cada dataset.</p>
             </div>
             <div class="course-catalog-dataset">
-                <span>Dataset activo</span>
-                <strong>${escapeHtml(profile.name)}</strong>
+                <span>Datasets activos</span>
+                <strong>SQL: ${escapeHtml(profile.name)}</strong>
+                <small>NoSQL: ${escapeHtml(nosqlProfile?.name || getNoSQLActiveDatasetName())}</small>
             </div>
         </div>
         <div class="course-grid">
@@ -8126,6 +8358,7 @@ function renderCourseCatalog() {
                         <p class="course-card-description">${escapeHtml(course.description)}</p>
                         <div class="course-card-meta">
                             <span><i class="fas fa-clock"></i> ${escapeHtml(course.duration)}</span>
+                            <span><i class="fas fa-database"></i> ${course.track === 'nosql' ? 'NoSQL' : 'SQL'}</span>
                             <span><i class="fas fa-layer-group"></i> ${course.modules.length} módulos</span>
                             <span><i class="fas fa-list-check"></i> ${lessons.length} lecciones</span>
                         </div>
@@ -8177,7 +8410,7 @@ function renderCourseDetail(courseId) {
         const moduleLessons = (module.lessonIds || [])
             .map(id => lessons.find(lesson => lesson.id === id))
             .filter(Boolean);
-        const completed = moduleLessons.filter(lesson => isLearningLessonCompleted(lesson.id)).length;
+        const completed = moduleLessons.filter(lesson => isCourseLessonCompleted(course, lesson.id)).length;
         return `
             <section class="course-module">
                 <div class="course-module-head">
@@ -8191,7 +8424,7 @@ function renderCourseDetail(courseId) {
                 <div class="course-module-lessons">
                     ${moduleLessons.map(lesson => {
                         const index = lessonIndexById.get(lesson.id) ?? 0;
-                        const done = isLearningLessonCompleted(lesson.id);
+                        const done = isCourseLessonCompleted(course, lesson.id);
                         return `
                             <button type="button" class="course-lesson-row${done ? ' completed' : ''}" data-course-lesson="${escapeHtml(lesson.id)}">
                                 <span class="course-lesson-index">${done ? '<i class="fas fa-check"></i>' : index + 1}</span>
@@ -8235,6 +8468,7 @@ function renderCourseDetail(courseId) {
                 <p>${escapeHtml(course.description)}</p>
                 <div class="course-detail-meta">
                     <span class="challenge-level ${getLearningLevelClass(course.level)}">${escapeHtml(course.level)}</span>
+                    <span><i class="fas fa-database"></i> ${course.track === 'nosql' ? 'NoSQL' : 'SQL'}</span>
                     <span><i class="fas fa-clock"></i> ${escapeHtml(course.duration)}</span>
                     <span><i class="fas fa-layer-group"></i> ${course.modules.length} módulos</span>
                     <span><i class="fas fa-list-check"></i> ${lessons.length} lecciones</span>
@@ -8316,7 +8550,7 @@ function startCourse(courseId = currentCourseId, lessonId = null) {
     const lessons = getCourseLessons(course);
     const requested = lessonId && lessons.some(lesson => lesson.id === lessonId) ? lessonId : null;
     const next = requested
-        || lessons.find(lesson => !isLearningLessonCompleted(lesson.id))?.id
+        || lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id))?.id
         || lessons[0]?.id
         || null;
     currentLearningLessonId = next;
@@ -8326,11 +8560,29 @@ function startCourse(courseId = currentCourseId, lessonId = null) {
     if (editor) editor.focus();
 }
 
+function refreshActiveCourseDataset() {
+    const course = getActiveCourse();
+    const pathSection = document.getElementById('section-path');
+    const pathActive = pathSection?.classList.contains('active');
+    if (currentCourseView === 'player') {
+        if (pathActive && course?.track === 'nosql') {
+            currentLearningLessonId = null;
+            startCourse(course.id);
+        }
+        return;
+    }
+    if (currentCourseView === 'detail' && currentCourseId) {
+        renderCourseDetail(currentCourseId);
+        return;
+    }
+    renderCourseCatalog();
+}
+
 function renderCoursePlayer() {
     const course = getActiveCourse();
     const breadcrumb = document.getElementById('coursePlayerBreadcrumb');
     if (breadcrumb && course) {
-        const lesson = getLearningLessonById(currentLearningLessonId);
+        const lesson = getActiveCourseLessonById(currentLearningLessonId);
         breadcrumb.innerHTML = `
             <button type="button" class="course-back-btn" onclick="showCourseCatalog()">
                 <i class="fas fa-arrow-left"></i> Cursos
@@ -8350,7 +8602,7 @@ function practiceCourseConcept(conceptId) {
         currentCourseId = course.id;
         saveActiveCourse();
         const pendingLesson = getCourseLessons(course)
-            .find(lesson => lesson.id === conceptId && !isLearningLessonCompleted(lesson.id));
+            .find(lesson => lesson.id === conceptId && !isCourseLessonCompleted(course, lesson.id));
         if (pendingLesson) {
             startCourse(course.id, pendingLesson.id);
             return;
@@ -8373,7 +8625,6 @@ function renderLearningPathList() {
 
     const course = getActiveCourse();
     const lessons = course ? getCourseLessons(course) : getLearningLessons();
-    const profile = getLearningProfile();
     const stats = course ? getCourseProgress(course) : getLearningProgressStats();
     const progressText = document.getElementById('pathProgressText');
     const progressBar = document.getElementById('pathProgressBar');
@@ -8388,7 +8639,7 @@ function renderLearningPathList() {
         progressTrack.setAttribute('aria-label', course ? `Progreso de ${course.title}` : 'Progreso del curso');
     }
     if (progressLabel) progressLabel.textContent = course ? 'Progreso del curso' : 'Tu progreso';
-    if (datasetLabel) datasetLabel.textContent = `Dataset SQL: ${profile.name}`;
+    if (datasetLabel) datasetLabel.textContent = getCourseDatasetLabel(course);
 
     if (!lessons.length) {
         list.innerHTML = '<p class="text-muted">Este curso no tiene lecciones disponibles.</p>';
@@ -8396,13 +8647,13 @@ function renderLearningPathList() {
     }
 
     if (!currentLearningLessonId || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
-        const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
+        const next = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id)) || lessons[0];
         currentLearningLessonId = next.id;
     }
 
     const renderLessonRow = lesson => {
         const index = lessons.findIndex(item => item.id === lesson.id);
-        const completed = isLearningLessonCompleted(lesson.id);
+        const completed = isCourseLessonCompleted(course, lesson.id);
         const active = lesson.id === currentLearningLessonId;
         const status = completed ? 'Completada' : (active ? 'En curso' : 'Pendiente');
         return `
@@ -8424,7 +8675,7 @@ function renderLearningPathList() {
             const moduleLessons = (module.lessonIds || [])
                 .map(id => lessons.find(lesson => lesson.id === id))
                 .filter(Boolean);
-            const completed = moduleLessons.filter(lesson => isLearningLessonCompleted(lesson.id)).length;
+            const completed = moduleLessons.filter(lesson => isCourseLessonCompleted(course, lesson.id)).length;
             return `
                 <div class="course-lesson-group">
                     <div class="course-lesson-group-head">
@@ -8455,7 +8706,7 @@ function renderCourseProgressSection() {
             <div class="progress-section-head">
                 <div>
                     <h3>Tus cursos</h3>
-                    <p>Avance de cada itinerario en el dataset activo.</p>
+                    <p>Avance de cada itinerario con sus datasets activos.</p>
                 </div>
                 <button type="button" class="btn-secondary" onclick="showCourseCatalog()">
                     Ver cursos <i class="fas fa-arrow-right"></i>
@@ -8500,15 +8751,15 @@ function renderLearningProgressDashboard() {
     const started = conceptStats.filter(concept => concept.percent > 0).length;
     const profile = getLearningProfile();
     const conceptLibrary = getConceptMasteryStats();
-    const courseCount = getCourses().length;
+    const sqlCourseCount = getCourses().filter(course => course.track !== 'nosql').length;
 
     const metrics = [
         {
-            label: 'Lecciones',
+            label: 'Lecciones SQL',
             value: `${globalStats.lessonsCompleted}/${globalStats.lessonsTotal}`,
             icon: 'fa-book-open',
             tone: 'tone-blue',
-            hint: `${globalStats.lessonsTotal} lecciones en ${courseCount} cursos`
+            hint: `${globalStats.lessonsTotal} lecciones en ${sqlCourseCount} cursos SQL`
         },
         {
             label: 'Retos',
@@ -8815,6 +9066,11 @@ function renderLearningLessonDetail() {
         return;
     }
 
+    if (course?.track === 'nosql') {
+        renderNoSQLCourseLessonDetail(lesson, course, lessons);
+        return;
+    }
+
     const profile = getLearningProfile();
     const tables = dbInitialized && typeof getUserTables === 'function' ? getUserTables() : [];
     if (tables.length > 0 && !tables.includes(profile.mainTable)) {
@@ -8829,21 +9085,9 @@ function renderLearningLessonDetail() {
     }
 
     const index = lessons.findIndex(item => item.id === lesson.id);
-    const completed = isLearningLessonCompleted(lesson.id);
-    const nextLesson = lessons[index + 1];
-    const stats = course ? getCourseProgress(course) : getLearningProgressStats();
-    const allComplete = stats.completed === stats.total;
+    const completed = isCourseLessonCompleted(course, lesson.id);
     const module = getCourseModuleForLesson(course, lesson.id);
-    const nextCourse = getNextCourse(course?.id);
-    const nextMarkup = nextLesson
-        ? `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`
-        : allComplete
-            ? course && nextCourse
-                ? `<div class="path-complete"><i class="fas fa-trophy"></i> ¡Curso completado!</div>
-                   <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(nextCourse.id)}')">Siguiente curso: ${escapeHtml(nextCourse.title)} <i class="fas fa-arrow-right"></i></button>`
-                : `<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste todos los cursos!</div>
-                   <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>`
-            : '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en el curso.</div>';
+    const nextMarkup = getCourseNextMarkup(course, lessons, lesson);
 
     detail.innerHTML = `
         <div class="challenge-detail-header">
@@ -8893,6 +9137,65 @@ function renderLearningLessonDetail() {
     `;
 }
 
+function renderNoSQLCourseLessonDetail(lesson, course, lessons) {
+    const detail = document.getElementById('pathLessonDetail');
+    if (!detail) return;
+
+    const index = lessons.findIndex(item => item.id === lesson.id);
+    const completed = isNoSQLCourseLessonCompleted(lesson.id);
+    const module = getCourseModuleForLesson(course, lesson.id);
+    const nextMarkup = getCourseNextMarkup(course, lessons, lesson);
+    const profile = getNoSQLCourseProfile();
+
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <span class="course-lesson-eyebrow">${escapeHtml(course?.title || 'NoSQL')}${module ? ` · ${escapeHtml(module.title)}` : ''}</span>
+                <h3>${index + 1}. ${escapeHtml(lesson.title)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
+                    <span class="text-muted">Lección ${index + 1} de ${lessons.length}</span>
+                    <span class="text-muted">Dataset NoSQL: ${escapeHtml(profile?.name || getNoSQLActiveDatasetName())}</span>
+                    <span id="pathLessonStatus" class="path-completed-badge" ${completed ? '' : 'hidden'}><i class="fas fa-check"></i> Completada</span>
+                </div>
+            </div>
+        </div>
+        <div class="path-objective">
+            <span>Misión de la lección</span>
+            <p>${escapeHtml(lesson.objective)}</p>
+        </div>
+        <div class="challenge-description">${escapeHtml(lesson.explanation)}</div>
+        <div class="path-example">
+            <div class="path-example-head">
+                <span><i class="fas fa-code"></i> Ejemplo</span>
+                <button type="button" class="btn-ghost btn-sm" onclick="loadLearningExample()">
+                    <i class="fas fa-arrow-down"></i> Usar ejemplo
+                </button>
+            </div>
+            <pre><code>${escapeHtml(lesson.example)}</code></pre>
+        </div>
+        <label for="pathEditor" class="sr-only">Comando NoSQL para la lección</label>
+        <textarea id="pathEditor" spellcheck="false" placeholder="Escribe un comando NoSQL, por ejemplo: db.estudiantes.find({})">${escapeHtml(lesson.starter)}</textarea>
+        <div class="challenge-actions">
+            <button type="button" id="pathRunBtn" onclick="runNoSQLCourseLesson()">
+                <i class="fas fa-play"></i> Comprobar lección
+            </button>
+            <button type="button" id="pathHintBtn" class="btn-secondary" onclick="showLearningHint()">
+                <i class="fas fa-lightbulb"></i> Ver pista
+            </button>
+            <button type="button" class="btn-secondary" onclick="clearLearningEditor()">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+        </div>
+        <div id="pathHint" class="challenge-hint" hidden>${escapeHtml(lesson.hint)}</div>
+        <div id="pathResult" class="challenge-result" aria-live="polite">
+            <strong><i class="fas fa-circle-info"></i> Listo para practicar</strong>
+            Escribe un comando NoSQL y pulsa «Comprobar lección».
+        </div>
+        <div id="pathNext" class="path-next" ${completed ? '' : 'hidden'}>${completed ? nextMarkup : ''}</div>
+    `;
+}
+
 function renderLearningPath() {
     renderLearningPathList();
     renderLearningLessonDetail();
@@ -8917,7 +9220,7 @@ function refreshLearningPath(options = {}) {
 
     const lessons = getCourseLessons(course);
     if (options.selectFirst || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
-        const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
+        const next = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id)) || lessons[0];
         currentLearningLessonId = next?.id || null;
     }
     renderCoursePlayer();
@@ -8925,6 +9228,7 @@ function refreshLearningPath(options = {}) {
 
 function initLearningPath() {
     loadLearningPathProgress();
+    loadNoSQLCourseProgress();
     currentCourseId = loadActiveCourse()
         || getCourses().find(course => course.recommended)?.id
         || getCourses()[0]?.id
@@ -8952,6 +9256,13 @@ function initLearningPath() {
         });
     });
 
+    const nosqlSelector = document.getElementById('nosqlDatasetSelector');
+    if (nosqlSelector) {
+        nosqlSelector.addEventListener('change', () => {
+            setTimeout(refreshActiveCourseDataset, 0);
+        });
+    }
+
     document.addEventListener('keydown', event => {
         if (event.target?.id !== 'pathEditor') return;
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -8959,6 +9270,8 @@ function initLearningPath() {
             runLearningLesson();
         }
     });
+
+    setTimeout(refreshActiveCourseDataset, 0);
 }
 
 function selectLearningLesson(id) {
@@ -8986,8 +9299,9 @@ function setLearningResult(type, html) {
 function resetLearningResult() {
     const result = document.getElementById('pathResult');
     if (!result) return;
+    const isNoSQL = getActiveCourse()?.track === 'nosql';
     result.className = 'challenge-result';
-    result.innerHTML = '<strong><i class="fas fa-circle-info"></i> Listo para practicar</strong> Escribe tu consulta y pulsa «Comprobar lección».';
+    result.innerHTML = `<strong><i class="fas fa-circle-info"></i> Listo para practicar</strong> ${isNoSQL ? 'Escribe un comando NoSQL' : 'Escribe tu consulta'} y pulsa «Comprobar lección».`;
 }
 
 function learningComparisonMessage(comparison) {
@@ -9011,34 +9325,97 @@ function showLearningNext(lesson) {
     if (!container) return;
     const course = getActiveCourse();
     const lessons = course ? getCourseLessons(course) : getLearningLessons();
-    const index = lessons.findIndex(item => item.id === lesson.id);
-    const nextLesson = lessons[index + 1];
-    const stats = course ? getCourseProgress(course) : getLearningProgressStats();
-    const nextCourse = getNextCourse(course?.id);
-
     container.hidden = false;
-    if (nextLesson) {
-        container.innerHTML = `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`;
-    } else if (stats.completed === stats.total) {
-        if (course && nextCourse) {
-            container.innerHTML = `
-                <div class="path-complete"><i class="fas fa-trophy"></i> ¡Curso completado!</div>
-                <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(nextCourse.id)}')">Siguiente curso: ${escapeHtml(nextCourse.title)} <i class="fas fa-arrow-right"></i></button>
-            `;
-        } else if (course) {
-            container.innerHTML = `
-                <div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste todos los cursos!</div>
-                <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
-            `;
-        } else {
-            container.innerHTML = '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
+    container.innerHTML = getCourseNextMarkup(course, lessons, lesson);
+}
+
+function runNoSQLCourseLesson() {
+    const course = getActiveCourse();
+    const lesson = course?.track === 'nosql'
+        ? getCourseLessons(course).find(item => item.id === currentLearningLessonId)
+        : null;
+    const editor = document.getElementById('pathEditor');
+    if (!lesson || !editor) return;
+
+    const query = editor.value.trim();
+    if (!query) {
+        setLearningResult('warning', '<strong><i class="fas fa-circle-exclamation"></i> Falta el comando</strong> Escribe un comando NoSQL antes de comprobarlo.');
+        return;
+    }
+    if (!window.NoSQL || !window.NOSQL_DATASETS) {
+        setLearningResult('warning', '<strong><i class="fas fa-hourglass-half"></i> Motor NoSQL no disponible</strong> Recarga la página e inténtalo de nuevo.');
+        return;
+    }
+
+    let command = null;
+    try {
+        command = window.NoSQL.parseCommand(query);
+    } catch (error) {
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Comando no válido</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+        `);
+        return;
+    }
+
+    const method = command.methods?.[0]?.name;
+    if (!['find', 'findOne', 'aggregate'].includes(method)) {
+        setLearningResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> El curso solo permite <code>find</code>, <code>findOne</code> y <code>aggregate</code>.');
+        return;
+    }
+
+    try {
+        const dataset = window.NOSQL_DATASETS[getNoSQLActiveDatasetName()];
+        const state = window.NoSQL.createDatabase(dataset);
+        const expected = window.NoSQL.executeCommand(state, lesson.expectedQuery);
+        const actual = window.NoSQL.executeCommand(state, query);
+        const comparison = compareNoSQLCourseResults(expected, actual);
+
+        if (comparison.ok) {
+            markNoSQLCourseLessonCompleted(lesson.id);
+            playSound('success');
+            renderLearningPathList();
+            const status = document.getElementById('pathLessonStatus');
+            if (status) status.hidden = false;
+            const stats = getCourseProgress(course);
+            const lessons = getCourseLessons(course);
+            const currentIndex = lessons.findIndex(item => item.id === lesson.id);
+            const hasNext = Boolean(lessons[currentIndex + 1]);
+            const nextMessage = stats.completed === stats.total
+                ? `Has terminado ${course.title}.`
+                : hasNext
+                    ? 'Puedes continuar con la siguiente lección.'
+                    : 'Has completado esta lección. Aún quedan pendientes en el curso.';
+            setLearningResult('success', `
+                <strong><i class="fas fa-circle-check"></i> Lección completada</strong>
+                Tu comando devuelve los documentos esperados. ${nextMessage}
+            `);
+            showLearningNext(lesson);
+            showToast('success', 'Lección completada.');
+            return;
         }
-    } else {
-        container.innerHTML = '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en el curso.</div>';
+
+        playSound('error');
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-xmark"></i> Todavía no</strong>
+            ${escapeHtml(comparison.message)}
+        `);
+    } catch (error) {
+        playSound('error');
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Error en el comando</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+        `);
     }
 }
 
 function runLearningLesson(database = db, initialized = dbInitialized) {
+    const course = getActiveCourse();
+    if (course?.track === 'nosql') {
+        runNoSQLCourseLesson();
+        return;
+    }
+
     const lesson = getLearningLessonById(currentLearningLessonId);
     const editor = document.getElementById('pathEditor');
     if (!lesson || !editor) return;
@@ -9134,7 +9511,10 @@ function clearLearningEditor() {
 }
 
 function loadLearningExample() {
-    const lesson = getLearningLessonById(currentLearningLessonId);
+    const course = getActiveCourse();
+    const lesson = course?.track === 'nosql'
+        ? getCourseLessons(course).find(item => item.id === currentLearningLessonId)
+        : getLearningLessonById(currentLearningLessonId);
     const editor = document.getElementById('pathEditor');
     if (!lesson || !editor) return;
     editor.value = lesson.example;
@@ -9144,34 +9524,45 @@ function loadLearningExample() {
 }
 
 function resetLearningProgress() {
-    const profile = getLearningProfile();
     const course = getActiveCourse();
-    const datasetName = getLearningDatasetName();
-    const scope = course ? `el curso ${course.title}` : `la ruta de ${profile.name}`;
-    if (!confirm(`¿Reiniciar tu progreso de ${scope} en ${profile.name}?`)) return;
+    const isNoSQL = course?.track === 'nosql';
+    const datasetName = isNoSQL ? getNoSQLActiveDatasetName() : getLearningDatasetName();
+    const datasetLabel = isNoSQL
+        ? (getNoSQLCourseProfile(datasetName)?.name || datasetName)
+        : getLearningProfile().name;
+    const scope = course ? `el curso ${course.title}` : `la ruta de ${datasetLabel}`;
+    if (!confirm(`¿Reiniciar tu progreso de ${scope} en ${datasetLabel}?`)) return;
 
-    if (course) {
+    if (isNoSQL) {
+        const datasetProgress = nosqlCourseProgress[datasetName];
+        if (datasetProgress) {
+            getCourseLessonIds(course).forEach(id => delete datasetProgress[id]);
+            if (!Object.keys(datasetProgress).length) delete nosqlCourseProgress[datasetName];
+        }
+        saveNoSQLCourseProgress();
+    } else if (course) {
         const datasetProgress = learningPathProgress[datasetName];
         if (datasetProgress) {
             getCourseLessonIds(course).forEach(id => delete datasetProgress[id]);
             if (!Object.keys(datasetProgress).length) delete learningPathProgress[datasetName];
         }
+        saveLearningPathProgress();
     } else {
         delete learningPathProgress[datasetName];
+        saveLearningPathProgress();
     }
 
-    saveLearningPathProgress();
     currentLearningLessonId = null;
     if (course) {
         const lessons = getCourseLessons(course);
-        currentLearningLessonId = lessons.find(lesson => !isLearningLessonCompleted(lesson.id))?.id
+        currentLearningLessonId = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id))?.id
             || lessons[0]?.id
             || null;
         renderCoursePlayer();
     } else {
         refreshLearningPath({ selectFirst: true });
     }
-    showToast('info', `Progreso de ${scope} en ${profile.name} reiniciado.`);
+    showToast('info', `Progreso de ${scope} en ${datasetLabel} reiniciado.`);
 }
 
 // ============================================
@@ -9451,6 +9842,16 @@ function activateSection(sectionName) {
     if (sectionName === 'challenges') {
         const activeTab = document.querySelector('.challenge-tab.active')?.dataset.challengeTab || 'sql';
         activateChallengeTab(activeTab);
+    }
+
+    if (sectionName === 'path') {
+        if (currentCourseView === 'player') {
+            renderCoursePlayer();
+        } else if (currentCourseView === 'detail' && currentCourseId) {
+            renderCourseDetail(currentCourseId);
+        } else {
+            renderCourseCatalog();
+        }
     }
 }
 

@@ -20,10 +20,10 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
-- Cursos guiados con dos itinerarios SQL, 8 lecciones, editor propio, pistas, proyectos finales y progreso persistente por dataset.
+- Cursos guiados con dos itinerarios SQL y uno NoSQL, 12 lecciones, editor propio, pistas, proyectos finales y progreso persistente por dataset.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
 - Guías de instalación paso a paso para doce gestores SQL y NoSQL, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
-- Panel **Mi progreso** con dominio por concepto SQL, avance por dataset, actividad reciente y recomendaciones.
+- Panel **Mi progreso** con avance por curso, dominio por concepto SQL, progreso por dataset, actividad reciente y recomendaciones.
 - **Torre de Datos:** minijuego deckbuilder con 6 pisos, cartas SQL, recompensas y soporte para teclado, ratón y mando.
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
@@ -98,7 +98,7 @@ sql-academy/
 ├── nosql-engine.js             # Motor documental seguro inspirado en MongoDB
 ├── nosql-datasets.js           # Documentos, ejemplos y retos NoSQL
 ├── install-guides.js           # Guías de instalación por gestor y sistema operativo
-├── courses.js                  # Catálogo de cursos, módulos y proyectos finales
+├── courses.js                  # Catálogo de cursos, módulos, proyectos y perfiles NoSQL
 ├── nosql.js                    # Interfaz, persistencia e historial del laboratorio NoSQL
 ├── datasets.js                 # Datasets Tienda y Biblioteca
 ├── service-worker.js           # Caché PWA y estrategia de red
@@ -270,11 +270,12 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 
 ### Cursos guiados
 
-- **Dos itinerarios:** **SQL desde cero** (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`) y **SQL intermedio** (`JOIN`, `GROUP BY`, `HAVING` y subconsultas).
-- **Catálogo con progreso:** cada curso muestra nivel, duración, módulos, lecciones y avance en el dataset activo.
+- **Tres itinerarios:** **SQL desde cero** (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`), **SQL intermedio** (`JOIN`, `GROUP BY`, `HAVING` y subconsultas) y **NoSQL esencial** (`find`, filtros, orden y agregaciones).
+- **Catálogo con progreso:** cada curso muestra nivel, duración, módulos, lecciones y avance en su dataset activo.
+- **SQL y NoSQL en el mismo flujo:** las lecciones SQL usan la base relacional y **NoSQL esencial** usa la consola documental.
 - **Temario claro:** módulos con descripción, lecciones completadas y acceso directo a cada práctica.
 - **Aprendizaje activo:** objetivo, explicación, ejemplo ejecutable, editor propio, pista y validación por resultado.
-- **Proyecto final:** cada curso propone un mini reporte para combinar lo aprendido y explicar la pregunta que responde.
+- **Proyecto final:** cada curso propone un mini reporte o catálogo para combinar lo aprendido y explicar la pregunta que responde.
 - **Continuidad:** al completar un curso se ofrece el siguiente; el curso activo se guarda en `localStorage`.
 - **Práctica conectada:** botones para reforzar conceptos con retos del dataset activo.
 - **Panel Mi progreso:** avance por curso, dominio por concepto, progreso por dataset, actividad reciente y siguiente paso recomendado.
@@ -412,7 +413,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
 - `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor, la pestaña Instalación y el mini-quiz de conceptos.
 - `tests/install-guides.test.mjs` cubre el catálogo de los doce gestores, las rutas por sistema, las plataformas de Firebase, los campos obligatorios, los logos y los enlaces oficiales.
-- `tests/courses.test.mjs` cubre el catálogo de cursos, los módulos, las ocho lecciones, el progreso compartido, el temario y la navegación al siguiente curso.
+- `tests/courses.test.mjs` cubre el catálogo de cursos, los módulos, las doce lecciones, el progreso compartido, el temario, el curso NoSQL y la navegación al siguiente curso.
 - `tests/path.test.mjs` cubre las lecciones del curso, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
 - `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
@@ -451,6 +452,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.16.0
+
+- **Tercer curso:** **NoSQL esencial**, con cuatro lecciones sobre documentos, filtros, orden y agregaciones.
+- **Contenido adaptado a los tres datasets NoSQL:** Escuela, Tienda y Biblioteca generan sus propias consultas y ejemplos.
+- **Editor NoSQL dentro de Cursos:** `find`, `findOne` y `aggregate` con validación por documentos.
+- **Progreso separado por dataset NoSQL:** completar una lección en Escuela no marca la misma lección en Tienda.
+- **Práctica segura:** el curso solo permite comandos de lectura y reutiliza el motor documental existente.
+- **Continuidad:** al terminar NoSQL esencial se ofrece repasar o elegir otro curso.
+- **Calidad:** pruebas de las cuatro lecciones en los tres datasets, plantillas que no resuelven el ejercicio y caché PWA `v33`.
 
 ### v1.15.0
 

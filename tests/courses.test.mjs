@@ -15,7 +15,7 @@ const { document } = window;
 window.confirm = () => true;
 window.requestAnimationFrame = () => 0;
 
-for (const file of ['datasets.js', 'nosql-datasets.js', 'install-guides.js', 'courses.js', 'script.js']) {
+for (const file of ['datasets.js', 'nosql-datasets.js', 'install-guides.js', 'courses.js', 'nosql-engine.js', 'script.js']) {
     window.eval(fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'));
 }
 
@@ -25,17 +25,19 @@ function clearCourseProgress(dataset = 'escuela') {
     window.localStorage.setItem('sql-academy-preferences-v1', JSON.stringify({ dataset, theme: 'light', safeMode: true }));
     window.loadPreferences();
     window.localStorage.removeItem('sql-academy-path-v1');
+    window.localStorage.removeItem('sql-academy-nosql-course-v1');
     window.loadLearningPathProgress();
+    window.loadNoSQLCourseProgress();
     window.startCourse('sql-desde-cero');
 }
 
-test('el catálogo de cursos usa las ocho lecciones sin duplicados', () => {
+test('el catálogo de cursos usa las lecciones sin duplicados', () => {
     const courses = window.SQL_ACADEMY_COURSES;
-    const expectedLessonIds = ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery'];
+    const expectedLessonIds = ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery', 'nosql-find', 'nosql-filter', 'nosql-sort', 'nosql-aggregate'];
     const courseIds = new Set();
     const lessonIds = [];
 
-    assert.equal(courses.length, 2);
+    assert.equal(courses.length, 3);
     for (const course of courses) {
         assert.ok(course.id);
         assert.equal(courseIds.has(course.id), false, `Curso duplicado: ${course.id}`);
@@ -48,25 +50,28 @@ test('el catálogo de cursos usa las ocho lecciones sin duplicados', () => {
     }
 
     const flattened = lessonIds.map(item => item.split('/')[1]);
-    const availableLessonIds = new Set(window.getLearningLessonsForDataset('escuela').map(lesson => lesson.id));
+    const sqlLessonIds = new Set(window.getLearningLessonsForDataset('escuela').map(lesson => lesson.id));
+    const nosqlLessonIds = new Set(window.getCourseLessons(window.getCourseById('nosql-esencial'), 'escuela').map(lesson => lesson.id));
     for (const lessonId of flattened) {
-        assert.ok(availableLessonIds.has(lessonId), `Lección inexistente: ${lessonId}`);
+        assert.ok(sqlLessonIds.has(lessonId) || nosqlLessonIds.has(lessonId), `Lección inexistente: ${lessonId}`);
     }
     assert.deepEqual([...flattened].sort(), [...expectedLessonIds].sort());
     assert.equal(new Set(flattened).size, expectedLessonIds.length);
 });
 
-test('el catálogo muestra los dos cursos y su progreso', () => {
+test('el catálogo muestra los tres cursos y su progreso', () => {
     clearCourseProgress();
     window.showCourseCatalog();
 
     const cards = [...document.querySelectorAll('#courseCatalogView .course-card')];
-    assert.equal(cards.length, 2);
+    assert.equal(cards.length, 3);
     assert.match(document.getElementById('courseCatalogView').textContent, /SQL desde cero/);
     assert.match(document.getElementById('courseCatalogView').textContent, /SQL intermedio/);
+    assert.match(document.getElementById('courseCatalogView').textContent, /NoSQL esencial/);
     assert.equal(cards[0].querySelector('.course-card-recommended').textContent, 'Empieza aquí');
     assert.match(cards[0].textContent, /0 de 4/);
     assert.match(cards[1].textContent, /0 de 4/);
+    assert.match(cards[2].textContent, /0 de 4/);
 });
 
 test('el temario del curso muestra módulos, lecciones y proyecto final', () => {
@@ -136,6 +141,15 @@ test('al completar un curso se ofrece el siguiente', () => {
     assert.equal(next.hidden, false);
     assert.match(next.textContent, /Curso completado/);
     assert.match(next.textContent, /SQL intermedio/);
+
+    for (const lessonId of ['join', 'group', 'having', 'subquery']) {
+        window.markLearningLessonCompleted(lessonId);
+    }
+    window.startCourse('sql-intermedio');
+    window.selectLearningLesson('subquery');
+    window.showLearningNext(window.getLearningLessonById('subquery'));
+
+    assert.match(document.getElementById('pathNext').textContent, /NoSQL esencial/);
 });
 
 test('reiniciar un curso no borra el avance de otro curso', () => {
@@ -151,4 +165,66 @@ test('reiniciar un curso no borra el avance de otro curso', () => {
 
     assert.equal(window.getCourseProgress(window.getCourseById('sql-desde-cero')).completed, 0);
     assert.equal(window.getCourseProgress(window.getCourseById('sql-intermedio')).completed, 1);
+});
+
+test('el curso NoSQL genera cuatro lecciones válidas por dataset', () => {
+    const course = window.getCourseById('nosql-esencial');
+    for (const datasetName of ['escuela', 'tienda', 'biblioteca']) {
+        const lessons = window.getCourseLessons(course, datasetName);
+        assert.equal(lessons.length, 4);
+        assert.ok(lessons.every(lesson => lesson.track === 'nosql'));
+
+        const state = window.NoSQL.createDatabase(window.NOSQL_DATASETS[datasetName]);
+        for (const lesson of lessons) {
+            const expected = window.NoSQL.executeCommand(state, lesson.expectedQuery);
+            const starter = window.NoSQL.executeCommand(state, lesson.starter);
+            const example = window.NoSQL.executeCommand(state, lesson.example);
+
+            assert.ok(Array.isArray(expected.documents) && expected.documents.length > 0, `${datasetName}/${lesson.id}: la solución no devuelve documentos`);
+            assert.equal(window.compareNoSQLCourseResults(expected, starter).ok, false, `${datasetName}/${lesson.id}: la plantilla ya resuelve`);
+            assert.equal(window.compareNoSQLCourseResults(expected, example).ok, false, `${datasetName}/${lesson.id}: el ejemplo ya resuelve`);
+        }
+    }
+});
+
+test('el curso NoSQL valida comandos y guarda progreso por dataset', () => {
+    clearCourseProgress();
+    const course = window.getCourseById('nosql-esencial');
+    const schoolLessons = window.getCourseLessons(course, 'escuela');
+    window.startCourse('nosql-esencial');
+
+    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
+    assert.match(document.getElementById('pathDatasetLabel').textContent, /NoSQL: Escuela/);
+    assert.equal(document.querySelectorAll('#pathLessonList [data-learning-lesson]').length, 4);
+
+    const editor = document.getElementById('pathEditor');
+    editor.value = schoolLessons[0].expectedQuery;
+    window.runNoSQLCourseLesson();
+
+    assert.match(document.getElementById('pathResult').textContent, /Lección completada/);
+    assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
+    assert.equal(window.getCourseProgress(course).completed, 1);
+
+    const selector = document.getElementById('nosqlDatasetSelector');
+    selector.value = 'tienda';
+    window.refreshLearningPath({ selectFirst: true });
+    assert.match(document.getElementById('pathDatasetLabel').textContent, /NoSQL: Tienda/);
+    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
+    assert.equal(window.getCourseProgress(course).completed, 0);
+
+    selector.value = 'escuela';
+    window.refreshLearningPath({ selectFirst: true });
+    assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
+});
+
+test('al completar las lecciones SQL se recomienda el curso NoSQL', () => {
+    clearCourseProgress();
+    for (const lessonId of ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery']) {
+        window.markLearningLessonCompleted(lessonId);
+    }
+
+    const recommendation = window.getLearningRecommendation();
+    assert.match(recommendation.title, /Consulta documentos/);
+    assert.match(recommendation.onclick, /nosql-find/);
+    assert.equal(recommendation.icon, 'fa-leaf');
 });
