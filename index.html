@@ -263,7 +263,7 @@
 
                 <!-- ===== GESTORES NoSQL ===== -->
                 <div class="db-group" style="margin-top: 40px;">
-                    <h3 class="db-group-title" style="color:#73bed7;"><i class="fas fa-database" style="color:#73bed7;"></i>
+                    <h3 class="db-group-title db-group-title-nosql"><i class="fas fa-database"></i>
                         Gestores NoSQL (No Relacionales)</h3>
                     <p class="db-group-subtitle">Sistemas de gestión de bases de datos diseñados para grandes volúmenes de
                         datos no estructurados</p>
@@ -334,7 +334,7 @@
                 <!-- ===== COMPARATIVA ===== -->
                 <div class="comparison-wrapper" data-guide-card data-tags="sql nosql comparativa" data-search="comparativa sql nosql acid escalabilidad esquema lenguaje">
                     <h3><i class="fas fa-chart-bar"></i> Comparativa de Gestores SQL vs NoSQL</h3>
-                    <div class="comparison-table-wrap">
+                    <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="Tabla comparativa de gestores">
                         <table class="comparison-table">
                             <thead>
                                 <tr>
@@ -995,7 +995,7 @@
                     <div class="info-panel nosql-help-panel">
                         <h3><i class="fas fa-circle-info"></i> Sintaxis rápida</h3>
                         <p>Usa una consola simplificada de MongoDB. No se ejecuta JavaScript arbitrario.</p>
-                        <div id="nosqlQuickSyntax" class="nosql-quick-syntax"></div>
+                        <div id="nosqlQuickSyntax" class="nosql-quick-syntax" tabindex="0" role="region" aria-label="Sintaxis rápida NoSQL"></div>
                         <p id="nosqlQuickOperators" class="nosql-muted"></p>
                     </div>
                 </aside>
@@ -1227,7 +1227,7 @@
                         </button>
                     </div>
                 </div>
-                <div id="diagramContainer">
+                <div id="diagramContainer" tabindex="0" role="region" aria-label="Diagrama de relaciones">
                     <div class="diagram-loading"><i class="fas fa-spinner fa-spin"></i> Generando diagrama...</div>
                 </div>
             </div>
@@ -1338,9 +1338,64 @@
                 </div>
             </div>
         </footer>
+
+        <!-- ===== NAVEGACIÓN MÓVIL ===== -->
+        <nav class="mobile-nav" aria-label="Navegación móvil">
+            <button type="button" class="mobile-nav-btn active" data-mobile-section="learn" aria-current="page">
+                <i class="fas fa-book"></i>
+                <span>Aprender</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="path">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Cursos</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="practice">
+                <i class="fas fa-laptop-code"></i>
+                <span>Practicar</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="challenges">
+                <i class="fas fa-trophy"></i>
+                <span>Retos</span>
+            </button>
+            <button type="button" id="mobileMoreBtn" class="mobile-nav-btn" aria-expanded="false" aria-controls="mobileMoreModal" onclick="openMobileMore()">
+                <i class="fas fa-ellipsis"></i>
+                <span>Más</span>
+            </button>
+        </nav>
     </div>
 
     <!-- ===== MODALES ===== -->
+    <!-- Modal de más secciones móviles -->
+    <div id="mobileMoreModal" class="modal mobile-more-modal" role="dialog" aria-modal="true" aria-labelledby="mobileMoreTitle">
+        <div class="modal-content mobile-more-sheet">
+            <div class="modal-header">
+                <div>
+                    <span class="course-eyebrow">Navegación</span>
+                    <h2 id="mobileMoreTitle">Más secciones</h2>
+                </div>
+                <button type="button" class="modal-close" onclick="closeMobileMore()" aria-label="Cerrar más secciones">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="mobile-more-grid">
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="game" onclick="closeMobileMore(); activateSection('game')">
+                        <span class="mobile-more-icon"><i class="fas fa-gamepad"></i></span>
+                        <span><strong>Juego</strong><small>Torre de Datos</small></span>
+                    </button>
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="nosql" onclick="closeMobileMore(); activateSection('nosql')">
+                        <span class="mobile-more-icon"><i class="fas fa-leaf"></i></span>
+                        <span><strong>NoSQL</strong><small>Laboratorio documental</small></span>
+                    </button>
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="analyze" onclick="closeMobileMore(); activateSection('analyze')">
+                        <span class="mobile-more-icon"><i class="fas fa-chart-pie"></i></span>
+                        <span><strong>Analizar</strong><small>Datos, ERD y calidad</small></span>
+                    </button>
+                </div>
+                <button type="button" class="btn-secondary mobile-more-close" onclick="closeMobileMore()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Gestores -->
     <!-- Modal de Gestores -->
     <div id="dbModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">

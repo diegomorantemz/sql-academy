@@ -637,6 +637,9 @@ function closeModal(modal) {
     if (modal.id === 'checkpointModal') {
         currentCheckpoint = null;
     }
+    if (modal.id === 'mobileMoreModal') {
+        document.getElementById('mobileMoreBtn')?.setAttribute('aria-expanded', 'false');
+    }
     modal.classList.remove('active');
     if (!document.querySelector('.modal.active')) {
         document.body.style.overflow = '';
@@ -910,7 +913,7 @@ function showTablesInfo() {
 
                 html += `<div class="table-card">`;
                 html += `<div class="table-title"><i class="fas fa-table"></i> ${escapeHtml(tableName)} <span class="badge-count">${escapeHtml(totalRows)} registros</span></div>`;
-                html += `<div class="table-scroll">`;
+                html += `<div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de datos">`;
                 html += `<table class="info-table">`;
 
                 html += '<thead><tr>';
@@ -921,7 +924,7 @@ function showTablesInfo() {
 
                 html += '<tbody>';
                 if (rows.length === 0) {
-                    html += `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;">Sin datos</td></tr>`;
+                    html += `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--text-muted);">Sin datos</td></tr>`;
                 } else {
                     rows.forEach(row => {
                         html += '<tr>';
@@ -933,7 +936,7 @@ function showTablesInfo() {
                         html += '</tr>';
                     });
                     if (totalRows > 5) {
-                        html += `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;font-style:italic;">
+                        html += `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--text-muted);font-style:italic;">
                             ... y ${escapeHtml(totalRows - 5)} registros mas
                         </td></tr>`;
                     }
@@ -1108,7 +1111,7 @@ function renderResultSets() {
                     </thead>
                     <tbody>
                         ${rowCount === 0
-                            ? `<tr><td colspan="${colCount}" style="text-align:center;color:#999;">Sin filas</td></tr>`
+                            ? `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);">Sin filas</td></tr>`
                             : visibleRows.map(row => `
                                 <tr>
                                     ${row.map(value => {
@@ -2187,7 +2190,7 @@ function loadTableEditor(tableName = analyzeSelectedTable, database = db) {
 
         html += '<tbody>';
         if (rows.length === 0) {
-            html += `<tr><td colspan="${selectColumns.length + 1}" style="text-align:center;color:#999;">
+            html += `<tr><td colspan="${selectColumns.length + 1}" style="text-align:center;color:var(--text-muted);">
                 Tabla vacía. Usa "Agregar fila" para crear un registro.
             </td></tr>`;
         } else {
@@ -2721,7 +2724,7 @@ function renderAnalyzeTableDetail(table, database = db) {
 
     const previewHtml = preview.columns.length
         ? `
-            <div class="table-detail-preview">
+            <div class="table-detail-preview" tabindex="0" role="region" aria-label="Vista previa de la tabla">
                 <table class="table-detail-table">
                     <thead>
                         <tr>${preview.columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr>
@@ -2763,7 +2766,7 @@ function renderAnalyzeTableDetail(table, database = db) {
         </div>
 
         <p class="table-detail-subtitle">Columnas</p>
-        <div class="table-detail-table-wrap">
+        <div class="table-detail-table-wrap" tabindex="0" role="region" aria-label="Detalle de la tabla">
             <table class="table-detail-table">
                 <thead>
                     <tr>
@@ -6888,9 +6891,9 @@ function renderNoSQLQuickSyntax() {
     const operators = [...new Set(levels.flatMap(item => NOSQL_QUICK_SYNTAX[item]?.operators || []))];
     const operatorsContainer = document.getElementById('nosqlQuickOperators');
 
-    container.innerHTML = examples.map(code => `<code>${escapeHtml(code)}</code>`).join('');
+    container.innerHTML = examples.map(code => `<code tabindex="0">${escapeHtml(code)}</code>`).join('');
     if (operatorsContainer) {
-        operatorsContainer.innerHTML = `Operadores: ${operators.map(operator => `<code>${escapeHtml(operator)}</code>`).join(', ')}.`;
+        operatorsContainer.innerHTML = `Operadores: ${operators.map(operator => `<code tabindex="0">${escapeHtml(operator)}</code>`).join(', ')}.`;
     }
 }
 
@@ -10678,6 +10681,55 @@ function openNoSQLChallengesHub() {
     activateChallengeTab('nosql');
 }
 
+function syncMobileNavigation(sectionName) {
+    const moreSections = ['game', 'nosql', 'analyze'];
+    document.querySelectorAll('[data-mobile-section]').forEach(button => {
+        const active = button.dataset.mobileSection === sectionName;
+        button.classList.toggle('active', active);
+        if (active) {
+            button.setAttribute('aria-current', 'page');
+        } else {
+            button.removeAttribute('aria-current');
+        }
+    });
+
+    const moreActive = moreSections.includes(sectionName);
+    const moreButton = document.getElementById('mobileMoreBtn');
+    if (moreButton) {
+        moreButton.classList.toggle('active', moreActive);
+        if (moreActive) {
+            moreButton.setAttribute('aria-current', 'page');
+        } else {
+            moreButton.removeAttribute('aria-current');
+        }
+    }
+
+    document.querySelectorAll('[data-mobile-more-section]').forEach(button => {
+        const active = button.dataset.mobileMoreSection === sectionName;
+        button.classList.toggle('active', active);
+        if (active) {
+            button.setAttribute('aria-current', 'page');
+        } else {
+            button.removeAttribute('aria-current');
+        }
+    });
+}
+
+function openMobileMore() {
+    const modal = document.getElementById('mobileMoreModal');
+    const button = document.getElementById('mobileMoreBtn');
+    if (!modal) return;
+    button?.setAttribute('aria-expanded', 'true');
+    openModal(modal);
+}
+
+function closeMobileMore() {
+    const modal = document.getElementById('mobileMoreModal');
+    if (!modal) return;
+    closeModal(modal);
+    document.getElementById('mobileMoreBtn')?.focus();
+}
+
 function activateSection(sectionName) {
     document.querySelectorAll('.nav-btn').forEach(btn => {
         const active = btn.dataset.section === sectionName;
@@ -10712,6 +10764,8 @@ function activateSection(sectionName) {
             renderCourseCatalog();
         }
     }
+
+    syncMobileNavigation(sectionName);
 }
 
 // NAVEGACIÓN ENTRE SECCIONES
@@ -10726,6 +10780,11 @@ document.addEventListener('DOMContentLoaded', function() {
             activateSection(this.dataset.section);
         });
     });
+
+    document.querySelectorAll('[data-mobile-section]').forEach(btn => {
+        btn.addEventListener('click', () => activateSection(btn.dataset.mobileSection));
+    });
+    syncMobileNavigation(document.querySelector('.section.active')?.id.replace('section-', '') || 'learn');
 
     document.querySelectorAll('.challenge-tab').forEach(tab => {
         tab.addEventListener('click', () => activateChallengeTab(tab.dataset.challengeTab));
@@ -11242,7 +11301,7 @@ function renderGuideStep(index) {
                 <i class="fas ${step.icon}"></i>
             </div>
             <div>
-                <div style="font-size:0.8em; color:#999;">Paso ${index + 1} de ${totalSteps}</div>
+                <div style="font-size:0.8em; color:var(--text-muted);">Paso ${index + 1} de ${totalSteps}</div>
                 <h3 style="color:#2c3e50; margin:0; font-size:1.2em;">${step.title}</h3>
             </div>
         </div>
@@ -11256,7 +11315,7 @@ function renderGuideStep(index) {
             <button onclick="previousGuideStep()" class="btn-secondary" ${index === 0 ? 'style="visibility:hidden;"' : ''}>
                 <i class="fas fa-arrow-left"></i> Anterior
             </button>
-            <span style="color:#999; font-size:0.85em; display:flex; align-items:center;">
+            <span style="color:var(--text-muted); font-size:0.85em; display:flex; align-items:center;">
                 ${index + 1} / ${totalSteps}
             </span>
             <button onclick="nextGuideStep()" class="btn-secondary">

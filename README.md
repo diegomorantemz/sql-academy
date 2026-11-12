@@ -28,7 +28,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
-- Aplicación instalable (PWA) con icono propio, modo oscuro, navegación táctil y mejoras de accesibilidad.
+- Aplicación instalable (PWA) con icono propio, modo oscuro, barra inferior en móvil y auditoría de accesibilidad con axe.
 - Sonido opcional: intro original sintetizada para el recorrido y feedback de aciertos/errores, apagado por defecto.
 - Donaciones voluntarias con Yape y Plin desde S/1, sin montos obligatorios ni funciones bloqueadas.
 - Tests automatizados, CI y escaneo de secretos con Gitleaks.
@@ -81,10 +81,14 @@ Requiere Node.js 20 o superior.
 npm ci
 npm test
 npm run check
+npx playwright install chromium
+npm run test:e2e
 ```
 
 - `npm test` ejecuta los tests de utilidades del frontend y de la función de Netlify.
-- `npm run check` valida la sintaxis de los archivos JavaScript y ejecuta toda la suite.
+- `npm run check` valida la sintaxis de los archivos JavaScript y ejecuta toda la suite unitaria.
+- `npm run test:e2e` ejecuta Playwright en viewports móviles, tablet y escritorio, con auditoría de accesibilidad mediante axe.
+- Las pruebas E2E usan `python3 -m http.server` como servidor estático local.
 
 ## Estructura del proyecto
 
@@ -129,8 +133,13 @@ sql-academy/
 │   ├── donation-ui.test.mjs    # Modal de donaciones
 │   ├── skill-level.test.mjs    # Test adaptativo, filtros y sonido
 │   ├── toolbar-ui.test.mjs     # Barra de herramientas y menú Más
+│   ├── mobile-ui.test.mjs      # Barra inferior y hoja Más
 │   ├── license.test.mjs        # Licencia y rutas de assets
 │   └── explain.test.mjs        # Función de Netlify y prompts
+├── tests/e2e/
+│   ├── responsive.spec.mjs     # Viewports, navegación y desbordamientos
+│   └── accessibility.spec.mjs  # Auditoría axe en claro y oscuro
+├── playwright.config.mjs       # Configuración de Playwright
 ├── .github/workflows/ci.yml    # Tests y Gitleaks en GitHub Actions
 ├── .gitleaks.toml              # Configuración del escaneo de secretos
 ├── .env.example                # Variables de entorno de ejemplo
@@ -432,8 +441,11 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/donation-ui.test.mjs` cubre el modal de donaciones, el cambio Yape/Plin, la ausencia de números y la presencia de los QR.
 - `tests/skill-level.test.mjs` cubre el perfil de nivel, el test adaptativo, los filtros SQL/NoSQL, la persistencia y el control de sonido.
 - `tests/toolbar-ui.test.mjs` cubre la agrupación de acciones, el menú Más y la retirada de la importación de bases.
+- `tests/mobile-ui.test.mjs` cubre la barra inferior, la sincronización de sección activa y la hoja Más.
 - `tests/license.test.mjs` cubre la licencia noncommercial, la nota de copyright y las rutas de los assets de la PWA.
 - `tests/explain.test.mjs` cubre prompts, códigos de error, validaciones y la llamada simulada a Gemini.
+- `tests/e2e/responsive.spec.mjs` comprueba viewports de 360, 390, 768, 1024 y 1280 px, navegación, modales y desbordamientos.
+- `tests/e2e/accessibility.spec.mjs` ejecuta axe en modo claro y oscuro, y en el modal de instalación.
 - `.github/workflows/ci.yml` ejecuta `npm ci`, `npm run check` y Gitleaks en cada push o pull request.
 - `_headers` añade `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS y cachés específicas.
 - `netlify.toml` incluye un `ignore` para evitar builds cuando solo cambian documentación, tests, CI o archivos de dependencias.
@@ -461,6 +473,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.22.0
+
+- **Navegación móvil:** barra inferior con Aprender, Cursos, Practicar, Retos y Más.
+- **Hoja Más:** Juego, NoSQL y Analizar accesibles desde un panel inferior con foco y cierre por Escape.
+- **Mejor ergonomía:** objetivos táctiles de 44 px, safe areas, navegación con scroll snap y formularios de 16 px para evitar el zoom de iOS.
+- **Lecciones y modales:** editor primero en móvil, modales con altura dinámica y contenido desplazable.
+- **Accesibilidad:** contraste corregido en modo claro y oscuro, regiones desplazables accesibles y atributos ARIA válidos en editores.
+- **Pruebas reales:** Playwright en 360, 390, 768, 1024 y 1280 px; axe en todas las secciones, modo oscuro y modal de instalación.
+- **Calidad:** `npm run test:e2e`, documentación actualizada, versión `1.22.0` y caché PWA `v39`.
 
 ### v1.21.0
 

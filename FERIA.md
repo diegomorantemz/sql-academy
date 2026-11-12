@@ -100,7 +100,7 @@ Mensaje clave:
 - **Aprendizaje activo:** práctica con datos reales, validación por resultados y feedback inmediato.
 - **Bajo costo:** funciona en el navegador y no necesita servidores para las consultas.
 - **Privacidad:** los datos de práctica se quedan en el dispositivo.
-- **Accesibilidad:** interfaz responsive con navegación táctil, icono de aplicación propio, modo oscuro y navegación por teclado.
+- **Accesibilidad:** interfaz responsive con barra inferior en móvil, icono de aplicación propio, modo oscuro, navegación por teclado y auditoría axe.
 - **Cursos guiados:** cuatro itinerarios con teoría breve, demostraciones, práctica, quiz, checkpoints de módulo, proyecto final evaluable, selector de dataset y continuación clara hacia el siguiente curso, incluido NoSQL.
 - **Continuidad:** guías de instalación para doce gestores, con rutas por sistema operativo, para pasar de practicar en el navegador a un entorno local.
 - **Escalabilidad educativa:** puede crecer hacia aulas, rutas personalizadas y reportes docentes.
