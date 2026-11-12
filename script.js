@@ -1717,12 +1717,31 @@ async function installApp() {
 
 function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') return;
+
+    const isLocalHost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+    if (window.location.protocol !== 'https:' && !isLocalHost) return;
+
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let refreshing = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
 
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch(error => {
-            console.warn('No se pudo registrar el service worker:', error);
-        });
+        navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' })
+            .then(registration => {
+                const update = () => registration.update().catch(() => {});
+                update();
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') update();
+                });
+            })
+            .catch(error => {
+                console.warn('No se pudo registrar el service worker:', error);
+            });
     });
 }
 
@@ -3456,14 +3475,13 @@ function renderDonationMethodPanel(method) {
         return `
             <div class="donation-method-panel" role="tabpanel">
                 <div class="donation-qr-card">
-                    <a href="${escapeHtml(method.image)}" target="_blank" rel="noopener" class="donation-qr-link" title="Abrir QR de ${escapeHtml(method.label)} en tamaño completo" aria-label="Abrir QR de ${escapeHtml(method.label)} en tamaño completo">
+                    <a href="${escapeHtml(method.image)}" target="_blank" rel="noopener" class="donation-qr-link" title="Abrir QR de ${escapeHtml(method.label)} en tamaño completo">
                         <img src="${escapeHtml(method.image)}" alt="${escapeHtml(method.alt)}" class="donation-qr-image">
                         <span class="donation-qr-hint"><i class="fas fa-expand"></i> Ver QR en grande</span>
                     </a>
                 </div>
                 <div class="donation-method-copy">
                     <p class="donation-scan-copy"><i class="fas fa-qrcode"></i> Escanea el QR y elige el monto.</p>
-                    <p class="donation-amount">Monto libre desde <strong>S/1</strong>. Tú decides cuánto.</p>
                 </div>
             </div>
         `;
@@ -3508,7 +3526,7 @@ function showDonationQR(type = 'yape') {
     body.innerHTML = `
         <div class="donation-card">
             <p class="donation-lead">
-                Si te sirvió, deja una donación voluntaria desde S/1.
+                Si te sirvió, puedes apoyar el proyecto con una donación voluntaria.
             </p>
 
             ${renderDonationMethodTabs(method.id, methods)}
@@ -3516,10 +3534,10 @@ function showDonationQR(type = 'yape') {
 
             <div class="donation-quote">“${escapeHtml(quote)}”</div>
 
-            <div class="donation-voluntary">
-                100% voluntario · No bloquea nada.
+            <div class="donation-impact">
+                <i class="fas fa-server" aria-hidden="true"></i>
+                <p>Tu apoyo mantiene SQL Academy en línea: <strong>hosting, dominio y mantenimiento</strong> para que siga siendo gratuito para quienes están empezando.</p>
             </div>
-            <p class="donation-footnote"><i class="fas fa-server"></i> Hosting, dominio y mantenimiento.</p>
         </div>
     `;
 
@@ -7075,8 +7093,8 @@ function closeSkillTest() {
 
 const DEMO_TOUR_STEPS = [
     {
-        title: 'Una academia que se adapta',
-        description: 'SQL Academy combina teoría, práctica y juego. El recorrido empieza en Aprender.',
+        title: 'Una academia para empezar',
+        description: 'Guías, conceptos e instalación para doce gestores. El recorrido empieza en Aprender.',
         section: 'learn'
     },
     {
@@ -7092,26 +7110,46 @@ const DEMO_TOUR_STEPS = [
         target: 'sqlEditor'
     },
     {
+        title: 'Cursos con proyecto final',
+        description: 'Cuatro itinerarios, 15 lecciones, quizzes, checkpoints y proyecto final. Cambia el dataset SQL o NoSQL y el avance se guarda por separado.',
+        section: 'path',
+        courseCatalog: true,
+        target: 'courseCatalogView'
+    },
+    {
         title: 'Explora el laboratorio NoSQL',
-        description: 'Los ejemplos y la sintaxis rápida también se filtran por nivel. La consola documental sigue disponible.',
+        description: 'Consola documental tipo MongoDB con CRUD, agregaciones y retos. Los ejemplos también se filtran por nivel.',
         section: 'nosql',
-        target: 'nosqlLevelBar'
+        target: 'nosqlEditor'
     },
     {
         title: 'Ponte a prueba',
-        description: 'Resuelve retos SQL, retos NoSQL o depuraciones con validación por resultado.',
-        section: 'challenges'
+        description: 'Retos SQL, retos NoSQL y depuraciones con validación por resultado, pistas y progreso guardado.',
+        section: 'challenges',
+        target: 'sqlChallengesTab'
     },
     {
-        title: 'Sigue tus cursos',
-        description: 'Consulta tu nivel, el avance por curso, las actividades completadas y el siguiente paso recomendado.',
+        title: 'Juega con la Torre de Datos',
+        description: 'Un deckbuilder de 6 pisos: construye consultas con cartas y supera cada piso. Funciona con teclado, ratón o mando.',
+        section: 'game',
+        target: 'gameTower'
+    },
+    {
+        title: 'Analiza el dataset',
+        description: 'Revisa el resumen, el diagrama ERD, el explorador y editor de tablas, y las comprobaciones de calidad.',
+        section: 'analyze',
+        target: 'analyzeSummary'
+    },
+    {
+        title: 'Sigue tu progreso',
+        description: 'Consulta tu nivel, el avance por curso, la actividad completada y el siguiente paso. También puedes generar un reporte imprimible.',
         section: 'path',
         progress: true,
         target: 'learningProgressDashboard'
     },
     {
         title: 'Tecnología y aprendizaje',
-        description: 'SQLite real en el navegador, PWA, pruebas automatizadas y un asistente IA opcional. Gracias por acompañar el recorrido.',
+        description: 'SQLite real en el navegador, PWA instalable, navegación móvil, accesibilidad y asistente IA opcional. Gracias por acompañar el recorrido.',
         section: null
     }
 ];
@@ -7153,6 +7191,10 @@ function renderDemoTourStep() {
     if (step.section) {
         activateSection(step.section);
         if (step.progress) activatePathTab('progress');
+        if (step.courseCatalog) {
+            activatePathTab('lessons');
+            renderCourseCatalog();
+        }
     }
     if (step.target) {
         setTimeout(() => scrollToDemoTarget(step.target), 80);

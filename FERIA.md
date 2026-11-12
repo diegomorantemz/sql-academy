@@ -16,50 +16,60 @@ Todo funciona en el navegador con SQLite real y un motor NoSQL propio. La base d
 
 ### 0:00 — Problema
 
-"Los cursos tradicionales no se adaptan al nivel del estudiante y separan la teoría de la práctica. El estudiante se pierde entre conceptos, sintaxis y ejemplos que no corresponden a su nivel."
+"Muchos estudiantes aprenden SQL con teoría y ejemplos que no pueden ejecutar. SQL Academy les da una base real en el navegador, práctica guiada y feedback inmediato."
 
-### 0:45 — Test de nivel
+### 0:30 — Cursos guiados
+
+1. Abrir **Cursos**.
+2. Mostrar los cuatro itinerarios, las 15 lecciones, los checkpoints y el proyecto final.
+3. Cambiar el dataset SQL o NoSQL y explicar que el avance se guarda por separado.
+
+Mensaje: "El estudiante no solo practica: sigue una ruta con teoría, ejercicios, quizzes y proyecto final."
+
+### 1:15 — Test y práctica SQL
 
 1. Abrir **Practicar**.
-2. Mostrar la barra **Tu nivel SQL**.
-3. Pulsar **Test de nivel**.
-4. Responder algunas preguntas y llegar al resultado.
-5. Mostrar el nivel recomendado y los conceptos a reforzar.
+2. Mostrar la barra **Tu nivel SQL** y el test adaptativo.
+3. Cambiar a **Ver todo** si hace falta.
+4. Elegir un ejemplo, ejecutarlo y mostrar los resultados reales.
 
-Mensaje: "La app no solo dice el nivel: recomienda qué practicar después."
+Mensaje: "La app detecta el nivel y adapta la práctica. La base SQLite funciona en el navegador."
 
-### 1:45 — Práctica personalizada
-
-1. Volver a Practicar.
-2. Mostrar que las categorías y ejemplos están filtrados por nivel.
-3. Cambiar a **Ver todo** y mostrar que no hay bloqueos.
-4. Elegir un ejemplo y pulsar **Ejecutar**.
-5. Mostrar resultados reales y la tabla de datos.
-
-Mensaje: "El estudiante practica con una base SQLite real, no con una simulación falsa."
-
-### 2:45 — Laboratorio NoSQL
+### 2:15 — Laboratorio NoSQL
 
 1. Abrir **NoSQL**.
-2. Mostrar la barra de nivel NoSQL.
-3. Ver cómo los ejemplos y la sintaxis rápida cambian según el nivel.
-4. Ejecutar un `find` o una agregación.
+2. Mostrar la barra de nivel NoSQL y la consola documental.
+3. Ejecutar un `find` o una agregación.
 
 Mensaje: "También cubrimos el modelo documental, con una consola segura y sin ejecutar JavaScript arbitrario."
 
-### 3:30 — Retos y depuración
+### 2:45 — Retos y depuración
 
 1. Abrir **Retos**.
-2. Mostrar un reto SQL o una depuración.
-3. Ejecutar una solución o una consulta incorrecta.
-4. Mostrar la validación por resultado.
+2. Mostrar un reto SQL, uno NoSQL y una depuración.
+3. Ejecutar una solución y mostrar la validación por resultado.
 
 Mensaje: "No validamos texto: validamos el resultado real de la consulta."
+
+### 3:15 — Torre de Datos
+
+1. Abrir **Juego**.
+2. Mostrar el deckbuilder de 6 pisos.
+3. Señalar que se puede jugar con teclado, ratón o mando.
+
+Mensaje: "La práctica también puede ser un juego."
+
+### 3:45 — Analizar
+
+1. Abrir **Analizar**.
+2. Mostrar el resumen, el diagrama ERD, el explorador de tablas y la calidad de los datos.
+
+Mensaje: "El estudiante puede entender el esquema y revisar la calidad del dataset."
 
 ### 4:15 — Progreso
 
 1. Abrir **Cursos → Mi progreso**.
-2. Mostrar el avance por curso, el perfil SQL/NoSQL, actividades, conceptos y siguiente paso.
+2. Mostrar niveles, avance por curso, actividades, conceptos y siguiente paso.
 3. Mostrar el reporte de aprendizaje.
 
 Mensaje: "El estudiante ve su avance y puede imprimir un reporte tangible."
@@ -68,7 +78,7 @@ Mensaje: "El estudiante ve su avance y puede imprimir un reporte tangible."
 
 - SQLite real en el navegador con `sql.js`.
 - Motor NoSQL documental propio.
-- PWA instalable.
+- PWA instalable y navegación móvil.
 - Datos y progreso locales.
 - Asistente IA opcional mediante proxy seguro.
 - Más de 100 pruebas automatizadas.

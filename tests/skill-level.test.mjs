@@ -227,19 +227,27 @@ test('el recorrido guiado avanza por los pasos y se puede cerrar', () => {
     window.startDemoTour();
     const bar = window.document.getElementById('demoTourBar');
     assert.equal(bar.hidden, false);
-    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 7/);
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 10/);
     assert.ok(window.document.getElementById('demoTourTitle').textContent.length > 0);
 
     window.nextDemoTourStep();
-    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 2 de 7/);
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 2 de 10/);
     assert.equal(window.document.getElementById('demoTourPrevBtn').disabled, false);
 
     window.previousDemoTourStep();
-    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 7/);
+    assert.match(window.document.getElementById('demoTourStepLabel').textContent, /Paso 1 de 10/);
     assert.equal(window.document.getElementById('demoTourPrevBtn').disabled, true);
 
     window.closeDemoTour();
     assert.equal(bar.hidden, true);
+});
+
+test('el recorrido de feria cubre las secciones principales', () => {
+    const source = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
+    for (const section of ['learn', 'practice', 'path', 'nosql', 'challenges', 'game', 'analyze']) {
+        assert.match(source, new RegExp(`section: '${section}'`));
+    }
+    assert.match(source, /courseCatalog: true/);
 });
 
 test('el HTML incluye el recorrido de feria', () => {
