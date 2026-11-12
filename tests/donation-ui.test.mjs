@@ -59,9 +59,14 @@ test('el modal de donaciones abre en Yape y muestra las opciones actuales', () =
     assert.ok(modal.classList.contains('active'));
     assert.match(body.textContent, /Si te sirvió/);
     assert.match(body.textContent, /Escanea el QR y elige el monto/);
-    assert.match(body.textContent, /Monto libre desde S\/1/);
-    assert.match(body.textContent, /100% voluntario/);
-    assert.match(body.textContent, /Hosting, dominio y mantenimiento/);
+    assert.doesNotMatch(body.textContent, /Monto libre desde S\/1/);
+    assert.doesNotMatch(body.textContent, /100% voluntario/);
+    assert.match(body.textContent, /hosting, dominio y mantenimiento/);
+    assert.match(body.textContent, /quienes están empezando/);
+    assert.ok(body.querySelector('.donation-impact'));
+    assert.equal(body.querySelector('.donation-amount'), null);
+    assert.equal(body.querySelector('.donation-voluntary'), null);
+    assert.equal(body.querySelector('.donation-footnote'), null);
     assert.equal(body.querySelectorAll('.donation-method-tab').length, 2);
     assert.equal(body.querySelectorAll('.donation-steps, .donation-transparency').length, 0);
     assert.equal(body.querySelector('.fa-heart'), null);

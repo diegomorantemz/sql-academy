@@ -8,9 +8,9 @@ Aplicación web para aprender SQL y NoSQL practicando con consultas reales en el
 
 ## Resumen
 
-SQL Academy es una página web que hice para un curso de 18 semanas. Sirve para aprender SQL y NoSQL practicando: escribes una consulta, la ejecutas y ves el resultado al instante, sin instalar un gestor de bases de datos.
+SQL Academy es una página web para estudiantes que están empezando con las bases de datos. La idea es que puedan practicar SQL y NoSQL sin instalar un gestor: escriben una consulta, la ejecutan y ven el resultado al instante.
 
-La base SQL funciona con SQLite dentro del navegador y el laboratorio NoSQL tiene una consola parecida a MongoDB. También hay cursos, retos y tres bases de práctica. El progreso se guarda solo, y el asistente con IA es opcional para explicar errores o dar pistas.
+La base SQL funciona con SQLite dentro del navegador y el laboratorio NoSQL tiene una consola parecida a MongoDB. También hay cursos, retos y tres bases de práctica. El progreso se guarda solo, y el asistente con IA es opcional para explicar errores o dar pistas. Funciona en laptop y celular, sin crear cuenta, para que se pueda probar en la feria o seguir practicando después.
 
 ## Puntos destacados
 
@@ -33,7 +33,7 @@ La base SQL funciona con SQLite dentro del navegador y el laboratorio NoSQL tien
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.
 - Aplicación instalable (PWA) con icono propio, modo oscuro, barra inferior en móvil y auditoría de accesibilidad con axe.
-- Donaciones voluntarias con Yape y Plin desde S/1, sin montos obligatorios ni funciones bloqueadas.
+- Donaciones voluntarias con Yape y Plin para cubrir hosting, dominio y mantenimiento, sin bloquear funciones.
 - Tests automatizados, CI y escaneo de secretos con Gitleaks.
 
 ## Tecnologías

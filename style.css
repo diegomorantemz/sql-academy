@@ -3986,23 +3986,6 @@ button:disabled {
     color: var(--postgres-blue);
 }
 
-#donationModalBody .donation-amount {
-    width: 100%;
-    margin: 0;
-    padding: 9px 12px;
-    border-left: 4px solid #f39c12;
-    border-radius: 7px;
-    background: #fff9e8;
-    color: #7a5a00;
-    font-size: 12.5px;
-    line-height: 1.5;
-    text-align: center;
-}
-
-#donationModalBody .donation-amount strong {
-    color: #9a6100;
-}
-
 .donation-quote {
     margin: 12px 0 10px;
     padding: 9px 14px;
@@ -4016,30 +3999,34 @@ button:disabled {
     text-align: center;
 }
 
-.donation-voluntary {
+.donation-impact {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #1e7e34;
-    font-size: 12px;
-    font-weight: 700;
-    text-align: center;
-}
-
-#donationModalBody .donation-footnote {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    margin: 5px 0 0;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 2px;
+    padding: 11px 13px;
+    border: 1px solid var(--postgres-border);
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: 8px;
+    background: var(--surface-muted);
     color: var(--text-muted);
-    font-size: 11px;
-    line-height: 1.4;
-    text-align: center;
+    font-size: 12px;
+    line-height: 1.5;
 }
 
-#donationModalBody .donation-footnote i {
+.donation-impact i {
+    flex: 0 0 auto;
+    margin-top: 2px;
     color: var(--postgres-blue);
+}
+
+.donation-impact p {
+    margin: 0;
+}
+
+.donation-impact strong {
+    color: var(--text-strong);
+    font-weight: 700;
 }
 
 .donation-link-btn {
@@ -4896,23 +4883,9 @@ button:disabled {
     border-color: #334155;
 }
 
-[data-theme="dark"] #donationModalBody .donation-amount {
-    background: #3b2f14;
-    border-left-color: #a16207;
-    color: #fde68a;
-}
-
-[data-theme="dark"] #donationModalBody .donation-amount strong {
-    color: #fbbf24;
-}
-
 [data-theme="dark"] .donation-quote {
     background: #0f172a;
     border-color: #334155;
-}
-
-[data-theme="dark"] .donation-voluntary {
-    color: #86efac;
 }
 
 [data-theme="dark"] .ai-context {

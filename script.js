@@ -3475,14 +3475,13 @@ function renderDonationMethodPanel(method) {
         return `
             <div class="donation-method-panel" role="tabpanel">
                 <div class="donation-qr-card">
-                    <a href="${escapeHtml(method.image)}" target="_blank" rel="noopener" class="donation-qr-link" title="Abrir QR de ${escapeHtml(method.label)} en tamaño completo" aria-label="Abrir QR de ${escapeHtml(method.label)} en tamaño completo">
+                    <a href="${escapeHtml(method.image)}" target="_blank" rel="noopener" class="donation-qr-link" title="Abrir QR de ${escapeHtml(method.label)} en tamaño completo">
                         <img src="${escapeHtml(method.image)}" alt="${escapeHtml(method.alt)}" class="donation-qr-image">
                         <span class="donation-qr-hint"><i class="fas fa-expand"></i> Ver QR en grande</span>
                     </a>
                 </div>
                 <div class="donation-method-copy">
                     <p class="donation-scan-copy"><i class="fas fa-qrcode"></i> Escanea el QR y elige el monto.</p>
-                    <p class="donation-amount">Monto libre desde <strong>S/1</strong>. Tú decides cuánto.</p>
                 </div>
             </div>
         `;
@@ -3527,7 +3526,7 @@ function showDonationQR(type = 'yape') {
     body.innerHTML = `
         <div class="donation-card">
             <p class="donation-lead">
-                Si te sirvió, deja una donación voluntaria desde S/1.
+                Si te sirvió, puedes apoyar el proyecto con una donación voluntaria.
             </p>
 
             ${renderDonationMethodTabs(method.id, methods)}
@@ -3535,10 +3534,10 @@ function showDonationQR(type = 'yape') {
 
             <div class="donation-quote">“${escapeHtml(quote)}”</div>
 
-            <div class="donation-voluntary">
-                100% voluntario · No bloquea nada.
+            <div class="donation-impact">
+                <i class="fas fa-server" aria-hidden="true"></i>
+                <p>Tu apoyo mantiene SQL Academy en línea: <strong>hosting, dominio y mantenimiento</strong> para que siga siendo gratuito para quienes están empezando.</p>
             </div>
-            <p class="donation-footnote"><i class="fas fa-server"></i> Hosting, dominio y mantenimiento.</p>
         </div>
     `;
 
