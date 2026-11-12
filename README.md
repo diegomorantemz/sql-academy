@@ -20,7 +20,7 @@ El proyecto nació como parte de un curso de 18 semanas para practicar flujos de
 - Ejemplos en un clic: al elegir una categoría o un ejemplo, la consulta se carga en el editor y se ejecuta con el botón «Ejecutar».
 - Tres datasets de práctica en SQL y tres en NoSQL: Escuela, Tienda y Biblioteca.
 - Panel **Analizar** con resumen del dataset, diagrama ERD, explorador de tablas con vista y edición de datos, y comprobaciones de calidad.
-- Cursos guiados con dos itinerarios SQL y uno NoSQL, 12 lecciones, editor propio, pistas, proyectos finales y progreso persistente por dataset.
+- Cursos guiados con tres itinerarios SQL y uno NoSQL, 15 lecciones, editor propio, pistas, proyectos finales y progreso persistente por dataset.
 - Biblioteca de aprendizaje con guías, conceptos, buscador, filtros, asistente de motor y mini-quizzes.
 - Guías de instalación paso a paso para doce gestores SQL y NoSQL, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
 - Panel **Mi progreso** con avance por curso, dominio por concepto SQL, progreso por dataset, actividad reciente y recomendaciones.
@@ -270,7 +270,7 @@ Es una comprobación heurística pensada para principiantes, no un parser SQL co
 
 ### Cursos guiados
 
-- **Tres itinerarios:** **SQL desde cero** (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`), **SQL intermedio** (`JOIN`, `GROUP BY`, `HAVING` y subconsultas) y **NoSQL esencial** (`find`, filtros, orden y agregaciones).
+- **Cuatro itinerarios:** **SQL desde cero** (`SELECT`, `WHERE`, `ORDER BY`, `LIMIT`), **SQL intermedio** (`JOIN`, `GROUP BY`, `HAVING` y subconsultas), **SQL avanzado** (`CASE`, CTE y `ROW_NUMBER`) y **NoSQL esencial** (`find`, filtros, orden y agregaciones).
 - **Catálogo con progreso:** cada curso muestra nivel, duración, módulos, lecciones y avance en su dataset activo.
 - **SQL y NoSQL en el mismo flujo:** las lecciones SQL usan la base relacional y **NoSQL esencial** usa la consola documental.
 - **Temario claro:** módulos con descripción, lecciones completadas y acceso directo a cada práctica.
@@ -413,7 +413,7 @@ El asistente usa **Gemini API** mediante una **Netlify Function**. La API Key nu
 - `tests/autocomplete.test.mjs` cubre sugerencias SQL/NoSQL, alias, cadenas, navegación y aplicación de sugerencias.
 - `tests/learn-ui.test.mjs` cubre las pestañas de la biblioteca, la búsqueda, los filtros, el asistente de motor, la pestaña Instalación y el mini-quiz de conceptos.
 - `tests/install-guides.test.mjs` cubre el catálogo de los doce gestores, las rutas por sistema, las plataformas de Firebase, los campos obligatorios, los logos y los enlaces oficiales.
-- `tests/courses.test.mjs` cubre el catálogo de cursos, los módulos, las doce lecciones, el progreso compartido, el temario, el curso NoSQL y la navegación al siguiente curso.
+- `tests/courses.test.mjs` cubre el catálogo de cursos, los módulos, las quince lecciones, el progreso compartido, el temario, el curso NoSQL y la navegación al siguiente curso.
 - `tests/path.test.mjs` cubre las lecciones del curso, la ejecución de sus consultas esperadas, el progreso, el dashboard y la validación de ejercicios.
 - `tests/deckbuilder.test.mjs` cubre la base del juego, las soluciones de los 6 pisos, las recompensas, el avance de piso y la persistencia.
 - `tests/nosql.test.mjs` cubre el parser seguro, filtros, proyecciones, CRUD, agregaciones y modo seguro del laboratorio NoSQL.
@@ -452,6 +452,16 @@ Si una API Key llegó a exponerse, revócala en Google AI Studio, genera una nue
 - Firebase es un servicio en la nube: su guía cubre la consola web y el emulador local, no una instalación de servidor propio.
 
 ## Release Notes
+
+### v1.17.0
+
+- **Cuarto curso:** **SQL avanzado**, con `CASE`, CTE y rankings con `ROW_NUMBER`.
+- **Itinerario SQL completo:** desde `SELECT` hasta funciones de ventana, con continuidad entre los tres cursos SQL.
+- **Lecciones adaptadas:** las reglas de `CASE`, los grupos de la CTE y los rankings cambian según Escuela, Tienda o Biblioteca.
+- **Práctica guiada:** ejemplos, pistas y validación por resultado en cada lección.
+- **Progreso compartido:** `SQL avanzado` reutiliza el progreso por lección y ofrece NoSQL esencial al completarse.
+- **Panel Mi progreso:** nuevos conceptos `CASE`, CTE y Ranking.
+- **Calidad:** pruebas de las nuevas lecciones en los tres datasets y caché PWA `v34`.
 
 ### v1.16.0
 

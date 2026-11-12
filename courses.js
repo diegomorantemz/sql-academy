@@ -84,6 +84,50 @@ window.SQL_ACADEMY_COURSES = [
         }
     },
     {
+        id: 'sql-avanzado',
+        track: 'sql',
+        title: 'SQL avanzado',
+        subtitle: 'Decisiones, CTE y rankings',
+        description: 'Aprende a clasificar filas, organizar consultas con WITH y construir rankings por categoría con funciones de ventana.',
+        level: 'Avanzado',
+        duration: '30-40 min',
+        icon: 'fa-chart-line',
+        tone: 'amber',
+        recommended: false,
+        prerequisites: ['SQL intermedio'],
+        outcomes: [
+            'Clasificar filas con CASE sin modificar los datos.',
+            'Dividir una consulta en pasos legibles con CTE.',
+            'Construir rankings por grupo con ROW_NUMBER.',
+            'Preparar reportes más expresivos sin salir de SQL.'
+        ],
+        modules: [
+            {
+                id: 'decisiones-sql',
+                title: 'Decisiones con CASE',
+                description: 'Crea categorías y etiquetas a partir de condiciones.',
+                lessonIds: ['case']
+            },
+            {
+                id: 'consultas-cte',
+                title: 'Consultas organizadas',
+                description: 'Usa WITH para separar pasos y reutilizar resultados.',
+                lessonIds: ['cte']
+            },
+            {
+                id: 'ranking-sql',
+                title: 'Rankings con ventanas',
+                description: 'Numera filas dentro de cada grupo con ROW_NUMBER.',
+                lessonIds: ['rank']
+            }
+        ],
+        practiceConcepts: [],
+        finalProject: {
+            title: 'Reporte avanzado',
+            description: 'Clasifica las filas de un dataset, resume sus grupos con una CTE y genera un ranking por categoría. Explica qué decisiones tomaste para ordenar y presentar el resultado.'
+        }
+    },
+    {
         id: 'nosql-esencial',
         track: 'nosql',
         title: 'NoSQL esencial',

@@ -33,11 +33,11 @@ function clearCourseProgress(dataset = 'escuela') {
 
 test('el catálogo de cursos usa las lecciones sin duplicados', () => {
     const courses = window.SQL_ACADEMY_COURSES;
-    const expectedLessonIds = ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery', 'nosql-find', 'nosql-filter', 'nosql-sort', 'nosql-aggregate'];
+    const expectedLessonIds = ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery', 'case', 'cte', 'rank', 'nosql-find', 'nosql-filter', 'nosql-sort', 'nosql-aggregate'];
     const courseIds = new Set();
     const lessonIds = [];
 
-    assert.equal(courses.length, 3);
+    assert.equal(courses.length, 4);
     for (const course of courses) {
         assert.ok(course.id);
         assert.equal(courseIds.has(course.id), false, `Curso duplicado: ${course.id}`);
@@ -59,19 +59,21 @@ test('el catálogo de cursos usa las lecciones sin duplicados', () => {
     assert.equal(new Set(flattened).size, expectedLessonIds.length);
 });
 
-test('el catálogo muestra los tres cursos y su progreso', () => {
+test('el catálogo muestra los cuatro cursos y su progreso', () => {
     clearCourseProgress();
     window.showCourseCatalog();
 
     const cards = [...document.querySelectorAll('#courseCatalogView .course-card')];
-    assert.equal(cards.length, 3);
+    assert.equal(cards.length, 4);
     assert.match(document.getElementById('courseCatalogView').textContent, /SQL desde cero/);
     assert.match(document.getElementById('courseCatalogView').textContent, /SQL intermedio/);
+    assert.match(document.getElementById('courseCatalogView').textContent, /SQL avanzado/);
     assert.match(document.getElementById('courseCatalogView').textContent, /NoSQL esencial/);
     assert.equal(cards[0].querySelector('.course-card-recommended').textContent, 'Empieza aquí');
     assert.match(cards[0].textContent, /0 de 4/);
     assert.match(cards[1].textContent, /0 de 4/);
-    assert.match(cards[2].textContent, /0 de 4/);
+    assert.match(cards[2].textContent, /0 de 3/);
+    assert.match(cards[3].textContent, /0 de 4/);
 });
 
 test('el temario del curso muestra módulos, lecciones y proyecto final', () => {
@@ -149,6 +151,15 @@ test('al completar un curso se ofrece el siguiente', () => {
     window.selectLearningLesson('subquery');
     window.showLearningNext(window.getLearningLessonById('subquery'));
 
+    assert.match(document.getElementById('pathNext').textContent, /SQL avanzado/);
+
+    for (const lessonId of ['case', 'cte', 'rank']) {
+        window.markLearningLessonCompleted(lessonId);
+    }
+    window.startCourse('sql-avanzado');
+    window.selectLearningLesson('rank');
+    window.showLearningNext(window.getLearningLessonById('rank'));
+
     assert.match(document.getElementById('pathNext').textContent, /NoSQL esencial/);
 });
 
@@ -219,7 +230,7 @@ test('el curso NoSQL valida comandos y guarda progreso por dataset', () => {
 
 test('al completar las lecciones SQL se recomienda el curso NoSQL', () => {
     clearCourseProgress();
-    for (const lessonId of ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery']) {
+    for (const lessonId of ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery', 'case', 'cte', 'rank']) {
         window.markLearningLessonCompleted(lessonId);
     }
 

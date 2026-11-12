@@ -10408,3 +10408,35 @@ button:disabled {
 [data-theme="dark"] .course-detail-hero-green {
     border-left-color: #34d399;
 }
+
+.course-card-amber {
+    border-top-color: #d97706;
+}
+
+.course-card-amber .course-card-icon {
+    background: #fff5e5;
+    color: #9a6100;
+}
+
+.course-detail-hero-amber {
+    border-left-color: #d97706;
+}
+
+.course-detail-hero-amber .course-detail-icon {
+    background: #fff5e5;
+    color: #9a6100;
+}
+
+[data-theme="dark"] .course-card-amber {
+    border-top-color: #fbbf24;
+}
+
+[data-theme="dark"] .course-card-amber .course-card-icon,
+[data-theme="dark"] .course-detail-hero-amber .course-detail-icon {
+    background: #78350f;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .course-detail-hero-amber {
+    border-left-color: #fbbf24;
+}

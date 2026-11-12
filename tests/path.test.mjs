@@ -123,16 +123,16 @@ function createSqliteAdapter(sql) {
     };
 }
 
-test('la ruta tiene ocho lecciones por dataset', () => {
-    const expectedIds = ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery'];
+test('la ruta tiene once lecciones por dataset', () => {
+    const expectedIds = ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery', 'case', 'cte', 'rank'];
 
     for (const datasetName of ['escuela', 'tienda', 'biblioteca']) {
         const lessons = window.getLearningLessonsForDataset(datasetName);
-        assert.equal(lessons.length, 8);
+        assert.equal(lessons.length, 11);
         assert.deepEqual([...lessons.map(lesson => lesson.id)], expectedIds);
 
         for (const lesson of lessons) {
-            assert.match(lesson.expectedSql, /^SELECT\b/i);
+            assert.match(lesson.expectedSql, /^(SELECT|WITH)\b/i);
             assert.ok(lesson.objective);
             assert.ok(lesson.explanation);
             assert.ok(lesson.example);
@@ -255,11 +255,11 @@ test('el dashboard muestra progreso, conceptos, actividad y recomendación', () 
     assert.match(dashboard.textContent, /Progreso global/);
     assert.match(dashboard.textContent, /Dataset activo: Tienda/);
     assert.match(dashboard.textContent, /Dominio por concepto/);
-    assert.match(dashboard.textContent, /1\/24/);
+    assert.match(dashboard.textContent, /1\/33/);
     assert.match(dashboard.textContent, /1\/20/);
     assert.match(dashboard.textContent, /Seleccionar/);
     assert.match(dashboard.textContent, /Filtros/);
-    assert.match(dashboard.textContent, /2 de 14 actividades/);
+    assert.match(dashboard.textContent, /2 de 17 actividades/);
     assert.match(dashboard.textContent, /Selecciona columnas/);
     assert.match(dashboard.textContent, /Productos con stock bajo/);
     assert.match(dashboard.textContent, /Siguiente paso recomendado/);

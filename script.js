@@ -7511,6 +7511,16 @@ const LEARNING_PATH_PROFILES = {
             rightKey: 'estudiante_id',
             columns: 'estudiantes.nombre, inscripciones.anio, inscripciones.nota',
             description: 'Cada inscripción pertenece a un estudiante.'
+        },
+        advanced: {
+            caseField: 'promedio',
+            caseLabel: 'nivel',
+            caseObjective: 'Clasifica a los estudiantes como Alto, Medio o Bajo según su promedio.',
+            caseRules: [
+                { operator: '>=', value: 17, label: 'Alto' },
+                { operator: '>=', value: 14, label: 'Medio' }
+            ],
+            caseElse: 'Bajo'
         }
     },
     tienda: {
@@ -7529,6 +7539,16 @@ const LEARNING_PATH_PROFILES = {
             rightKey: 'id',
             columns: 'clientes.nombre, pedidos.fecha, pedidos.estado',
             description: 'Cada pedido pertenece a un cliente.'
+        },
+        advanced: {
+            caseField: 'stock',
+            caseLabel: 'nivel_stock',
+            caseObjective: 'Clasifica los productos como Alto, Medio o Bajo según su stock.',
+            caseRules: [
+                { operator: '>=', value: 30, label: 'Alto' },
+                { operator: '>=', value: 10, label: 'Medio' }
+            ],
+            caseElse: 'Bajo'
         }
     },
     biblioteca: {
@@ -7547,6 +7567,16 @@ const LEARNING_PATH_PROFILES = {
             rightKey: 'id',
             columns: 'libros.titulo, autores.nombre',
             description: 'Cada libro tiene un autor.'
+        },
+        advanced: {
+            caseField: 'anio',
+            caseLabel: 'categoria',
+            caseObjective: 'Clasifica los libros como Reciente, Moderno o Clásico según su año de publicación.',
+            caseRules: [
+                { operator: '>=', value: 2000, label: 'Reciente' },
+                { operator: '>=', value: 1980, label: 'Moderno' }
+            ],
+            caseElse: 'Clásico'
         }
     }
 };
@@ -7559,7 +7589,10 @@ const LEARNING_CONCEPTS = [
     { id: 'join', label: 'JOIN', icon: 'fa-link', description: 'Combinar tablas relacionadas.' },
     { id: 'group', label: 'Agrupar', icon: 'fa-layer-group', description: 'GROUP BY y COUNT.' },
     { id: 'having', label: 'HAVING', icon: 'fa-list-check', description: 'Filtrar grupos.' },
-    { id: 'subquery', label: 'Subconsultas', icon: 'fa-code-branch', description: 'Consultas dentro de otras.' }
+    { id: 'subquery', label: 'Subconsultas', icon: 'fa-code-branch', description: 'Consultas dentro de otras.' },
+    { id: 'case', label: 'CASE', icon: 'fa-code-branch', description: 'Clasificar filas con condiciones.' },
+    { id: 'cte', label: 'CTE', icon: 'fa-layer-group', description: 'Organizar consultas con WITH.' },
+    { id: 'rank', label: 'Ranking', icon: 'fa-list-ol', description: 'Numerar filas con ventanas.' }
 ];
 
 const CHALLENGE_CONCEPT_BY_ID = {
@@ -7611,6 +7644,21 @@ function buildLearningLessons(profile) {
     const exampleGroup = profile.exampleGroup || { table: main, column: group };
     const join = profile.join;
     const joinCondition = `${join.left}.${join.leftKey} = ${join.right}.${join.rightKey}`;
+    const advanced = profile.advanced || {
+        caseField: sort,
+        caseLabel: 'nivel',
+        caseObjective: `Clasifica las filas de ${main} según ${sort}.`,
+        caseRules: [
+            { operator: '>=', value: 0, label: 'Alto' }
+        ],
+        caseElse: 'Bajo'
+    };
+    const caseWhens = (advanced.caseRules || [])
+        .map(rule => `WHEN ${advanced.caseField} ${rule.operator} ${rule.value} THEN '${rule.label}'`)
+        .join('\n        ');
+    const caseExpression = `CASE\n        ${caseWhens}\n        ELSE '${advanced.caseElse}'\n      END`;
+    const firstCaseRule = advanced.caseRules?.[0] || { operator: '>=', value: 0, label: 'Alto' };
+    const exampleCase = `CASE WHEN ${advanced.caseField} ${firstCaseRule.operator} ${firstCaseRule.value} THEN '${firstCaseRule.label}' ELSE '${advanced.caseElse}' END`;
 
     return [
         {
@@ -7707,6 +7755,42 @@ function buildLearningLessons(profile) {
             starter: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > 0\nORDER BY ${sort} DESC, ${label} ASC;`,
             expectedSql: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > (SELECT AVG(${sort}) FROM ${main})\nORDER BY ${sort} DESC, ${label} ASC;`,
             hint: `Sustituye 0 por (SELECT AVG(${sort}) FROM ${main}) y mantén el orden.`,
+            ordered: true
+        },
+        {
+            id: 'case',
+            title: 'Clasifica con CASE',
+            level: 'Avanzado',
+            objective: advanced.caseObjective,
+            explanation: 'CASE evalúa las condiciones en orden y devuelve la primera etiqueta que coincide. Es la forma de crear categorías dentro de una consulta sin modificar los datos.',
+            example: `SELECT ${label}, ${advanced.caseField}, ${exampleCase} AS ${advanced.caseLabel}\nFROM ${main}\nORDER BY ${advanced.caseField} DESC, ${label} ASC;`,
+            starter: `SELECT ${label}, ${advanced.caseField}, 'Pendiente' AS ${advanced.caseLabel}\nFROM ${main}\nORDER BY ${advanced.caseField} DESC, ${label} ASC;`,
+            expectedSql: `SELECT ${label}, ${advanced.caseField}, ${caseExpression} AS ${advanced.caseLabel}\nFROM ${main}\nORDER BY ${advanced.caseField} DESC, ${label} ASC;`,
+            hint: `Completa el CASE con las reglas ${advanced.caseRules.map(rule => `${advanced.caseField} ${rule.operator} ${rule.value} → ${rule.label}`).join(', ')} y el ELSE '${advanced.caseElse}'.`,
+            ordered: true
+        },
+        {
+            id: 'cte',
+            title: 'Organiza con WITH',
+            level: 'Avanzado',
+            objective: `Resume ${main} por ${group} y calcula qué porcentaje representa cada grupo.`,
+            explanation: 'Una CTE (Common Table Expression) es una consulta con nombre que puedes reutilizar dentro de otra. WITH hace que los pasos intermedios se lean como una historia.',
+            example: `WITH resumen AS (\n    SELECT ${group}, COUNT(*) AS total\n    FROM ${main}\n    GROUP BY ${group}\n)\nSELECT ${group}, total\nFROM resumen\nORDER BY total DESC, ${group} ASC;`,
+            starter: `SELECT ${group}, COUNT(*) AS total\nFROM ${main}\nGROUP BY ${group}\nORDER BY total DESC, ${group} ASC;`,
+            expectedSql: `WITH resumen AS (\n    SELECT ${group}, COUNT(*) AS total\n    FROM ${main}\n    GROUP BY ${group}\n)\nSELECT ${group}, total,\n       ROUND(total * 100.0 / (SELECT COUNT(*) FROM ${main}), 1) AS porcentaje\nFROM resumen\nORDER BY total DESC, ${group} ASC;`,
+            hint: 'Añade la columna porcentaje usando el total del grupo y el total de filas de la tabla.',
+            ordered: true
+        },
+        {
+            id: 'rank',
+            title: 'Ranking con ventanas',
+            level: 'Avanzado',
+            objective: `Numera ${main} dentro de cada ${group} según ${sort} de mayor a menor.`,
+            explanation: 'ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...) asigna un número a cada fila dentro de su grupo. Es ideal para rankings, comparativas y reportes por categoría.',
+            example: `SELECT ${label}, ${group}, ${sort},\n       ROW_NUMBER() OVER (ORDER BY ${sort} DESC) AS posicion\nFROM ${main}\nORDER BY ${sort} DESC;`,
+            starter: `SELECT ${label}, ${group}, ${sort}\nFROM ${main}\nORDER BY ${group} ASC, ${sort} DESC;`,
+            expectedSql: `SELECT ${label}, ${group}, ${sort},\n       ROW_NUMBER() OVER (PARTITION BY ${group} ORDER BY ${sort} DESC, ${label} ASC) AS posicion\nFROM ${main}\nORDER BY ${group} ASC, posicion ASC;`,
+            hint: `Usa PARTITION BY ${group} y ordena la ventana por ${sort} DESC, ${label} ASC.`,
             ordered: true
         }
     ];
