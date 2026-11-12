@@ -5,11 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Aprende SQL y NoSQL desde cero, practica con una base de datos real y comprueba tus resultados en el navegador.">
-    <meta name="theme-color" content="#336791">
+    <meta name="theme-color" content="#123b61">
     <title>SQL Academy</title>
 
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32.png">
+    <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
     <script>
         try {
             const savedPreferences = JSON.parse(localStorage.getItem('sql-academy-preferences-v1') || '{}');
@@ -35,9 +37,8 @@
         <!-- ===== HEADER ===== -->
         <header class="app-header">
             <div class="header-content">
-                <!-- Logo c -->
                 <div class="logo">
-                    <i class="fas fa-terminal" style="color:#99b9e9; font-size:1em;"></i>
+                    <img class="logo-mark" src="assets/icons/logo-mark.svg" alt="" aria-hidden="true">
                     <span>SQL Academy</span>
                 </div>
                 <nav class="main-nav" aria-label="Navegación principal">
@@ -45,7 +46,7 @@
                         <i class="fas fa-book"></i> Aprender
                     </button>
                     <button class="nav-btn" data-section="path">
-                        <i class="fas fa-route"></i> Ruta
+                        <i class="fas fa-graduation-cap"></i> Cursos
                     </button>
                     <button class="nav-btn" data-section="game">
                         <i class="fas fa-gamepad"></i> Juego
@@ -84,12 +85,23 @@
 
             <div class="path-cta">
                 <div>
-                    <span class="path-cta-eyebrow"><i class="fas fa-route"></i> Ruta guiada</span>
-                    <h3>Aprende SQL paso a paso</h3>
-                    <p>8 lecciones cortas con editor, ejemplos, pistas y validación automática.</p>
+                    <span class="path-cta-eyebrow"><i class="fas fa-graduation-cap"></i> Cursos guiados</span>
+                    <h3>Aprende SQL y NoSQL con misiones cortas</h3>
+                    <p>Cuatro cursos con teoría breve, práctica, quiz, checkpoints y proyecto final. Elige Escuela, Tienda o Biblioteca y avanza desde cero hasta CTE, rankings y documentos.</p>
                 </div>
                 <button type="button" id="pathCtaBtn" class="btn-primary" onclick="openLearningPath()">
-                    Comenzar ruta <i class="fas fa-arrow-right"></i>
+                    Explorar cursos <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <div class="fair-tour-card">
+                <div>
+                    <span class="fair-tour-eyebrow"><i class="fas fa-chalkboard-user"></i> Modo feria</span>
+                    <h3>Recorrido de 5 minutos</h3>
+                    <p>Una guía rápida por el test de nivel, la práctica, NoSQL, los retos y tu progreso.</p>
+                </div>
+                <button type="button" class="btn-secondary" onclick="startDemoTour()">
+                    <i class="fas fa-play"></i> Comenzar recorrido
                 </button>
             </div>
 
@@ -99,6 +111,9 @@
                 </button>
                 <button type="button" id="learnConceptsTab" class="learn-tab" data-learn-tab="concepts" role="tab" aria-selected="false" aria-controls="learnConceptsPanel">
                     <i class="fas fa-graduation-cap"></i> Conceptos
+                </button>
+                <button type="button" id="learnInstallTab" class="learn-tab" data-learn-tab="install" role="tab" aria-selected="false" aria-controls="learnInstallPanel">
+                    <i class="fas fa-download"></i> Instalación
                 </button>
             </div>
 
@@ -245,7 +260,7 @@
 
                 <!-- ===== GESTORES NoSQL ===== -->
                 <div class="db-group" style="margin-top: 40px;">
-                    <h3 class="db-group-title" style="color:#73bed7;"><i class="fas fa-database" style="color:#73bed7;"></i>
+                    <h3 class="db-group-title db-group-title-nosql"><i class="fas fa-database"></i>
                         Gestores NoSQL (No Relacionales)</h3>
                     <p class="db-group-subtitle">Sistemas de gestión de bases de datos diseñados para grandes volúmenes de
                         datos no estructurados</p>
@@ -316,7 +331,7 @@
                 <!-- ===== COMPARATIVA ===== -->
                 <div class="comparison-wrapper" data-guide-card data-tags="sql nosql comparativa" data-search="comparativa sql nosql acid escalabilidad esquema lenguaje">
                     <h3><i class="fas fa-chart-bar"></i> Comparativa de Gestores SQL vs NoSQL</h3>
-                    <div class="comparison-table-wrap">
+                    <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="Tabla comparativa de gestores">
                         <table class="comparison-table">
                             <thead>
                                 <tr>
@@ -546,18 +561,78 @@
                     </div>
                 </div>
             </div>
+
+            <div id="learnInstallPanel" class="learn-tab-panel" role="tabpanel" aria-labelledby="learnInstallTab" hidden>
+                <div class="install-callout">
+                    <span class="install-callout-icon"><i class="fas fa-lightbulb"></i></span>
+                    <div>
+                        <strong>No necesitas instalar nada para practicar aquí</strong>
+                        <p>SQL Academy incluye una base SQLite real en el navegador. Estas guías son para cuando quieras instalar un gestor en tu equipo.</p>
+                    </div>
+                </div>
+
+                <div class="library-toolbar">
+                    <label class="library-search" for="installSearch">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input id="installSearch" type="search" placeholder="Buscar gestor o sistema operativo..." oninput="filterInstallGuides()">
+                    </label>
+                    <div class="library-filters" role="group" aria-label="Filtrar guías de instalación">
+                        <button type="button" class="library-filter active" data-install-filter="all" onclick="setInstallFilter('all')">Todos</button>
+                        <button type="button" class="library-filter" data-install-filter="sql" onclick="setInstallFilter('sql')">SQL</button>
+                        <button type="button" class="library-filter" data-install-filter="nosql" onclick="setInstallFilter('nosql')">NoSQL</button>
+                        <button type="button" class="library-filter" data-install-filter="recomendado" onclick="setInstallFilter('recomendado')">Recomendados</button>
+                    </div>
+                    <label class="install-os-filter" for="installOsFilter">
+                        <span>Sistema</span>
+                        <select id="installOsFilter" onchange="filterInstallGuides()">
+                            <option value="all">Todos</option>
+                            <option value="windows">Windows</option>
+                            <option value="macos">macOS</option>
+                            <option value="linux">Linux</option>
+                            <option value="docker">Docker</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div id="installGuideGrid" class="install-guide-grid"></div>
+
+                <div id="installEmptyState" class="library-empty" hidden>
+                    <i class="fas fa-magnifying-glass"></i>
+                    <p>No hay guías que coincidan con los filtros.</p>
+                </div>
+            </div>
         </section>
 
         <!-- ===== SECCIÓN: RUTA DE APRENDIZAJE ===== -->
         <section id="section-path" class="section">
             <div class="section-header">
-                <h2><i class="fas fa-route"></i> Ruta de Aprendizaje</h2>
-                <p>Aprende SQL paso a paso y revisa tu dominio por concepto</p>
+                <h2><i class="fas fa-graduation-cap"></i> Cursos</h2>
+                <p>Itinerarios de SQL y NoSQL con teoría breve, demostraciones, práctica y comprobaciones</p>
             </div>
 
-            <div class="path-tabs" role="tablist" aria-label="Ruta de aprendizaje">
+            <div class="course-dataset-toolbar">
+                <label class="course-dataset-control" for="courseSqlDatasetSelector">
+                    <span><i class="fas fa-database"></i> Dataset SQL</span>
+                    <select id="courseSqlDatasetSelector" onchange="changeCourseSqlDataset(this.value)">
+                        <option value="escuela">Escuela</option>
+                        <option value="tienda">Tienda</option>
+                        <option value="biblioteca">Biblioteca</option>
+                    </select>
+                </label>
+                <label class="course-dataset-control" for="courseNoSQLDatasetSelector">
+                    <span><i class="fas fa-leaf"></i> Dataset NoSQL</span>
+                    <select id="courseNoSQLDatasetSelector" onchange="changeCourseNoSQLDataset(this.value)">
+                        <option value="escuela">Escuela</option>
+                        <option value="tienda">Tienda</option>
+                        <option value="biblioteca">Biblioteca</option>
+                    </select>
+                </label>
+                <span class="course-dataset-hint">El curso y su progreso se adaptan al dataset elegido.</span>
+            </div>
+
+            <div class="path-tabs" role="tablist" aria-label="Cursos y progreso">
                 <button type="button" id="pathLessonsTab" class="path-tab active" data-path-tab="lessons" role="tab" aria-selected="true" aria-controls="pathLessonsPanel">
-                    <i class="fas fa-list-check"></i> Lecciones
+                    <i class="fas fa-layer-group"></i> Cursos
                 </button>
                 <button type="button" id="pathProgressTab" class="path-tab" data-path-tab="progress" role="tab" aria-selected="false" aria-controls="pathProgressPanel">
                     <i class="fas fa-chart-simple"></i> Mi progreso
@@ -565,34 +640,39 @@
             </div>
 
             <div id="pathLessonsPanel" class="path-tab-panel active" role="tabpanel" aria-labelledby="pathLessonsTab">
-                <div class="challenges-layout">
-                    <aside class="challenge-list-panel" aria-label="Lecciones de la ruta">
-                        <div class="challenge-progress">
-                            <div class="challenge-progress-head">
-                                <span>Tu progreso</span>
-                                <strong id="pathProgressText">0 de 8</strong>
+                <div id="courseCatalogView" class="course-catalog-view"></div>
+
+                <div id="courseDetailView" class="course-detail-view" hidden></div>
+
+                <div id="coursePlayerView" class="course-player-view" hidden>
+                    <div id="coursePlayerBreadcrumb" class="course-breadcrumb" aria-label="Ubicación del curso"></div>
+                    <div class="challenges-layout">
+                        <aside class="challenge-list-panel" aria-label="Lecciones del curso">
+                            <div class="challenge-progress">
+                                <div class="challenge-progress-head">
+                                    <span id="pathCourseProgressLabel">Tu progreso</span>
+                                    <strong id="pathProgressText">0 de 4</strong>
+                                </div>
+                                <div class="challenge-progress-track" role="progressbar" aria-label="Progreso del curso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pathProgressTrack">
+                                    <div id="pathProgressBar"></div>
+                                </div>
                             </div>
-                            <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de la ruta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pathProgressTrack">
-                                <div id="pathProgressBar"></div>
-                            </div>
-                        </div>
 
-                        <p id="pathDatasetLabel" class="path-dataset-label">Dataset SQL: Escuela</p>
-                        <div id="pathLessonList" class="challenge-list">
-                            <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando ruta...</p>
-                        </div>
+                            <p id="pathDatasetLabel" class="path-dataset-label">Dataset SQL: Escuela</p>
+                            <div id="pathLessonList" class="challenge-list"></div>
 
-                        <button type="button" onclick="resetLearningProgress()" class="btn-secondary challenge-reset-btn">
-                            <i class="fas fa-rotate-left"></i> Reiniciar ruta
-                        </button>
-                    </aside>
+                            <button type="button" onclick="resetLearningProgress()" class="btn-secondary challenge-reset-btn">
+                                <i class="fas fa-rotate-left"></i> Reiniciar curso
+                            </button>
+                        </aside>
 
-                    <div class="challenge-play-panel">
-                        <div id="pathLessonDetail" class="challenge-detail">
-                            <div class="challenge-empty">
-                                <i class="fas fa-route"></i>
-                                <h3>Cargando ruta...</h3>
-                                <p>Preparando las lecciones para el dataset activo.</p>
+                        <div class="challenge-play-panel">
+                            <div id="pathLessonDetail" class="challenge-detail">
+                                <div class="challenge-empty">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <h3>Cargando curso...</h3>
+                                    <p>Preparando las lecciones para el dataset activo.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -712,6 +792,29 @@
                 <p>Escribe consultas SQL y ve los resultados en tiempo real</p>
             </div>
 
+            <div id="sqlLevelBar" class="level-bar is-onboarding" role="region" aria-label="Nivel SQL">
+                <div class="level-bar-copy" aria-live="polite" aria-atomic="true">
+                    <span class="level-bar-eyebrow"><i class="fas fa-signal"></i> Tu nivel SQL</span>
+                    <strong id="sqlLevelLabel">Nivel estimado: Básico</strong>
+                    <p id="sqlLevelDescription">Aún no has hecho el test. Empezamos por lo básico.</p>
+                </div>
+                <div class="level-bar-actions">
+                    <label class="level-select-label" for="sqlLevelSelect">Nivel</label>
+                    <select id="sqlLevelSelect" onchange="setSkillLevel('sql', this.value)" aria-label="Nivel de ejemplos SQL">
+                        <option value="basico">Básico</option>
+                        <option value="intermedio">Intermedio</option>
+                        <option value="avanzado">Avanzado</option>
+                        <option value="all">Ver todo</option>
+                    </select>
+                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('sql')" aria-haspopup="dialog" aria-controls="skillTestModal">
+                        <i class="fas fa-clipboard-question"></i> Test de nivel
+                    </button>
+                    <button type="button" class="btn-ghost level-skip-btn" onclick="setSkillLevel('sql', 'basico')">
+                        Empezar desde cero
+                    </button>
+                </div>
+            </div>
+
             <div class="practice-layout">
                 <!-- Panel izquierdo: Info -->
                 <div class="practice-sidebar">
@@ -777,33 +880,35 @@
                                     <option value="tienda">Tienda</option>
                                     <option value="biblioteca">Biblioteca</option>
                                 </select>
-                                <button onclick="resetDatabase()" class="btn-secondary">
-                                    <i class="fas fa-rotate"></i> Reiniciar
-                                </button>
-                                <button onclick="exportDatabase()" class="btn-secondary btn-icon" title="Exportar BD" aria-label="Exportar base de datos">
-                                    <i class="fas fa-download"></i>
-                                </button>
-                                <button onclick="importDatabase()" class="btn-secondary btn-icon" title="Importar BD" aria-label="Importar base de datos">
-                                    <i class="fas fa-upload"></i>
-                                </button>
-                                <button onclick="openSQLGuide()" class="btn-secondary" title="Guía de primeros pasos en SQL">
-                                    <i class="fas fa-graduation-cap"></i> Guía
-                                </button>
                                 <button id="aiHelpBtn" onclick="openAIHelp('manual')" class="btn-secondary btn-ai" title="Explicar tu consulta con IA">
                                     <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
                                 </button>
+                                <details class="toolbar-more" id="sqlMoreMenu">
+                                    <summary class="btn-secondary toolbar-more-toggle" title="Más acciones">
+                                        <i class="fas fa-ellipsis"></i> Más
+                                    </summary>
+                                    <div class="toolbar-more-menu" role="menu" aria-label="Más acciones de práctica">
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); resetDatabase()">
+                                            <i class="fas fa-rotate"></i> Reiniciar base
+                                        </button>
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); exportDatabase()">
+                                            <i class="fas fa-download"></i> Exportar base
+                                        </button>
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); openSQLGuide()">
+                                            <i class="fas fa-graduation-cap"></i> Guía de primeros pasos
+                                        </button>
+                                    </div>
+                                </details>
                             </div>
-
-                            <div class="toolbar-group toolbar-group-status">
-                                <span id="persistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite" title="La base de datos se guarda en este navegador (IndexedDB)">
-                                    <i class="fas fa-hard-drive"></i> Guardado local
-                                </span>
-
-                                <label class="safe-mode-toggle" title="Pide confirmación antes de ejecutar consultas destructivas">
-                                    <input type="checkbox" id="safeModeToggle" checked onchange="toggleSafeMode(this.checked)">
-                                    <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
-                                </label>
-                            </div>
+                        </div>
+                        <div class="editor-statusbar">
+                            <span id="persistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite" title="La base de datos se guarda en este navegador (IndexedDB)">
+                                <i class="fas fa-hard-drive"></i> Guardado local
+                            </span>
+                            <label class="safe-mode-toggle" title="Pide confirmación antes de ejecutar consultas destructivas">
+                                <input type="checkbox" id="safeModeToggle" checked onchange="toggleSafeMode(this.checked)">
+                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                            </label>
                         </div>
                     </div>
 
@@ -843,6 +948,29 @@
                 <p>Practica con documentos JSON y una consola tipo MongoDB, directamente en el navegador</p>
             </div>
 
+            <div id="nosqlLevelBar" class="level-bar is-onboarding" role="region" aria-label="Nivel NoSQL">
+                <div class="level-bar-copy" aria-live="polite" aria-atomic="true">
+                    <span class="level-bar-eyebrow"><i class="fas fa-signal"></i> Tu nivel NoSQL</span>
+                    <strong id="nosqlLevelLabel">Nivel estimado: Básico</strong>
+                    <p id="nosqlLevelDescription">Aún no has hecho el test. Empezamos por lo básico.</p>
+                </div>
+                <div class="level-bar-actions">
+                    <label class="level-select-label" for="nosqlLevelSelect">Nivel</label>
+                    <select id="nosqlLevelSelect" onchange="setSkillLevel('nosql', this.value)" aria-label="Nivel de ejemplos NoSQL">
+                        <option value="basico">Básico</option>
+                        <option value="intermedio">Intermedio</option>
+                        <option value="avanzado">Avanzado</option>
+                        <option value="all">Ver todo</option>
+                    </select>
+                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('nosql')" aria-haspopup="dialog" aria-controls="skillTestModal">
+                        <i class="fas fa-clipboard-question"></i> Test de nivel
+                    </button>
+                    <button type="button" class="btn-ghost level-skip-btn" onclick="setSkillLevel('nosql', 'basico')">
+                        Empezar desde cero
+                    </button>
+                </div>
+            </div>
+
             <div class="nosql-layout">
                 <aside class="nosql-sidebar">
                     <div class="info-panel nosql-collections-panel">
@@ -864,11 +992,8 @@
                     <div class="info-panel nosql-help-panel">
                         <h3><i class="fas fa-circle-info"></i> Sintaxis rápida</h3>
                         <p>Usa una consola simplificada de MongoDB. No se ejecuta JavaScript arbitrario.</p>
-                        <code>db.estudiantes.find({ edad: { $gt: 18 } })</code>
-                        <code>db.estudiantes.insertOne({ nombre: "Ana" })</code>
-                        <code>db.estudiantes.updateMany({}, { $inc: { edad: 1 } })</code>
-                        <code>db.estudiantes.aggregate([{ $group: { _id: "$carrera", total: { $sum: 1 } } }])</code>
-                        <p class="nosql-muted">Operadores: <code>$gt</code>, <code>$gte</code>, <code>$lt</code>, <code>$in</code>, <code>$and</code>, <code>$or</code>, <code>$set</code>, <code>$inc</code>, <code>$push</code>.</p>
+                        <div id="nosqlQuickSyntax" class="nosql-quick-syntax" tabindex="0" role="region" aria-label="Sintaxis rápida NoSQL"></div>
+                        <p id="nosqlQuickOperators" class="nosql-muted"></p>
                     </div>
                 </aside>
 
@@ -906,17 +1031,16 @@
                                 <button type="button" onclick="openNoSQLAIHelp()" class="btn-secondary btn-ai" title="Explicar tu comando con IA">
                                     <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
                                 </button>
-                                <label class="safe-mode-toggle" title="Pide confirmación antes de operaciones destructivas">
-                                    <input type="checkbox" id="nosqlSafeModeToggle" checked onchange="toggleNoSQLSafeMode(this.checked)">
-                                    <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
-                                </label>
                             </div>
-
-                            <div class="toolbar-group toolbar-group-status">
-                                <span id="nosqlPersistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite">
-                                    <i class="fas fa-hard-drive"></i> Guardado local
-                                </span>
-                            </div>
+                        </div>
+                        <div class="editor-statusbar">
+                            <span id="nosqlPersistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite">
+                                <i class="fas fa-hard-drive"></i> Guardado local
+                            </span>
+                            <label class="safe-mode-toggle" title="Pide confirmación antes de operaciones destructivas">
+                                <input type="checkbox" id="nosqlSafeModeToggle" checked onchange="toggleNoSQLSafeMode(this.checked)">
+                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                            </label>
                         </div>
                     </div>
 
@@ -1100,7 +1224,7 @@
                         </button>
                     </div>
                 </div>
-                <div id="diagramContainer">
+                <div id="diagramContainer" tabindex="0" role="region" aria-label="Diagrama de relaciones">
                     <div class="diagram-loading"><i class="fas fa-spinner fa-spin"></i> Generando diagrama...</div>
                 </div>
             </div>
@@ -1211,9 +1335,64 @@
                 </div>
             </div>
         </footer>
+
+        <!-- ===== NAVEGACIÓN MÓVIL ===== -->
+        <nav class="mobile-nav" aria-label="Navegación móvil">
+            <button type="button" class="mobile-nav-btn active" data-mobile-section="learn" aria-current="page">
+                <i class="fas fa-book"></i>
+                <span>Aprender</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="path">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Cursos</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="practice">
+                <i class="fas fa-laptop-code"></i>
+                <span>Practicar</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="challenges">
+                <i class="fas fa-trophy"></i>
+                <span>Retos</span>
+            </button>
+            <button type="button" id="mobileMoreBtn" class="mobile-nav-btn" aria-expanded="false" aria-controls="mobileMoreModal" onclick="openMobileMore()">
+                <i class="fas fa-ellipsis"></i>
+                <span>Más</span>
+            </button>
+        </nav>
     </div>
 
     <!-- ===== MODALES ===== -->
+    <!-- Modal de más secciones móviles -->
+    <div id="mobileMoreModal" class="modal mobile-more-modal" role="dialog" aria-modal="true" aria-labelledby="mobileMoreTitle">
+        <div class="modal-content mobile-more-sheet">
+            <div class="modal-header">
+                <div>
+                    <span class="course-eyebrow">Navegación</span>
+                    <h2 id="mobileMoreTitle">Más secciones</h2>
+                </div>
+                <button type="button" class="modal-close" onclick="closeMobileMore()" aria-label="Cerrar más secciones">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="mobile-more-grid">
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="game" onclick="closeMobileMore(); activateSection('game')">
+                        <span class="mobile-more-icon"><i class="fas fa-gamepad"></i></span>
+                        <span><strong>Juego</strong><small>Torre de Datos</small></span>
+                    </button>
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="nosql" onclick="closeMobileMore(); activateSection('nosql')">
+                        <span class="mobile-more-icon"><i class="fas fa-leaf"></i></span>
+                        <span><strong>NoSQL</strong><small>Laboratorio documental</small></span>
+                    </button>
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="analyze" onclick="closeMobileMore(); activateSection('analyze')">
+                        <span class="mobile-more-icon"><i class="fas fa-chart-pie"></i></span>
+                        <span><strong>Analizar</strong><small>Datos, ERD y calidad</small></span>
+                    </button>
+                </div>
+                <button type="button" class="btn-secondary mobile-more-close" onclick="closeMobileMore()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Gestores -->
     <!-- Modal de Gestores -->
     <div id="dbModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
@@ -1246,6 +1425,59 @@
             <div class="modal-body" id="donationModalBody"></div>
         </div>
     </div>
+
+    <!-- ===== MODAL DE TEST DE NIVEL ===== -->
+    <div id="skillTestModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="skillTestTitle">
+        <div class="modal-content skill-test-content">
+            <div class="modal-header">
+                <div>
+                    <span id="skillTestTrackLabel" class="skill-test-eyebrow">SQL</span>
+                    <h2 id="skillTestTitle">Test de nivel</h2>
+                </div>
+                <button type="button" onclick="closeSkillTest()" class="modal-close" aria-label="Cerrar test">&times;</button>
+            </div>
+            <div class="modal-body" id="skillTestBody" aria-live="polite"></div>
+        </div>
+    </div>
+    <!-- ===== MODAL DE REPORTE DE PROGRESO ===== -->
+    <div id="progressReportModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="progressReportTitle">
+        <div class="modal-content report-modal-content">
+            <div class="modal-header">
+                <h2 id="progressReportTitle">Reporte de aprendizaje</h2>
+                <button type="button" onclick="closeProgressReport()" class="modal-close" aria-label="Cerrar reporte">&times;</button>
+            </div>
+            <div class="modal-body" id="progressReportBody"></div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE GUÍA DE INSTALACIÓN ===== -->
+    <div id="installGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="installGuideTitle">
+        <div class="modal-content install-guide-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span id="installGuideEyebrow" class="install-guide-eyebrow">Instalación</span>
+                    <h2 id="installGuideTitle">Guía de instalación</h2>
+                </div>
+                <button type="button" onclick="closeInstallGuide()" class="modal-close" aria-label="Cerrar guía de instalación">&times;</button>
+            </div>
+            <div class="modal-body" id="installGuideBody" aria-live="polite"></div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE CHECKPOINT DE MÓDULO ===== -->
+    <div id="checkpointModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="checkpointTitle">
+        <div class="modal-content checkpoint-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span id="checkpointEyebrow" class="install-guide-eyebrow">Checkpoint</span>
+                    <h2 id="checkpointTitle">Checkpoint del módulo</h2>
+                </div>
+                <button type="button" onclick="closeCheckpointModal()" class="modal-close" aria-label="Cerrar checkpoint">&times;</button>
+            </div>
+            <div class="modal-body" id="checkpointBody" aria-live="polite"></div>
+        </div>
+    </div>
+
     <!-- ===== GUÍA DE PRIMEROS PASOS EN SQL ===== -->
 <div id="sqlGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="sqlGuideTitle">
     <div class="modal-content" style="max-width: 750px; max-height: 90vh;">
@@ -1302,11 +1534,31 @@
         </div>
     </div>
 
+    <div id="demoTourBar" class="demo-tour-bar" role="region" aria-label="Recorrido guiado" aria-live="polite" hidden>
+        <div class="demo-tour-icon"><i class="fas fa-route"></i></div>
+        <div class="demo-tour-copy">
+            <span id="demoTourStepLabel">Paso 1 de 7</span>
+            <strong id="demoTourTitle"></strong>
+            <p id="demoTourDescription"></p>
+        </div>
+        <div class="demo-tour-actions">
+            <button type="button" class="btn-ghost btn-sm" id="demoTourPrevBtn" onclick="previousDemoTourStep()">Anterior</button>
+            <button type="button" class="btn-primary btn-sm" id="demoTourNextBtn" onclick="nextDemoTourStep()">Siguiente</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="closeDemoTour()" aria-label="Cerrar recorrido">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
     <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Datasets de práctica -->
     <script src="datasets.js"></script>
     <script src="nosql-datasets.js"></script>
+    <script src="install-guides.js"></script>
+    <script src="courses.js"></script>
+    <script src="course-content.js"></script>
+    <script src="checkpoint-content.js"></script>
 
     <!-- Motor documental del laboratorio NoSQL -->
     <script src="nosql-engine.js"></script>

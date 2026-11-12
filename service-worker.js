@@ -1,21 +1,32 @@
-const CACHE_VERSION = 'sql-academy-v25';
+const CACHE_VERSION = 'sql-academy-v40';
 const APP_SHELL = [
     './',
     './index.html',
     './style.css',
     './datasets.js',
     './nosql-datasets.js',
+    './install-guides.js',
+    './courses.js',
+    './course-content.js',
+    './checkpoint-content.js',
     './nosql-engine.js',
     './script.js',
     './nosql.js',
     './autocomplete.js',
     './deckbuilder.js',
+    './feria.html',
     './manifest.webmanifest',
     './assets/images/qr-yape.png',
     './assets/images/qr-plin.png',
+    './assets/images/qr-demo.png',
+    './assets/icons/icon.svg',
+    './assets/icons/icon-32.png',
+    './assets/icons/icon-96.png',
+    './assets/icons/icon-180.png',
     './assets/icons/icon-192.png',
     './assets/icons/icon-512.png',
-    './assets/icons/icon-maskable-512.png'
+    './assets/icons/icon-maskable-512.png',
+    './assets/icons/logo-mark.svg'
 ];
 const CDN_HOSTS = new Set([
     'cdn.jsdelivr.net',

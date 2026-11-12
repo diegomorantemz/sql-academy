@@ -17,7 +17,7 @@
 }
 
 :root {
-    --postgres-blue: #2f6f9f;
+    --postgres-blue: #28618c;
     --postgres-light: #3b82f6;
     --postgres-dark: #132a43;
     --postgres-bg: #f4f7fb;
@@ -29,7 +29,7 @@
     --surface-muted: #f7f9fc;
     --surface-strong: #eef3f9;
     --text-strong: #132a43;
-    --text-muted: #64748b;
+    --text-muted: #526176;
     --accent-soft: rgba(47, 111, 159, 0.1);
     --radius-sm: 8px;
     --radius-md: 12px;
@@ -248,6 +248,107 @@ body {
     font-size: 0.98em;
     margin-top: 5px;
     max-width: 780px;
+}
+
+/* ===== NIVEL DE HABILIDAD ===== */
+.level-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.level-bar.is-onboarding {
+    border-left-color: #e0a800;
+    background: linear-gradient(135deg, #fffef9 0%, #fff9e8 100%);
+}
+
+.level-bar-copy {
+    min-width: 0;
+}
+
+.level-bar-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.level-bar-copy strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-size: 15px;
+}
+
+.level-bar-copy p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.level-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.level-select-label {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+#sqlLevelSelect,
+#nosqlLevelSelect {
+    min-height: 36px;
+    padding: 7px 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.level-test-btn {
+    white-space: nowrap;
+}
+
+.level-skip-btn {
+    display: none;
+}
+
+.level-bar.is-onboarding .level-skip-btn {
+    display: inline-flex;
+}
+
+.level-bar.is-onboarding .level-test-btn {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.18);
+}
+
+.level-bar.is-onboarding .level-test-btn:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
 }
 
 /* ===== LEARN SECTION ===== */
@@ -539,6 +640,189 @@ body {
 
 .toolbar-group-status {
     margin-left: auto;
+}
+
+.toolbar-more {
+    position: relative;
+}
+
+.toolbar-more-toggle {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toolbar-more-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.toolbar-more-toggle::marker {
+    content: '';
+}
+
+.toolbar-more-toggle:hover {
+    background: var(--surface-muted);
+    border-color: rgba(47, 111, 159, 0.45);
+    color: var(--text-strong);
+}
+
+.toolbar-more-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.toolbar-more[open] .toolbar-more-toggle {
+    background: var(--surface-muted);
+    border-color: rgba(47, 111, 159, 0.45);
+}
+
+.toolbar-more-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 218px;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+}
+
+.toolbar-more-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.toolbar-more-item:hover {
+    background: var(--accent-soft);
+    border-color: transparent;
+    color: var(--postgres-blue);
+    transform: none;
+    box-shadow: none;
+}
+
+.toolbar-more-item i {
+    width: 14px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.toolbar-more-item:hover i {
+    color: var(--postgres-blue);
+}
+
+.editor-statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--postgres-border);
+}
+
+.editor-statusbar .persistence-status {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 11px;
+}
+
+.editor-statusbar .persistence-status.is-saved {
+    color: #256b3d;
+}
+
+.editor-statusbar .persistence-status.is-saving {
+    color: #8a6d3b;
+}
+
+.editor-statusbar .persistence-status.is-error {
+    color: #a12828;
+}
+
+[data-theme="dark"] .toolbar-more-menu {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .toolbar-more-item {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .toolbar-more-item:hover {
+    background: #172554;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .editor-statusbar .persistence-status {
+    background: transparent;
+    border-color: transparent;
+}
+
+[data-theme="dark"] .editor-statusbar .persistence-status.is-saved {
+    color: #86efac;
+}
+
+[data-theme="dark"] .editor-statusbar .persistence-status.is-saving {
+    color: #fde68a;
+}
+
+[data-theme="dark"] .editor-statusbar .persistence-status.is-error {
+    color: #fca5a5;
+}
+
+@media (max-width: 600px) {
+    .toolbar-more {
+        width: 100%;
+    }
+
+    .toolbar-more-toggle {
+        width: 100%;
+    }
+
+    .toolbar-more-menu {
+        left: 0;
+        right: auto;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .editor-statusbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .editor-statusbar .safe-mode-toggle {
+        width: 100%;
+    }
 }
 
 .toolbar-select-label {
@@ -974,7 +1258,7 @@ button:disabled {
 }
 
 .msg-success .msg-title {
-    color: #28a745;
+    color: #1e7e34;
 }
 
 .msg-error {
@@ -983,7 +1267,7 @@ button:disabled {
 }
 
 .msg-error .msg-title {
-    color: #dc3545;
+    color: #b02a37;
 }
 
 .msg-warning {
@@ -1001,7 +1285,7 @@ button:disabled {
 }
 
 .msg-info .msg-title {
-    color: #336791;
+    color: #245a84;
 }
 
 /* ===== RESULTADOS ===== */
@@ -1173,7 +1457,7 @@ button:disabled {
 .result-scroll-hint {
     margin-top: 8px;
     font-size: 11px;
-    color: #999;
+    color: var(--text-muted);
     text-align: center;
     display: flex;
     justify-content: center;
@@ -2414,7 +2698,7 @@ button:disabled {
 
 .diagram-loading {
     text-align: center;
-    color: #999;
+    color: var(--text-muted);
     padding: 40px 0;
 }
 
@@ -2550,7 +2834,7 @@ button:disabled {
 
 .relation-label {
     font-size: 10px;
-    color: #999;
+    color: var(--text-muted);
     background: var(--postgres-bg);
     padding: 2px 10px;
     border-radius: 12px;
@@ -2623,7 +2907,7 @@ button:disabled {
 
 .relation-delete {
     margin-left: auto;
-    color: #999;
+    color: var(--text-muted);
     font-size: 10px;
 }
 
@@ -2631,7 +2915,7 @@ button:disabled {
     margin-top: 18px;
     padding: 12px;
     text-align: center;
-    color: #999;
+    color: var(--text-muted);
     background: var(--postgres-bg);
     border-radius: 8px;
     font-size: 12px;
@@ -2877,7 +3161,7 @@ button:disabled {
     background: none;
     border: none;
     font-size: 28px;
-    color: #999;
+    color: var(--text-muted);
     cursor: pointer;
     padding: 0 8px;
     transition: color 0.3s;
@@ -2938,7 +3222,7 @@ button:disabled {
 .modal-body .info-item .label {
     font-size: 0.7em;
     text-transform: uppercase;
-    color: #999;
+    color: var(--text-muted);
     font-weight: 600;
 }
 
@@ -3043,7 +3327,7 @@ button:disabled {
 }
 
 .ai-empty-hint {
-    color: #999;
+    color: var(--text-muted);
     font-size: 0.85em !important;
 }
 
@@ -3223,6 +3507,342 @@ button:disabled {
     opacity: 0.55;
     cursor: not-allowed;
     transform: none;
+}
+
+/* ===== TEST DE NIVEL ===== */
+.skill-test-content {
+    max-width: 640px;
+}
+
+.skill-test-eyebrow {
+    display: inline-flex;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.skill-test-question h3 {
+    margin: 4px 0 0;
+    color: var(--postgres-dark);
+    font-size: 1.2em;
+    line-height: 1.45;
+}
+
+.skill-test-progress {
+    height: 6px;
+    margin: 14px 0 16px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-strong);
+}
+
+.skill-test-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--postgres-blue), #6c5ce7);
+    transition: width 0.3s ease;
+}
+
+.skill-test-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skill-test-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.skill-test-option:hover {
+    border-color: rgba(47, 111, 159, 0.45);
+    background: var(--accent-soft);
+}
+
+.skill-test-option.selected {
+    border-color: var(--postgres-blue);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 2px rgba(51, 103, 145, 0.13);
+}
+
+.skill-test-option-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface-muted);
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.skill-test-option.selected .skill-test-option-letter {
+    background: var(--postgres-blue);
+    color: white;
+}
+
+.skill-test-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.skill-test-score {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.skill-test-next {
+    margin-top: 14px;
+    padding: 11px 13px;
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.skill-test-next span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.skill-test-next strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-strong);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.skill-test-result {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.skill-test-result h3 {
+    margin: 2px 0 0;
+    color: var(--postgres-dark);
+}
+
+.skill-test-result > p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.skill-test-result-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+[data-theme="dark"] .level-bar {
+    background: #111827;
+    border-color: #334155;
+    border-left-color: #60a5fa;
+}
+
+[data-theme="dark"] .level-bar.is-onboarding {
+    background: #3b2f14;
+    border-left-color: #a16207;
+}
+
+[data-theme="dark"] .level-bar-copy strong,
+[data-theme="dark"] #skillTestBody .skill-test-question h3,
+[data-theme="dark"] #skillTestBody .skill-test-result h3 {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .level-bar-copy p,
+[data-theme="dark"] #skillTestBody .skill-test-result > p,
+[data-theme="dark"] #skillTestBody .skill-test-score {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] #sqlLevelSelect,
+[data-theme="dark"] #nosqlLevelSelect {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .skill-test-option {
+    background: #111827;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .skill-test-option:hover,
+[data-theme="dark"] .skill-test-option.selected {
+    background: #172554;
+    border-color: #60a5fa;
+}
+
+[data-theme="dark"] .skill-test-option-letter {
+    background: #1e293b;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .skill-test-option.selected .skill-test-option-letter {
+    background: var(--postgres-blue);
+    color: white;
+}
+
+[data-theme="dark"] .skill-test-next {
+    background: #0f172a;
+    border-left-color: #60a5fa;
+}
+
+[data-theme="dark"] .skill-test-next strong {
+    color: #e2e8f0;
+}
+
+@media (max-width: 600px) {
+    .level-bar-actions {
+        width: 100%;
+    }
+
+    .level-bar-actions select {
+        flex: 1;
+    }
+
+    .level-test-btn {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .skill-test-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .skill-test-footer .btn-primary,
+    .skill-test-footer .btn-ghost,
+    .skill-test-result-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.report-modal-content {
+    max-width: 560px;
+}
+
+.report-form p {
+    margin: 0 0 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.report-name-label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+#reportStudentName {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 11px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.report-preview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.report-preview > div {
+    padding: 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.report-preview span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.report-preview strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-strong);
+    font-size: 15px;
+}
+
+.report-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+[data-theme="dark"] #reportStudentName {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .report-preview > div {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+@media (max-width: 600px) {
+    .report-preview {
+        grid-template-columns: 1fr;
+    }
+
+    .report-actions button {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 /* ===== DONACIONES ===== */
@@ -3476,13 +4096,13 @@ button:disabled {
 .footer-left .brand-name {
     font-size: 1.1em;
     font-weight: 700;
-    color: #667eea;
+    color: #a5b4fc;
     letter-spacing: 1px;
 }
 
 .footer-left .brand-tagline {
     font-size: 0.65em;
-    color: rgba(255,255,255,0.3);
+    color: #94a3b8;
     font-weight: 300;
     letter-spacing: 2px;
     margin-top: 1px;
@@ -3554,11 +4174,31 @@ button:disabled {
     transform: translateY(-2px);
 }
 
+#sqlLevelSelect:focus,
+#nosqlLevelSelect:focus,
+.skill-profile-select:focus,
+#reportStudentName:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 /* ===== UTILITIES ===== */
 .text-success { color: #28a745; }
 .text-danger { color: #dc3545; }
 .text-warning { color: #ffc107; }
-.text-muted { color: #999; }
+.text-muted { color: var(--text-muted); }
 
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {
@@ -5389,6 +6029,182 @@ button:disabled {
     }
 }
 
+.fair-tour-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 15px 18px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f3f0ff 100%);
+    border: 1px solid #d8d7f5;
+    border-left: 4px solid #6c5ce7;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.fair-tour-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #6c5ce7;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.fair-tour-card h3 {
+    margin: 3px 0;
+    color: var(--text-strong);
+    font-size: 1.05em;
+}
+
+.fair-tour-card p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.fair-tour-card .btn-secondary {
+    flex: 0 0 auto;
+}
+
+.demo-tour-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: min(920px, calc(100% - 32px));
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-left: 4px solid #6c5ce7;
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-50%);
+}
+
+.demo-tour-bar[hidden] {
+    display: none;
+}
+
+.demo-tour-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #ece9ff;
+    color: #6c5ce7;
+    font-size: 16px;
+}
+
+.demo-tour-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.demo-tour-copy > span {
+    display: block;
+    color: #6c5ce7;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.demo-tour-copy strong {
+    display: block;
+    margin-top: 1px;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+.demo-tour-copy p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.4;
+}
+
+.demo-tour-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+[data-theme="dark"] .fair-tour-card {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .fair-tour-eyebrow,
+[data-theme="dark"] .demo-tour-copy > span {
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .demo-tour-bar {
+    background: #111827;
+    border-color: #334155;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .demo-tour-icon {
+    background: #1e1b4b;
+    color: #a5b4fc;
+}
+
+@media (max-width: 700px) {
+    .fair-tour-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .fair-tour-card .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .demo-tour-bar {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        bottom: 8px;
+        width: calc(100% - 16px);
+        padding: 10px 12px;
+    }
+
+    .demo-tour-copy {
+        flex-basis: calc(100% - 52px);
+    }
+
+    .demo-tour-actions {
+        width: 100%;
+    }
+
+    .demo-tour-actions .btn-primary,
+    .demo-tour-actions .btn-ghost {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+@media print {
+    .fair-tour-card,
+    .demo-tour-bar {
+        display: none !important;
+    }
+}
+
 /* ===== DASHBOARD DE PROGRESO ===== */
 .path-tabs {
     display: flex;
@@ -5624,6 +6440,230 @@ button:disabled {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     white-space: nowrap;
+}
+
+.progress-section-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.skill-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.skill-profile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-left: 3px solid var(--postgres-blue);
+    border-radius: 9px;
+}
+
+.skill-profile-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.skill-profile-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 9px;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.skill-profile-heading {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.skill-profile-heading span {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.skill-profile-heading strong {
+    color: var(--text-strong);
+    font-size: 15px;
+}
+
+.skill-profile-head .challenge-level {
+    margin-left: auto;
+}
+
+.skill-profile-description {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.skill-profile-next {
+    margin: 0;
+    padding: 8px 10px;
+    border-left: 3px solid #f39c12;
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+
+.skill-profile-next strong {
+    color: var(--text-strong);
+}
+
+.skill-profile-weak {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.skill-weak-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border: 1px solid rgba(220, 53, 69, 0.25);
+    border-radius: 999px;
+    background: #fff5f5;
+    color: #a12828;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.skill-weak-chip:hover {
+    background: #ffe7e7;
+    border-color: #dc3545;
+}
+
+.skill-test-weak {
+    width: 100%;
+    margin-top: 4px;
+    padding: 10px 11px;
+    border: 1px solid rgba(220, 53, 69, 0.18);
+    border-radius: 8px;
+    background: #fff8f8;
+}
+
+.skill-test-weak > span {
+    display: block;
+    margin-bottom: 7px;
+    color: #a12828;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.skill-test-weak-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.skill-profile-meta {
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.skill-profile-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 3px;
+}
+
+.skill-profile-select-label {
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.skill-profile-select {
+    min-height: 32px;
+    padding: 5px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .skill-profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-profile-actions .btn-secondary,
+    .skill-profile-actions .btn-ghost {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+[data-theme="dark"] .skill-weak-chip {
+    background: #3f1d1d;
+    border-color: #7f1d1d;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .skill-weak-chip:hover {
+    background: #4c2222;
+    border-color: #f87171;
+}
+
+[data-theme="dark"] .skill-test-weak {
+    background: #2a1518;
+    border-color: #7f1d1d;
+}
+
+[data-theme="dark"] .skill-test-weak > span,
+[data-theme="dark"] .skill-profile-weak {
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .skill-profile-card {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .skill-profile-next {
+    background: #111827;
+}
+
+[data-theme="dark"] .skill-profile-select {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
 }
 
 .concept-mastery-grid {
@@ -7758,4 +8798,2953 @@ button:disabled {
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+/* ===== GUÍAS DE INSTALACIÓN ===== */
+.install-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f3f0ff 100%);
+    border: 1px solid #d8d7f5;
+    border-left: 4px solid #6c5ce7;
+    border-radius: 10px;
+}
+
+.install-callout-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #ece9ff;
+    color: #6c5ce7;
+}
+
+.install-callout strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+.install-callout p {
+    margin: 3px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.install-os-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.install-os-filter select {
+    min-height: 36px;
+    padding: 7px 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.install-guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.install-guide-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 11px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.install-guide-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(47, 111, 159, 0.45);
+    box-shadow: var(--shadow-md);
+}
+
+.install-guide-card[hidden] {
+    display: none;
+}
+
+.install-guide-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.install-guide-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 10px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+}
+
+.install-guide-logo img {
+    display: block;
+    max-width: 34px;
+    max-height: 34px;
+    object-fit: contain;
+}
+
+.install-guide-recommended {
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #eaf7ef;
+    color: #256b3d;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.install-guide-card h3 {
+    margin: 2px 0 0;
+    color: var(--text-strong);
+    font-size: 16px;
+}
+
+.install-guide-card p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.install-guide-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.install-difficulty {
+    padding: 3px 7px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.install-difficulty-facil { background: #e8f7ee; color: #1f7a42; }
+.install-difficulty-facil-media { background: #eef7ff; color: #1d5f91; }
+.install-difficulty-media { background: #fff5e5; color: #9a6100; }
+.install-difficulty-alta { background: #fdeaea; color: #a12828; }
+
+.install-guide-os {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.install-guide-os span {
+    padding: 3px 6px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 5px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.install-guide-open {
+    justify-content: center;
+    margin-top: auto;
+}
+
+.install-guide-modal-content {
+    max-width: 720px;
+}
+
+.install-guide-eyebrow {
+    display: inline-flex;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.install-guide-detail-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--postgres-border);
+}
+
+.install-guide-logo-large {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+}
+
+.install-guide-logo-large img {
+    max-width: 46px;
+    max-height: 46px;
+}
+
+.install-guide-detail-copy {
+    min-width: 0;
+}
+
+#installGuideBody .install-guide-detail-copy h3 {
+    margin: 2px 0 4px;
+    color: var(--postgres-dark);
+    font-size: 1.35em;
+}
+
+#installGuideBody .install-guide-detail-copy p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.install-guide-detail-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.install-cloud-alternative {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid #cfe3f4;
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: 8px;
+    background: #f3f9ff;
+}
+
+.install-cloud-alternative > span {
+    display: block;
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+#installGuideBody .install-cloud-alternative strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+#installGuideBody .install-cloud-alternative p {
+    margin: 3px 0 8px;
+    color: var(--text-muted);
+    font-size: 11.5px;
+}
+
+.install-cloud-alternative a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.install-os-tabs {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding: 4px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+}
+
+.install-os-tab {
+    padding: 7px 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.install-os-tab:hover {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.install-os-tab.active {
+    background: var(--postgres-blue);
+    border-color: var(--postgres-blue);
+    color: white;
+}
+
+.install-guide-section {
+    margin-top: 18px;
+}
+
+#installGuideBody .install-guide-section h4 {
+    margin: 0 0 9px;
+    color: var(--text-strong);
+    font-size: 12px;
+}
+
+#installGuideBody .install-guide-section h4 i {
+    margin-right: 6px;
+    color: var(--postgres-blue);
+}
+
+.install-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.install-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.install-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.install-step-body {
+    flex: 1;
+    min-width: 0;
+}
+
+#installGuideBody .install-step-body strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 12.5px;
+}
+
+#installGuideBody .install-step-body p,
+#installGuideBody .install-verify-item p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.install-code-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 7px;
+    overflow: hidden;
+    border-radius: 7px;
+    background: #0f172a;
+}
+
+.install-code-row code {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    overflow-wrap: anywhere;
+    color: #dbeafe;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 10.5px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.install-copy-btn {
+    flex: 0 0 auto;
+    padding: 0 10px;
+    border: 0;
+    border-left: 1px solid #334155;
+    border-radius: 0;
+    background: #1e293b;
+    color: #dbeafe;
+    font-family: inherit;
+    font-size: 9.5px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.install-copy-btn:hover {
+    background: #334155;
+    transform: none;
+}
+
+.install-inline-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 6px;
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.install-inline-link:hover {
+    text-decoration: underline;
+}
+
+.install-verify {
+    padding: 12px 14px;
+    border-left: 4px solid #28a745;
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.install-verify-item + .install-verify-item {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--postgres-border);
+}
+
+#installGuideBody .install-verify-item strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 12px;
+}
+
+#installGuideBody .install-notes ul,
+#installGuideBody .install-security ul {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.install-guide-links {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.install-guide-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 10px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.install-guide-links a:hover {
+    background: var(--accent-soft);
+}
+
+.install-errors {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.install-error {
+    padding: 10px 12px;
+    border-left: 4px solid #e0a800;
+    border-radius: 7px;
+    background: #fff9e8;
+}
+
+#installGuideBody .install-error strong {
+    display: block;
+    color: #7a5a00;
+    font-size: 11.5px;
+}
+
+#installGuideBody .install-error p {
+    margin: 2px 0 0;
+    color: #7a5a00;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.install-security {
+    padding: 12px 14px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+}
+
+.install-empty-copy {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.install-guide-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding-top: 12px;
+    border-top: 1px solid var(--postgres-border);
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.install-guide-footer a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--postgres-blue);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.install-guide-footer a:hover {
+    text-decoration: underline;
+}
+
+.db-install-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding: 13px 14px;
+    border: 1px solid #d8e4f0;
+    border-left: 4px solid #6c5ce7;
+    border-radius: 8px;
+    background: #f8f7ff;
+}
+
+.db-install-cta strong {
+    display: block;
+    color: var(--text-strong);
+    font-size: 12.5px;
+}
+
+.db-install-cta p {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+[data-theme="dark"] .install-callout {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .install-callout-icon {
+    background: #1e1b4b;
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .install-guide-card {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .install-guide-logo,
+[data-theme="dark"] .install-guide-os span,
+[data-theme="dark"] .install-os-tabs,
+[data-theme="dark"] .install-verify,
+[data-theme="dark"] .install-security {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .install-guide-recommended {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .install-difficulty-facil { background: #064e3b; color: #a7f3d0; }
+[data-theme="dark"] .install-difficulty-facil-media { background: #172554; color: #bfdbfe; }
+[data-theme="dark"] .install-difficulty-media { background: #78350f; color: #fde68a; }
+[data-theme="dark"] .install-difficulty-alta { background: #7f1d1d; color: #fecaca; }
+
+[data-theme="dark"] .install-os-filter select {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] #installGuideBody .install-guide-detail-copy h3,
+[data-theme="dark"] #installGuideBody .install-cloud-alternative strong,
+[data-theme="dark"] #installGuideBody .install-step-body strong,
+[data-theme="dark"] #installGuideBody .install-verify-item strong,
+[data-theme="dark"] #installGuideBody .install-guide-section h4,
+[data-theme="dark"] .db-install-cta strong {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] #installGuideBody .install-guide-detail-copy p,
+[data-theme="dark"] #installGuideBody .install-step-body p,
+[data-theme="dark"] #installGuideBody .install-verify-item p,
+[data-theme="dark"] #installGuideBody .install-notes ul,
+[data-theme="dark"] #installGuideBody .install-security ul,
+[data-theme="dark"] .db-install-cta p {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .install-cloud-alternative {
+    background: #0f1b2d;
+    border-color: #334155;
+    border-left-color: #60a5fa;
+}
+
+[data-theme="dark"] .install-cloud-alternative > span,
+[data-theme="dark"] .install-cloud-alternative a,
+[data-theme="dark"] .install-inline-link,
+[data-theme="dark"] .install-guide-footer a,
+[data-theme="dark"] .install-guide-links a {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .install-guide-links a {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .install-error {
+    background: #3b2f14;
+}
+
+[data-theme="dark"] #installGuideBody .install-error strong,
+[data-theme="dark"] #installGuideBody .install-error p {
+    color: #fde68a;
+}
+
+[data-theme="dark"] .db-install-cta {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+@media (max-width: 700px) {
+    .install-guide-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .install-guide-detail-head {
+        flex-direction: column;
+    }
+
+    .install-os-filter {
+        width: 100%;
+    }
+
+    .install-os-filter select {
+        flex: 1;
+    }
+
+    .install-guide-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .db-install-cta {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .db-install-cta .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ===== CURSOS GUIADOS ===== */
+.course-catalog-view,
+.course-detail-view,
+.course-player-view {
+    min-width: 0;
+}
+
+.course-catalog-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f3f0ff 100%);
+    border: 1px solid #d8d7f5;
+    border-left: 4px solid #6c5ce7;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.course-eyebrow,
+.course-side-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.course-catalog-hero .course-eyebrow {
+    color: #6c5ce7;
+}
+
+.course-catalog-hero h3 {
+    margin: 3px 0 4px;
+    color: var(--text-strong);
+    font-size: 1.25em;
+}
+
+.course-catalog-hero p {
+    max-width: 680px;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.course-catalog-dataset {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 132px;
+    padding: 9px 12px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid #d8d7f5;
+    border-radius: 9px;
+}
+
+.course-catalog-dataset span {
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.course-catalog-dataset strong {
+    color: #6c5ce7;
+    font-size: 13px;
+}
+
+.course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 16px;
+}
+
+.course-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 18px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-top: 4px solid var(--postgres-blue);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.course-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(47, 111, 159, 0.45);
+    box-shadow: var(--shadow-md);
+}
+
+.course-card-violet {
+    border-top-color: #6c5ce7;
+}
+
+.course-card.is-active {
+    box-shadow: 0 0 0 2px rgba(47, 111, 159, 0.16), var(--shadow-sm);
+}
+
+.course-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.course-card-icon,
+.course-detail-icon,
+.progress-course-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 10px;
+}
+
+.course-card-icon {
+    width: 42px;
+    height: 42px;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 17px;
+}
+
+.course-card-violet .course-card-icon {
+    background: #ece9ff;
+    color: #6c5ce7;
+}
+
+.course-card-badges {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.course-card-recommended {
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: #eaf7ef;
+    color: #256b3d;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.course-card h3 {
+    margin: 0;
+    color: var(--text-strong);
+    font-size: 18px;
+}
+
+.course-card-subtitle {
+    margin: 0;
+    color: var(--postgres-blue);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.course-card-description {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.course-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.course-card-meta i {
+    color: var(--postgres-blue);
+}
+
+.course-card-progress {
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+.course-card-progress-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.course-card-progress-head strong {
+    color: var(--postgres-blue);
+    font-size: 10px;
+}
+
+.course-card-progress-track,
+.progress-course-track {
+    display: block;
+    height: 7px;
+    overflow: hidden;
+    background: var(--surface-strong);
+    border-radius: 999px;
+}
+
+.course-card-progress-track span,
+.progress-course-track > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--postgres-blue), #6c5ce7);
+    transition: width 0.35s ease;
+}
+
+.course-card-prerequisite {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-style: italic;
+}
+
+.course-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 3px;
+}
+
+.course-card-actions .btn-primary,
+.course-card-actions .btn-secondary {
+    flex: 1;
+    justify-content: center;
+}
+
+.course-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--postgres-blue);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.course-back-btn:hover {
+    background: var(--accent-soft);
+}
+
+.course-detail-view > .course-back-btn {
+    margin-bottom: 10px;
+}
+
+.course-detail-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f3f0ff 100%);
+    border: 1px solid #d8d7f5;
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.course-detail-hero-violet {
+    border-left-color: #6c5ce7;
+}
+
+.course-detail-icon {
+    width: 56px;
+    height: 56px;
+    background: #ece9ff;
+    color: #6c5ce7;
+    font-size: 23px;
+}
+
+.course-detail-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.course-detail-copy h3 {
+    margin: 2px 0 4px;
+    color: var(--text-strong);
+    font-size: 1.45em;
+}
+
+.course-detail-copy p {
+    max-width: 720px;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.course-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.course-detail-meta i {
+    color: var(--postgres-blue);
+}
+
+.course-detail-score {
+    flex: 0 0 auto;
+    text-align: right;
+}
+
+.course-detail-score strong {
+    display: block;
+    color: var(--postgres-blue);
+    font-size: 27px;
+    line-height: 1;
+}
+
+.course-detail-score span {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.course-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.75fr);
+    gap: 16px;
+    align-items: start;
+    margin-top: 16px;
+}
+
+.course-syllabus,
+.course-outcomes,
+.course-practice-card,
+.course-final-project {
+    padding: 15px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.course-detail-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.course-syllabus-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.course-syllabus-head h4 {
+    margin: 2px 0 0;
+    color: var(--text-strong);
+    font-size: 14px;
+}
+
+.course-syllabus-head > span {
+    color: var(--text-muted);
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.course-module {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--postgres-border);
+}
+
+.course-module-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.course-module-head > div > span {
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.course-module-head h4 {
+    margin: 2px 0;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+.course-module-head p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.course-module-head > strong {
+    flex: 0 0 auto;
+    color: var(--postgres-blue);
+    font-size: 11px;
+}
+
+.course-module-lessons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 9px;
+}
+
+.course-lesson-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 10px;
+    text-align: left;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.course-lesson-row:hover {
+    transform: translateX(2px);
+    background: var(--accent-soft);
+    border-color: rgba(47, 111, 159, 0.35);
+}
+
+.course-lesson-row.completed {
+    border-left: 3px solid #28a745;
+}
+
+.course-lesson-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--surface-strong);
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.course-lesson-row.completed .course-lesson-index {
+    background: #e8f7ee;
+    color: #1e7e34;
+}
+
+.course-lesson-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.course-lesson-copy strong {
+    overflow-wrap: anywhere;
+    color: var(--text-strong);
+    font-size: 12px;
+}
+
+.course-lesson-copy span {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.course-lesson-status {
+    flex: 0 0 auto;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.course-outcomes ul {
+    margin: 8px 0 0;
+    padding-left: 17px;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.55;
+}
+
+.course-outcomes li + li {
+    margin-top: 4px;
+}
+
+.course-practice-card {
+    background: var(--surface-muted);
+}
+
+.course-practice-card p,
+.course-final-project p {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.course-practice-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 9px;
+}
+
+.course-final-project {
+    background: linear-gradient(135deg, #f8f7ff 0%, #f3f9ff 100%);
+    border-left: 4px solid #6c5ce7;
+}
+
+.course-final-project h4 {
+    margin: 3px 0 0;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+.course-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.course-lesson-eyebrow {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.course-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.course-breadcrumb-sep {
+    color: #cbd5e1;
+}
+
+.course-lesson-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.course-lesson-group + .course-lesson-group {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--postgres-border);
+}
+
+.course-lesson-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.course-lesson-group-head span:last-child {
+    color: var(--postgres-blue);
+}
+
+.course-player-view .challenges-layout {
+    margin-top: 0;
+}
+
+.progress-course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+}
+
+.progress-course-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    text-align: left;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.progress-course-card:hover {
+    transform: translateY(-1px);
+    background: var(--accent-soft);
+    border-color: rgba(47, 111, 159, 0.35);
+}
+
+.progress-course-icon {
+    width: 34px;
+    height: 34px;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 14px;
+}
+
+.progress-course-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.progress-course-copy strong {
+    overflow-wrap: anywhere;
+    color: var(--text-strong);
+    font-size: 12px;
+}
+
+.progress-course-copy > span {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.progress-course-track {
+    height: 6px;
+    margin-top: 3px;
+}
+
+.progress-course-percent {
+    flex: 0 0 auto;
+    color: var(--postgres-blue);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.path-next {
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+[data-theme="dark"] .course-catalog-hero,
+[data-theme="dark"] .course-detail-hero {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .course-catalog-hero h3,
+[data-theme="dark"] .course-detail-copy h3,
+[data-theme="dark"] .course-card h3,
+[data-theme="dark"] .course-syllabus-head h4,
+[data-theme="dark"] .course-module-head h4,
+[data-theme="dark"] .course-lesson-copy strong,
+[data-theme="dark"] .course-final-project h4,
+[data-theme="dark"] .progress-course-copy strong {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .course-catalog-hero p,
+[data-theme="dark"] .course-card-description,
+[data-theme="dark"] .course-detail-copy p,
+[data-theme="dark"] .course-card-meta,
+[data-theme="dark"] .course-detail-meta,
+[data-theme="dark"] .course-syllabus-head > span,
+[data-theme="dark"] .course-module-head p,
+[data-theme="dark"] .course-lesson-copy span,
+[data-theme="dark"] .course-outcomes ul,
+[data-theme="dark"] .course-practice-card p,
+[data-theme="dark"] .course-final-project p,
+[data-theme="dark"] .progress-course-copy > span {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .course-card,
+[data-theme="dark"] .course-syllabus,
+[data-theme="dark"] .course-outcomes,
+[data-theme="dark"] .course-practice-card,
+[data-theme="dark"] .course-final-project {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .course-card-icon,
+[data-theme="dark"] .course-detail-icon,
+[data-theme="dark"] .progress-course-icon,
+[data-theme="dark"] .course-lesson-index {
+    background: #1e1b4b;
+    color: #a5b4fc;
+}
+
+[data-theme="dark"] .course-card-violet .course-card-icon {
+    background: #1e1b4b;
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .course-card-recommended {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .course-catalog-dataset {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .course-catalog-dataset strong {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .course-card-progress-track,
+[data-theme="dark"] .progress-course-track,
+[data-theme="dark"] .course-lesson-index {
+    background: #0f172a;
+}
+
+[data-theme="dark"] .course-lesson-row,
+[data-theme="dark"] .progress-course-card {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .course-lesson-row:hover,
+[data-theme="dark"] .progress-course-card:hover {
+    background: #172554;
+}
+
+[data-theme="dark"] .course-lesson-row.completed .course-lesson-index {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .course-card-subtitle,
+[data-theme="dark"] .course-card-meta i,
+[data-theme="dark"] .course-detail-meta i,
+[data-theme="dark"] .course-module-head > div > span,
+[data-theme="dark"] .course-module-head > strong,
+[data-theme="dark"] .course-lesson-status,
+[data-theme="dark"] .course-lesson-group-head span:last-child,
+[data-theme="dark"] .course-detail-score strong,
+[data-theme="dark"] .progress-course-percent {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .course-final-project {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .course-card-progress-head strong,
+[data-theme="dark"] .course-card-progress-head span,
+[data-theme="dark"] .course-detail-score span {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .course-card-progress-head strong {
+    color: #93c5fd;
+}
+
+@media (max-width: 800px) {
+    .course-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .course-detail-hero {
+        flex-wrap: wrap;
+    }
+
+    .course-detail-score {
+        width: 100%;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        text-align: left;
+    }
+}
+
+@media (max-width: 600px) {
+    .course-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .course-catalog-hero,
+    .course-detail-hero {
+        flex-direction: column;
+    }
+
+    .course-catalog-dataset {
+        width: 100%;
+    }
+
+    .course-card-actions,
+    .course-detail-actions {
+        flex-direction: column;
+    }
+
+    .course-card-actions .btn-primary,
+    .course-card-actions .btn-secondary,
+    .course-detail-actions .btn-primary,
+    .course-detail-actions .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.course-detail-flow {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 10px 0 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.course-detail-flow i {
+    margin-top: 2px;
+    color: #f39c12;
+}
+
+[data-theme="dark"] .course-detail-flow {
+    color: #94a3b8;
+}
+
+.course-catalog-dataset small {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+[data-theme="dark"] .course-catalog-dataset small {
+    color: #94a3b8;
+}
+
+.course-card-green {
+    border-top-color: #28a745;
+}
+
+.course-card-green .course-card-icon {
+    background: #e8f7ee;
+    color: #1f7a42;
+}
+
+.course-detail-hero-green {
+    border-left-color: #28a745;
+}
+
+.course-detail-hero-green .course-detail-icon {
+    background: #e8f7ee;
+    color: #1f7a42;
+}
+
+[data-theme="dark"] .course-card-green {
+    border-top-color: #34d399;
+}
+
+[data-theme="dark"] .course-card-green .course-card-icon,
+[data-theme="dark"] .course-detail-hero-green .course-detail-icon {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+[data-theme="dark"] .course-detail-hero-green {
+    border-left-color: #34d399;
+}
+
+.course-card-amber {
+    border-top-color: #d97706;
+}
+
+.course-card-amber .course-card-icon {
+    background: #fff5e5;
+    color: #9a6100;
+}
+
+.course-detail-hero-amber {
+    border-left-color: #d97706;
+}
+
+.course-detail-hero-amber .course-detail-icon {
+    background: #fff5e5;
+    color: #9a6100;
+}
+
+[data-theme="dark"] .course-card-amber {
+    border-top-color: #fbbf24;
+}
+
+[data-theme="dark"] .course-card-amber .course-card-icon,
+[data-theme="dark"] .course-detail-hero-amber .course-detail-icon {
+    background: #78350f;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .course-detail-hero-amber {
+    border-left-color: #fbbf24;
+}
+
+/* ===== LECCIONES GUIADAS: CONCEPTO, PRÁCTICA Y COMPROBACIÓN ===== */
+.lesson-stepper {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin: 14px 0 18px;
+    padding: 5px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+}
+
+.lesson-step {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    padding: 8px 9px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.lesson-step:hover:not(:disabled) {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.lesson-step.active {
+    background: var(--postgres-blue);
+    border-color: var(--postgres-blue);
+    color: #fff;
+}
+
+.lesson-step.completed:not(.active) {
+    border-color: rgba(40, 167, 69, 0.28);
+    color: #256b3d;
+}
+
+.lesson-step:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.lesson-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 21px;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: rgba(47, 111, 159, 0.1);
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.lesson-step.active .lesson-step-number {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+}
+
+.lesson-step.completed:not(.active) .lesson-step-number {
+    background: #e8f7ee;
+    color: #1e7e34;
+}
+
+.lesson-step-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.lesson-objectives {
+    padding: 13px 15px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-left: 4px solid var(--postgres-blue);
+    border-radius: 9px;
+}
+
+.lesson-objectives ul {
+    margin: 7px 0 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.lesson-objectives li + li {
+    margin-top: 3px;
+}
+
+.lesson-theory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.lesson-theory-card {
+    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+    box-shadow: var(--shadow-sm);
+}
+
+.lesson-theory-card h4 {
+    margin: 0 0 5px;
+    color: var(--text-strong);
+    font-size: 13px;
+}
+
+.lesson-theory-card p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.lesson-theory-card pre,
+.lesson-demo-card pre {
+    margin: 9px 0 0;
+    padding: 10px 11px;
+    overflow-x: auto;
+    border-radius: 7px;
+    background: #0f172a;
+    color: #dbeafe;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.lesson-demo-card {
+    margin-top: 14px;
+    padding: 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+}
+
+.lesson-demo-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lesson-demo-head p {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.lesson-demo-note {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.lesson-demo-result {
+    margin-top: 10px;
+    padding: 10px;
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    color: var(--text-strong);
+    font-size: 11px;
+}
+
+.lesson-demo-result pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+}
+
+.lesson-demo-table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5px;
+}
+
+.lesson-demo-table-wrap th,
+.lesson-demo-table-wrap td {
+    padding: 5px 7px;
+    border-bottom: 1px solid var(--postgres-border);
+    text-align: left;
+}
+
+.lesson-demo-table-wrap th {
+    background: var(--surface-strong);
+    color: var(--text-strong);
+    font-weight: 700;
+}
+
+.lesson-demo-more,
+.lesson-demo-empty {
+    margin: 7px 0 0;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.lesson-demo-error {
+    margin: 0;
+    color: #b91c1c;
+    font-size: 11px;
+}
+
+.lesson-mistakes {
+    margin-top: 14px;
+}
+
+.lesson-mistake {
+    margin-top: 7px;
+    padding: 9px 11px;
+    background: #fff9e8;
+    border-left: 3px solid #e0a800;
+    border-radius: 7px;
+}
+
+.lesson-mistake strong {
+    display: block;
+    color: #7a5a00;
+    font-size: 11px;
+}
+
+.lesson-mistake p {
+    margin: 2px 0 0;
+    color: #7a5a00;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.lesson-step-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.lesson-practice-intro {
+    padding: 13px 15px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+}
+
+.lesson-practice-intro h4,
+.lesson-check-intro h4 {
+    margin: 3px 0 4px;
+    color: var(--text-strong);
+    font-size: 15px;
+}
+
+.lesson-practice-intro p,
+.lesson-check-intro p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.lesson-practice-checklist {
+    margin: 9px 0 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.lesson-practice-checklist li + li {
+    margin-top: 3px;
+}
+
+.lesson-check-intro {
+    padding: 13px 15px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f3f0ff 100%);
+    border: 1px solid #d8d7f5;
+    border-left: 4px solid #6c5ce7;
+    border-radius: 9px;
+}
+
+.lesson-quiz {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    margin-top: 14px;
+}
+
+.lesson-quiz-question {
+    margin: 0;
+    padding: 13px 14px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+}
+
+.lesson-quiz-question legend {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 0 4px;
+    color: var(--text-strong);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.lesson-quiz-question legend span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.lesson-quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.lesson-quiz-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 9px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.45;
+    cursor: pointer;
+}
+
+.lesson-quiz-option:hover {
+    background: var(--accent-soft);
+    border-color: rgba(47, 111, 159, 0.35);
+}
+
+.lesson-quiz-option input {
+    margin-top: 2px;
+    accent-color: var(--postgres-blue);
+}
+
+.lesson-check-success {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #f4fbf6;
+    border-left: 4px solid #28a745;
+    border-radius: 8px;
+    color: #1e7e34;
+}
+
+.lesson-check-success > i {
+    margin-top: 2px;
+}
+
+.lesson-check-success strong {
+    display: block;
+    font-size: 12px;
+}
+
+.lesson-check-success p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.lesson-check-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 0 0;
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.lesson-summary-card {
+    margin-top: 14px;
+    padding: 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-left: 4px solid #6c5ce7;
+    border-radius: 9px;
+}
+
+.lesson-summary-card ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.lesson-summary-card li + li {
+    margin-top: 3px;
+}
+
+#lessonQuizResult ul {
+    margin: 7px 0 0;
+    padding-left: 18px;
+}
+
+[data-theme="dark"] .lesson-stepper,
+[data-theme="dark"] .lesson-objectives,
+[data-theme="dark"] .lesson-demo-card,
+[data-theme="dark"] .lesson-practice-intro,
+[data-theme="dark"] .lesson-summary-card {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .lesson-theory-card,
+[data-theme="dark"] .lesson-quiz-question {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .lesson-theory-card h4,
+[data-theme="dark"] .lesson-practice-intro h4,
+[data-theme="dark"] .lesson-check-intro h4,
+[data-theme="dark"] .lesson-quiz-question legend,
+[data-theme="dark"] .lesson-demo-result {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .lesson-theory-card p,
+[data-theme="dark"] .lesson-practice-intro p,
+[data-theme="dark"] .lesson-check-intro p,
+[data-theme="dark"] .lesson-practice-checklist,
+[data-theme="dark"] .lesson-objectives ul,
+[data-theme="dark"] .lesson-demo-head p,
+[data-theme="dark"] .lesson-demo-note,
+[data-theme="dark"] .lesson-summary-card ul,
+[data-theme="dark"] .lesson-quiz-option,
+[data-theme="dark"] .lesson-check-hint {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .lesson-check-intro {
+    background: #191a38;
+    border-color: #423b78;
+    border-left-color: #818cf8;
+}
+
+[data-theme="dark"] .lesson-demo-result {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .lesson-quiz-option {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .lesson-quiz-option:hover {
+    background: #172554;
+}
+
+[data-theme="dark"] .lesson-mistake {
+    background: #3b2f14;
+}
+
+[data-theme="dark"] .lesson-mistake strong,
+[data-theme="dark"] .lesson-mistake p {
+    color: #fde68a;
+}
+
+[data-theme="dark"] .lesson-step {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .lesson-step.active {
+    background: #2f6f9f;
+    color: #fff;
+}
+
+[data-theme="dark"] .lesson-step.completed:not(.active) {
+    color: #86efac;
+    border-color: #166534;
+}
+
+[data-theme="dark"] .lesson-check-success {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+@media (max-width: 600px) {
+    .lesson-stepper {
+        grid-template-columns: 1fr;
+    }
+
+    .lesson-step {
+        justify-content: flex-start;
+    }
+
+    .lesson-step-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .lesson-step-actions .btn-primary,
+    .lesson-step-actions .btn-ghost {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.course-dataset-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+}
+
+.course-dataset-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.course-dataset-control > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.course-dataset-control > span i {
+    color: var(--postgres-blue);
+}
+
+.course-dataset-control select {
+    min-width: 150px;
+    min-height: 34px;
+    padding: 6px 9px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.course-dataset-hint {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+[data-theme="dark"] .course-dataset-toolbar {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .course-dataset-control select {
+    background: #111827;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .course-dataset-hint {
+    color: #94a3b8;
+}
+
+@media (max-width: 600px) {
+    .course-dataset-control,
+    .course-dataset-control select {
+        width: 100%;
+    }
+
+    .course-dataset-hint {
+        margin-left: 0;
+    }
+}
+
+/* ===== CHECKPOINTS DE MÓDULO Y PROYECTO FINAL ===== */
+.course-assessment-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    gap: 16px;
+    align-items: start;
+    margin-top: 16px;
+}
+
+.course-assessment-card {
+    padding: 15px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.course-assessment-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.course-assessment-head h4 {
+    margin: 3px 0 0;
+    color: var(--text-strong);
+    font-size: 14px;
+}
+
+.course-assessment-card > p {
+    margin: 7px 0 0;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.course-assessment-badge {
+    flex: 0 0 auto;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: #fff5e5;
+    color: #9a6100;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.course-assessment-badge.is-complete {
+    background: #e8f7ee;
+    color: #1e7e34;
+}
+
+.course-checkpoint-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.course-checkpoint-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 9px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+}
+
+.course-checkpoint-row.passed {
+    border-left: 3px solid #28a745;
+}
+
+.course-checkpoint-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface-strong);
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.course-checkpoint-row.passed .course-checkpoint-index {
+    background: #e8f7ee;
+    color: #1e7e34;
+}
+
+.course-checkpoint-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.course-checkpoint-copy strong {
+    overflow-wrap: anywhere;
+    color: var(--text-strong);
+    font-size: 11.5px;
+}
+
+.course-checkpoint-copy span {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.course-checkpoint-row .btn-sm {
+    flex: 0 0 auto;
+    padding: 4px 7px;
+    font-size: 9.5px;
+}
+
+.course-project-criteria {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.course-project-criterion {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 7px 8px;
+    color: var(--text-muted);
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    font-size: 11px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.course-project-criterion input {
+    margin-top: 2px;
+    accent-color: var(--postgres-blue);
+}
+
+.course-project-card .btn-primary {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.checkpoint-modal-content {
+    max-width: 700px;
+}
+
+[data-theme="dark"] .course-assessment-card {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .course-assessment-head h4,
+[data-theme="dark"] .course-checkpoint-copy strong {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .course-assessment-card > p,
+[data-theme="dark"] .course-checkpoint-copy span,
+[data-theme="dark"] .course-project-criterion {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .course-checkpoint-row,
+[data-theme="dark"] .course-project-criterion {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .course-assessment-badge {
+    background: #78350f;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .course-assessment-badge.is-complete {
+    background: #064e3b;
+    color: #a7f3d0;
+}
+
+@media (max-width: 800px) {
+    .course-assessment-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== MARCA E ICONO DE APLICACIÓN ===== */
+.logo-mark {
+    display: block;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 8px rgba(2, 6, 23, 0.28));
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body,
+.app-container {
+    min-height: 100dvh;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+button,
+.nav-btn,
+.header-icon-btn,
+.lesson-step {
+    touch-action: manipulation;
+}
+
+/* ===== AJUSTES RESPONSIVE DE EXPERIENCIA ===== */
+@media (max-width: 992px) {
+    .challenges-layout .challenge-play-panel {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-header {
+        padding-left: max(14px, env(safe-area-inset-left));
+        padding-right: max(14px, env(safe-area-inset-right));
+    }
+
+    .main-nav {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+        padding: 4px 2px 6px;
+    }
+
+    .nav-btn {
+        flex: 0 0 auto;
+        min-height: 38px;
+        scroll-snap-align: start;
+    }
+
+    .header-icon-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .section {
+        padding-left: max(18px, env(safe-area-inset-left));
+        padding-right: max(18px, env(safe-area-inset-right));
+    }
+
+    .course-player-view .challenge-list-panel {
+        order: 2;
+    }
+
+    .course-player-view .challenge-play-panel {
+        order: 1;
+    }
+}
+
+@media (max-width: 600px) {
+    .modal-content {
+        width: calc(100% - 16px);
+        max-height: calc(100dvh - 16px);
+        border-radius: 12px;
+    }
+
+    .modal-header {
+        padding: 12px 14px;
+    }
+
+    .modal-body {
+        padding: 16px 14px;
+        max-height: calc(100dvh - 82px);
+    }
+
+    .course-assessment-card {
+        padding: 13px;
+    }
+
+    .course-checkpoint-row {
+        flex-wrap: wrap;
+    }
+
+    .course-checkpoint-row .btn-sm {
+        width: 100%;
+    }
+
+    .course-checkpoint-copy {
+        flex-basis: calc(100% - 40px);
+    }
+
+    .course-dataset-toolbar {
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-header {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+    }
+
+    .logo {
+        gap: 8px;
+        font-size: 1.05em;
+    }
+
+    .logo-mark {
+        width: 30px;
+        height: 30px;
+        flex-basis: 30px;
+    }
+
+    .header-actions {
+        gap: 6px;
+    }
+
+    .header-icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .section {
+        padding: 18px 12px 28px;
+    }
+
+    .section-header h2 {
+        font-size: 1.25em;
+    }
+
+    .section-header p {
+        font-size: 0.9em;
+    }
+
+    .course-card,
+    .course-catalog-hero,
+    .course-detail-hero {
+        padding: 14px;
+    }
+
+    .lesson-stepper {
+        gap: 4px;
+        padding: 4px;
+    }
+
+    .lesson-step {
+        padding: 7px 8px;
+    }
+
+    .course-detail-actions,
+    .course-card-actions {
+        gap: 6px;
+    }
+}
+
+@media (max-width: 380px) {
+    .logo {
+        font-size: 0.98em;
+    }
+
+    .logo-mark {
+        width: 27px;
+        height: 27px;
+        flex-basis: 27px;
+    }
+
+    .header-icon-btn {
+        width: 33px;
+        height: 33px;
+    }
+
+    .section {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .nav-btn {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .course-dataset-control select {
+        min-width: 0;
+    }
+}
+
+@supports (padding: max(0px)) {
+    .footer-content {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+    }
+}
+
+/* ===== NAVEGACIÓN MÓVIL ===== */
+.mobile-nav {
+    display: none;
+}
+
+.mobile-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    min-height: 50px;
+    padding: 6px 3px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.62);
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.1;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.mobile-nav-btn i {
+    font-size: 17px;
+    line-height: 1;
+}
+
+.mobile-nav-btn.active {
+    background: rgba(255, 255, 255, 0.13);
+    color: #fff;
+}
+
+.mobile-nav-btn.active::after {
+    content: '';
+    width: 18px;
+    height: 2px;
+    margin-top: 1px;
+    border-radius: 999px;
+    background: #facc15;
+}
+
+.mobile-more-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mobile-more-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    text-align: left;
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    background: var(--surface-muted);
+    color: var(--text-strong);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.mobile-more-item:hover,
+.mobile-more-item.active {
+    border-color: rgba(47, 111, 159, 0.4);
+    background: var(--accent-soft);
+}
+
+.mobile-more-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #ece9ff;
+    color: #6c5ce7;
+    font-size: 16px;
+}
+
+.mobile-more-item > span:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.mobile-more-item strong {
+    font-size: 13px;
+}
+
+.mobile-more-item small {
+    color: var(--text-muted);
+    font-size: 10.5px;
+}
+
+.mobile-more-close {
+    width: 100%;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+[data-theme="dark"] .mobile-more-item {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .mobile-more-item:hover,
+[data-theme="dark"] .mobile-more-item.active {
+    background: #172554;
+    border-color: #3b82f6;
+}
+
+@media (max-width: 768px) {
+    .main-nav {
+        display: none;
+    }
+
+    body {
+        padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    }
+
+    .mobile-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1500;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 2px;
+        padding: 6px 5px calc(6px + env(safe-area-inset-bottom));
+        background: rgba(9, 25, 45, 0.97);
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 -10px 30px rgba(2, 6, 23, 0.22);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .toast-container {
+        bottom: calc(82px + env(safe-area-inset-bottom));
+    }
+
+    .demo-tour-bar {
+        bottom: calc(82px + env(safe-area-inset-bottom));
+        width: calc(100% - 20px);
+    }
+
+    .mobile-more-modal {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .mobile-more-sheet {
+        width: 100%;
+        max-width: 560px;
+        max-height: calc(100dvh - 24px);
+        margin: 0 auto;
+        border-radius: 20px 20px 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .mobile-more-sheet .modal-body {
+        max-height: calc(100dvh - 130px);
+    }
+
+    .course-player-view .challenge-list-panel,
+    .challenge-list-panel {
+        order: 2;
+    }
+
+    .course-player-view .challenge-play-panel,
+    .challenge-play-panel {
+        order: 1;
+    }
+
+    textarea,
+    input,
+    select {
+        font-size: 16px !important;
+    }
+
+    .nav-btn,
+    .mobile-nav-btn,
+    .btn-primary,
+    .btn-secondary,
+    .header-icon-btn,
+    .challenge-card,
+    .course-lesson-row,
+    .lesson-step {
+        min-height: 44px;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-more-modal {
+        display: none !important;
+    }
+}
+
+.db-group-title-nosql,
+.db-group-title-nosql i {
+    color: var(--postgres-blue);
+}
+
+[data-theme="dark"] .entity-box .entity-title,
+[data-theme="dark"] .entity-box .pk,
+[data-theme="dark"] .motor-finder-eyebrow,
+[data-theme="dark"] .level-bar-eyebrow,
+[data-theme="dark"] .challenge-progress-head strong,
+[data-theme="dark"] .course-catalog-hero .course-eyebrow,
+[data-theme="dark"] .db-group-title-nosql,
+[data-theme="dark"] .db-group-title-nosql i {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .entity-box ul li {
+    color: #cbd5e1;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .entity-box .fk {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .entity-box .pk-fk {
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .msg-title {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .diagram-legend {
+    color: #94a3b8;
+    border-top-color: #334155;
+}
+
+[data-theme="dark"] .course-eyebrow,
+[data-theme="dark"] .course-side-eyebrow {
+    color: #93c5fd;
+}
+
+@media (min-width: 769px) and (max-width: 1120px) {
+    .app-header {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .header-content {
+        gap: 10px;
+    }
+
+    .logo {
+        gap: 8px;
+        font-size: 1.05em;
+    }
+
+    .logo-mark {
+        width: 30px;
+        height: 30px;
+        flex-basis: 30px;
+    }
+
+    .main-nav {
+        gap: 2px;
+    }
+
+    .nav-btn {
+        gap: 5px;
+        padding: 7px 8px;
+        font-size: 0.78em;
+    }
+
+    .header-actions {
+        gap: 5px;
+    }
+
+    .header-icon-btn {
+        width: 32px;
+        height: 32px;
+    }
 }

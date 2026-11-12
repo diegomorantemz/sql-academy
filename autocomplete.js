@@ -838,6 +838,8 @@
         global.addEventListener('resize', closePopup);
 
         document.querySelectorAll(EDITOR_SELECTOR).forEach(textarea => {
+            textarea.setAttribute('role', 'combobox');
+            textarea.setAttribute('aria-haspopup', 'listbox');
             textarea.setAttribute('aria-autocomplete', 'list');
             textarea.setAttribute('aria-expanded', 'false');
         });

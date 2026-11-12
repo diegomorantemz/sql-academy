@@ -15,7 +15,11 @@ const STORAGE_KEYS = {
     history: 'sql-academy-history-v1',
     preferences: 'sql-academy-preferences-v1',
     challenges: 'sql-academy-challenges-v1',
-    learningPath: 'sql-academy-path-v1'
+    learningPath: 'sql-academy-path-v1',
+    activeCourse: 'sql-academy-active-course-v1',
+    nosqlCourse: 'sql-academy-nosql-course-v1',
+    courseAssessment: 'sql-academy-course-assessment-v1',
+    skillProfile: 'sql-academy-skill-profile-v1'
 };
 const PERSIST_DB_NAME = 'sql-academy';
 const PERSIST_DB_VERSION = 1;
@@ -449,6 +453,12 @@ function closeModal(modal) {
     if (modal.id === 'aiHelpModal') {
         abortAIRequest();
     }
+    if (modal.id === 'checkpointModal') {
+        currentCheckpoint = null;
+    }
+    if (modal.id === 'mobileMoreModal') {
+        document.getElementById('mobileMoreBtn')?.setAttribute('aria-expanded', 'false');
+    }
     modal.classList.remove('active');
     if (!document.querySelector('.modal.active')) {
         document.body.style.overflow = '';
@@ -722,7 +732,7 @@ function showTablesInfo() {
 
                 html += `<div class="table-card">`;
                 html += `<div class="table-title"><i class="fas fa-table"></i> ${escapeHtml(tableName)} <span class="badge-count">${escapeHtml(totalRows)} registros</span></div>`;
-                html += `<div class="table-scroll">`;
+                html += `<div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de datos">`;
                 html += `<table class="info-table">`;
 
                 html += '<thead><tr>';
@@ -733,7 +743,7 @@ function showTablesInfo() {
 
                 html += '<tbody>';
                 if (rows.length === 0) {
-                    html += `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;">Sin datos</td></tr>`;
+                    html += `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--text-muted);">Sin datos</td></tr>`;
                 } else {
                     rows.forEach(row => {
                         html += '<tr>';
@@ -745,7 +755,7 @@ function showTablesInfo() {
                         html += '</tr>';
                     });
                     if (totalRows > 5) {
-                        html += `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;font-style:italic;">
+                        html += `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--text-muted);font-style:italic;">
                             ... y ${escapeHtml(totalRows - 5)} registros mas
                         </td></tr>`;
                     }
@@ -920,7 +930,7 @@ function renderResultSets() {
                     </thead>
                     <tbody>
                         ${rowCount === 0
-                            ? `<tr><td colspan="${colCount}" style="text-align:center;color:#999;">Sin filas</td></tr>`
+                            ? `<tr><td colspan="${colCount}" style="text-align:center;color:var(--text-muted);">Sin filas</td></tr>`
                             : visibleRows.map(row => `
                                 <tr>
                                     ${row.map(value => {
@@ -1603,9 +1613,53 @@ function getDangerousQueryReason(sql) {
     return '';
 }
 
+function syncCourseDatasetControls() {
+    const sqlSelector = document.getElementById('courseSqlDatasetSelector');
+    if (sqlSelector) sqlSelector.value = preferences.dataset;
+
+    const nosqlSelector = document.getElementById('courseNoSQLDatasetSelector');
+    if (nosqlSelector) nosqlSelector.value = getNoSQLActiveDatasetName();
+}
+
 function syncDatasetSelector() {
     const selector = document.getElementById('datasetSelector');
     if (selector) selector.value = preferences.dataset;
+    syncCourseDatasetControls();
+}
+
+async function changeCourseSqlDataset(name) {
+    if (!['escuela', 'tienda', 'biblioteca'].includes(name)) {
+        syncCourseDatasetControls();
+        return;
+    }
+    if (name === preferences.dataset) {
+        syncCourseDatasetControls();
+        return;
+    }
+    await loadDataset(name);
+    syncCourseDatasetControls();
+}
+
+function changeCourseNoSQLDataset(name) {
+    if (!['escuela', 'tienda', 'biblioteca'].includes(name)) {
+        syncCourseDatasetControls();
+        return;
+    }
+    if (getNoSQLActiveDatasetName() === name) {
+        syncCourseDatasetControls();
+        return;
+    }
+    if (typeof window.changeNoSQLDataset !== 'function') {
+        showToast('warning', 'El laboratorio NoSQL todavía no está listo.');
+        syncCourseDatasetControls();
+        return;
+    }
+    const previous = getNoSQLActiveDatasetName();
+    window.changeNoSQLDataset(name);
+    syncCourseDatasetControls();
+    if (getNoSQLActiveDatasetName() !== previous) {
+        refreshActiveCourseDataset();
+    }
 }
 
 function applyPreferences() {
@@ -1616,7 +1670,7 @@ function applyPreferences() {
     const isDark = preferences.theme === 'dark';
     document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
     const themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeMeta) themeMeta.setAttribute('content', isDark ? '#111827' : '#336791');
+    if (themeMeta) themeMeta.setAttribute('content', isDark ? '#111827' : '#123b61');
 
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
@@ -1768,7 +1822,7 @@ function clearHistory() {
     }
 }
 
-// EXPORTAR / IMPORTAR
+// EXPORTAR BASE DE DATOS
 function exportDatabase() {
     if (!db) {
         showMessage('error', 'La base de datos no está inicializada');
@@ -1791,52 +1845,9 @@ function exportDatabase() {
     }
 }
 
-function importDatabase() {
-    if (!SQLModule) {
-        showMessage('warning', 'Espera a que la base de datos termine de inicializarse');
-        return;
-    }
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.sqlite,.sqlite3,.db,application/x-sqlite3';
-    input.style.display = 'none';
-    input.addEventListener('change', () => {
-        const file = input.files && input.files[0];
-        input.remove();
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            let imported = null;
-            try {
-                imported = new SQLModule.Database(new Uint8Array(reader.result));
-                // Fuerza la lectura del esquema para detectar archivos que no son SQLite.
-                imported.exec('SELECT name FROM sqlite_master LIMIT 1;');
-                imported.run('PRAGMA foreign_keys = ON;');
-                if (db) db.close();
-                db = imported;
-                dbInitialized = true;
-                lastQueryError = null;
-                aiCooldownUntil = 0;
-                aiResponseCache.clear();
-                refreshAll();
-                schedulePersistDatabase();
-                showMessage('success', 'Base de datos importada correctamente', `Archivo: ${escapeHtml(file.name)}`);
-            } catch (e) {
-                if (imported) {
-                    try { imported.close(); } catch (closeError) { /* ignorar */ }
-                }
-                showMessage('error', 'No se pudo importar el archivo', `<code>${escapeHtml(e.message)}</code>`);
-            }
-        };
-        reader.onerror = () => {
-            showMessage('error', 'No se pudo leer el archivo seleccionado');
-        };
-        reader.readAsArrayBuffer(file);
-    });
-    document.body.appendChild(input);
-    input.click();
+function closeToolbarMore() {
+    const menu = document.getElementById('sqlMoreMenu');
+    if (menu) menu.open = false;
 }
 
 // EXPLORADOR DE TABLAS Y EDITOR DE DATOS
@@ -1998,7 +2009,7 @@ function loadTableEditor(tableName = analyzeSelectedTable, database = db) {
 
         html += '<tbody>';
         if (rows.length === 0) {
-            html += `<tr><td colspan="${selectColumns.length + 1}" style="text-align:center;color:#999;">
+            html += `<tr><td colspan="${selectColumns.length + 1}" style="text-align:center;color:var(--text-muted);">
                 Tabla vacía. Usa "Agregar fila" para crear un registro.
             </td></tr>`;
         } else {
@@ -2532,7 +2543,7 @@ function renderAnalyzeTableDetail(table, database = db) {
 
     const previewHtml = preview.columns.length
         ? `
-            <div class="table-detail-preview">
+            <div class="table-detail-preview" tabindex="0" role="region" aria-label="Vista previa de la tabla">
                 <table class="table-detail-table">
                     <thead>
                         <tr>${preview.columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr>
@@ -2574,7 +2585,7 @@ function renderAnalyzeTableDetail(table, database = db) {
         </div>
 
         <p class="table-detail-subtitle">Columnas</p>
-        <div class="table-detail-table-wrap">
+        <div class="table-detail-table-wrap" tabindex="0" role="region" aria-label="Detalle de la tabla">
             <table class="table-detail-table">
                 <thead>
                     <tr>
@@ -3276,11 +3287,15 @@ function renderCategorySelector() {
     if (!selector) return;
 
     const previous = selector.value;
-    const categories = getExamplesByCategory();
+    const categories = getVisibleExampleCategories();
     const keys = Object.keys(categories);
-    const options = keys.map(key => (
-        `<option value="${escapeHtml(key)}">${escapeHtml(categories[key].titulo)}</option>`
-    ));
+    const showLevels = getEffectiveSkillLevel('sql') === 'all';
+    const options = keys.map(key => {
+        const levelLabel = showLevels
+            ? `[${getSkillLevelInfo(getExampleCategoryLevel(key)).label}] `
+            : '';
+        return `<option value="${escapeHtml(key)}">${levelLabel}${escapeHtml(categories[key].titulo)}</option>`;
+    });
     options.push('<option value="aleatorio">Aleatorio</option>');
     selector.innerHTML = options.join('');
 
@@ -3302,10 +3317,10 @@ function showExampleByCategory() {
     }
 
     const category = selector.value;
-    const categories = getExamplesByCategory();
+    const categories = getVisibleExampleCategories();
     const keys = Object.keys(categories);
     if (!keys.length) {
-        showMessage('warning', 'No hay ejemplos para este dataset', 'Escribe una consulta directamente en el editor.');
+        showMessage('warning', 'No hay ejemplos para este nivel', 'Cambia de nivel o escribe una consulta directamente en el editor.');
         return;
     }
 
@@ -3537,7 +3552,7 @@ const dbInfo = {
             'Extensible con extensiones',
             'Ideal para aplicaciones empresariales'
         ],
-        empresas: 'Instagram, Apple, Spotify, Uber, Reddit',
+        empresas: 'Instagram, Apple, Uber, Reddit',
         ventajas: 'Muy robusto, excelente rendimiento, gran comunidad',
         desventajas: 'Curva de aprendizaje pronunciada, consume mas recursos',
         tip: 'Ideal para aplicaciones que requieren consistencia, transacciones complejas y consultas avanzadas.',
@@ -3698,7 +3713,7 @@ const dbInfo = {
     logo: 'assets/logos/redis.png',
     description: 'Redis es la base de datos clave-valor más rápida del mundo. Es ampliamente utilizada como caché, para sesiones de usuario y para aplicaciones que requieren baja latencia.',
     type: 'NoSQL (Clave-Valor)',
-    licencia: 'Open Source (BSD)',
+    licencia: 'AGPLv3 (Redis 8+)',
     sitio: 'redis.io',
     caracteristicas: [
         'Alta velocidad (sub-milisegundo)',
@@ -3729,7 +3744,7 @@ const dbInfo = {
         'Lenguaje CQL (Cassandra Query Language)',
         'Ideal para Big Data y IoT'
     ],
-    empresas: 'Apple, Netflix, Uber, eBay, Spotify',
+    empresas: 'Apple, Netflix, Uber, eBay',
     ventajas: 'Muy escalable, alta disponibilidad',
     desventajas: 'Consistencia eventual, complejo de administrar',
     tip: 'Ideal para escrituras masivas y datos distribuidos geograficamente.',
@@ -3761,7 +3776,7 @@ const dbInfo = {
     logo: 'assets/logos/elasticsearch.png',
     description: 'Elasticsearch es el motor de búsqueda y análisis de datos más popular. Está basado en Lucene y permite consultas full-text en tiempo real.',
     type: 'NoSQL (Busqueda)',
-    licencia: 'Open Source (Apache 2.0)',
+    licencia: 'Elastic License 2.0 / AGPLv3',
     sitio: 'elastic.co',
     caracteristicas: [
         'Búsqueda full-text en tiempo real',
@@ -3859,6 +3874,18 @@ function openDBInfo(dbKey) {
             <i class="fas fa-lightbulb" style="color: #336791;"></i>
             <strong>Tip:</strong> ${info.tip}
         </div>
+
+        ${window.INSTALL_GUIDES?.[dbKey] ? `
+            <div class="db-install-cta">
+                <div>
+                    <strong>¿Quieres instalarlo en tu equipo?</strong>
+                    <p>Guía paso a paso para Windows, macOS, Linux o Docker.</p>
+                </div>
+                <button type="button" class="btn-primary" onclick="openInstallFromDBInfo('${escapeHtml(dbKey)}')">
+                    <i class="fas fa-download"></i> Cómo instalarlo
+                </button>
+            </div>
+        ` : ''}
     `;
     
     body.innerHTML = html;
@@ -4226,6 +4253,9 @@ const CONCEPT_PROGRESS_KEY = 'sql-academy-concepts-v1';
 let conceptProgress = {};
 let activeGuideFilter = 'all';
 let activeConceptFilter = 'all';
+let activeInstallFilter = 'all';
+let currentInstallGuideId = null;
+let currentInstallPathId = null;
 let learnLibraryInitialized = false;
 
 function loadConceptProgress() {
@@ -4295,11 +4325,12 @@ function normalizeLibraryText(value) {
 }
 
 function activateLearnTab(tabName) {
-    const next = tabName === 'concepts' ? 'concepts' : 'guides';
+    const next = ['guides', 'concepts', 'install'].includes(tabName) ? tabName : 'guides';
     const tabs = Array.from(document.querySelectorAll('.learn-tab'));
     const panels = {
         guides: document.getElementById('learnGuidesPanel'),
-        concepts: document.getElementById('learnConceptsPanel')
+        concepts: document.getElementById('learnConceptsPanel'),
+        install: document.getElementById('learnInstallPanel')
     };
 
     tabs.forEach(tab => {
@@ -4317,6 +4348,7 @@ function activateLearnTab(tabName) {
     });
 
     if (next === 'concepts') updateConceptProgressUI();
+    if (next === 'install') filterInstallGuides();
 }
 
 function filterLearnGuides() {
@@ -4385,6 +4417,325 @@ function setConceptFilter(filter) {
         button.setAttribute('aria-pressed', String(active));
     });
     filterConcepts();
+}
+
+function getInstallDifficultyClass(difficulty) {
+    return normalizeLibraryText(difficulty).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'media';
+}
+
+function renderInstallGuides() {
+    const container = document.getElementById('installGuideGrid');
+    if (!container) return;
+
+    const guides = Object.values(window.INSTALL_GUIDES || {})
+        .filter(guide => guide && guide.id && guide.name)
+        .sort((a, b) => {
+            if (Boolean(a.recommended) !== Boolean(b.recommended)) return a.recommended ? -1 : 1;
+            return a.name.localeCompare(b.name, 'es');
+        });
+
+    container.innerHTML = guides.map(guide => {
+        const paths = Array.isArray(guide.paths) ? guide.paths : [];
+        const osIds = [...new Set(paths.flatMap(path => (
+            Array.isArray(path.platforms) && path.platforms.length ? path.platforms : [path.id]
+        )))].join(' ');
+        const search = [
+            guide.name,
+            guide.summary,
+            guide.type,
+            guide.difficulty,
+            ...paths.flatMap(path => [
+                path.label,
+                ...(Array.isArray(path.platforms) ? path.platforms : [])
+            ])
+        ].join(' ');
+        return `
+            <article class="install-guide-card"
+                data-install-card
+                data-type="${escapeHtml(String(guide.type || '').toLowerCase())}"
+                data-recommended="${guide.recommended ? 'true' : 'false'}"
+                data-os="${escapeHtml(osIds)}"
+                data-search="${escapeHtml(search)}">
+                <div class="install-guide-card-top">
+                    <span class="install-guide-logo${guide.logoDark ? ' has-dark-logo' : ''}">
+                        <img class="db-logo-light" src="${escapeHtml(guide.logo)}" alt="${escapeHtml(guide.name)}">
+                        ${guide.logoDark ? `<img class="db-logo-dark" src="${escapeHtml(guide.logoDark)}" alt="" aria-hidden="true">` : ''}
+                    </span>
+                    ${guide.recommended ? '<span class="install-guide-recommended">Recomendado</span>' : ''}
+                </div>
+                <h3>${escapeHtml(guide.name)}</h3>
+                <p>${escapeHtml(guide.summary)}</p>
+                <div class="install-guide-meta">
+                    <span class="install-difficulty install-difficulty-${getInstallDifficultyClass(guide.difficulty)}">${escapeHtml(guide.difficulty)}</span>
+                    <span><i class="fas fa-clock"></i> ${escapeHtml(guide.time)}</span>
+                </div>
+                <div class="install-guide-os">
+                    ${paths.map(path => `<span>${escapeHtml(path.label)}</span>`).join('')}
+                </div>
+                <button type="button" class="btn-secondary install-guide-open" onclick="openInstallGuide('${escapeHtml(guide.id)}')">
+                    Ver guía <i class="fas fa-arrow-right"></i>
+                </button>
+            </article>
+        `;
+    }).join('');
+}
+
+function filterInstallGuides() {
+    const search = document.getElementById('installSearch');
+    const osFilter = document.getElementById('installOsFilter');
+    const query = normalizeLibraryText(search?.value || '');
+    const selectedOs = osFilter?.value || 'all';
+    const cards = Array.from(document.querySelectorAll('[data-install-card]'));
+    let visible = 0;
+
+    cards.forEach(card => {
+        const type = card.dataset.type || '';
+        const recommended = card.dataset.recommended === 'true';
+        const osIds = (card.dataset.os || '').split(' ').filter(Boolean);
+        const matchesFilter = activeInstallFilter === 'all'
+            || (activeInstallFilter === 'recomendado' ? recommended : type === activeInstallFilter);
+        const matchesOs = selectedOs === 'all'
+            || osIds.includes(selectedOs)
+            || (osIds.includes('docker') && ['windows', 'macos', 'linux'].includes(selectedOs));
+        const haystack = normalizeLibraryText(`${card.dataset.search || ''} ${card.textContent}`);
+        const matchesQuery = !query || haystack.includes(query);
+        const match = matchesFilter && matchesOs && matchesQuery;
+        card.hidden = !match;
+        if (match) visible += 1;
+    });
+
+    const empty = document.getElementById('installEmptyState');
+    if (empty) empty.hidden = visible > 0;
+}
+
+function setInstallFilter(filter) {
+    activeInstallFilter = ['all', 'sql', 'nosql', 'recomendado'].includes(filter) ? filter : 'all';
+    document.querySelectorAll('[data-install-filter]').forEach(button => {
+        const active = button.dataset.installFilter === activeInstallFilter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    filterInstallGuides();
+}
+
+function getActiveInstallGuide() {
+    return window.INSTALL_GUIDES?.[currentInstallGuideId] || null;
+}
+
+function getActiveInstallPath(guide) {
+    if (!guide) return null;
+    return guide.paths.find(path => path.id === currentInstallPathId)
+        || guide.paths.find(path => path.recommended)
+        || guide.paths[0]
+        || null;
+}
+
+function renderInstallCode(code) {
+    if (!code) return '';
+    return `
+        <div class="install-code-row">
+            <code>${escapeHtml(code)}</code>
+            <button type="button" class="install-copy-btn" data-copy-code="${escapeHtml(code)}" onclick="copyInstallCommand(this)" aria-label="Copiar comando">
+                <i class="fas fa-copy"></i> Copiar
+            </button>
+        </div>
+    `;
+}
+
+function renderInstallLink(link) {
+    if (!link || !link.url) return '';
+    return `<a class="install-inline-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label || link.url)} <i class="fas fa-arrow-up-right-from-square"></i></a>`;
+}
+
+function renderInstallGuide() {
+    const guide = getActiveInstallGuide();
+    const body = document.getElementById('installGuideBody');
+    const title = document.getElementById('installGuideTitle');
+    const eyebrow = document.getElementById('installGuideEyebrow');
+    if (!guide || !body) return;
+
+    const path = getActiveInstallPath(guide);
+    currentInstallPathId = path?.id || null;
+    if (title) title.textContent = `Cómo instalar ${guide.name}`;
+    if (eyebrow) eyebrow.textContent = `Instalación · ${guide.type}`;
+
+    const paths = Array.isArray(guide.paths) ? guide.paths : [];
+    const osTabs = paths.length > 1 ? `
+        <div class="install-os-tabs" role="tablist" aria-label="Sistema operativo">
+            ${paths.map(item => `
+                <button type="button"
+                    class="install-os-tab${item.id === currentInstallPathId ? ' active' : ''}"
+                    role="tab"
+                    aria-selected="${item.id === currentInstallPathId}"
+                    onclick="selectInstallOs('${escapeHtml(item.id)}')">
+                    ${escapeHtml(item.label)}
+                </button>
+            `).join('')}
+        </div>
+    ` : '';
+
+    const steps = path?.steps?.length ? `
+        <section class="install-guide-section">
+            <h4><i class="fas fa-list-ol"></i> Pasos</h4>
+            <ol class="install-steps">
+                ${path.steps.map((step, index) => `
+                    <li class="install-step">
+                        <span class="install-step-number">${index + 1}</span>
+                        <div class="install-step-body">
+                            <strong>${escapeHtml(step.title)}</strong>
+                            <p>${escapeHtml(step.body)}</p>
+                            ${renderInstallCode(step.code)}
+                            ${renderInstallLink(step.link)}
+                        </div>
+                    </li>
+                `).join('')}
+            </ol>
+        </section>
+    ` : '<p class="install-empty-copy">No hay pasos disponibles para este sistema.</p>';
+
+    const verify = path?.verify?.length ? `
+        <section class="install-guide-section install-verify">
+            <h4><i class="fas fa-circle-check"></i> Cómo verificar</h4>
+            ${path.verify.map(step => `
+                <div class="install-verify-item">
+                    <strong>${escapeHtml(step.title)}</strong>
+                    <p>${escapeHtml(step.body)}</p>
+                    ${renderInstallCode(step.code)}
+                    ${renderInstallLink(step.link)}
+                </div>
+            `).join('')}
+        </section>
+    ` : '';
+
+    const notes = path?.notes?.length ? `
+        <section class="install-guide-section install-notes">
+            <h4><i class="fas fa-circle-info"></i> Notas</h4>
+            <ul>${path.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>
+        </section>
+    ` : '';
+
+    const clients = guide.clients?.length ? `
+        <section class="install-guide-section">
+            <h4><i class="fas fa-window-restore"></i> Cliente recomendado</h4>
+            <div class="install-guide-links">
+                ${guide.clients.map(client => `
+                    <a href="${escapeHtml(client.url)}" target="_blank" rel="noopener">
+                        ${escapeHtml(client.name)} <i class="fas fa-arrow-up-right-from-square"></i>
+                    </a>
+                `).join('')}
+            </div>
+        </section>
+    ` : '';
+
+    const cloud = guide.cloudAlternative ? `
+        <div class="install-cloud-alternative">
+            <span><i class="fas fa-cloud"></i> Alternativa sin instalar</span>
+            <strong>${escapeHtml(guide.cloudAlternative.label)}</strong>
+            <p>${escapeHtml(guide.cloudAlternative.note)}</p>
+            <a href="${escapeHtml(guide.cloudAlternative.url)}" target="_blank" rel="noopener">Abrir ${escapeHtml(guide.cloudAlternative.label)} <i class="fas fa-arrow-up-right-from-square"></i></a>
+        </div>
+    ` : '';
+
+    const commonErrors = guide.commonErrors?.length ? `
+        <section class="install-guide-section">
+            <h4><i class="fas fa-triangle-exclamation"></i> Errores comunes</h4>
+            <div class="install-errors">
+                ${guide.commonErrors.map(error => `
+                    <div class="install-error">
+                        <strong>${escapeHtml(error.problem)}</strong>
+                        <p>${escapeHtml(error.solution)}</p>
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+    ` : '';
+
+    const security = guide.security?.length ? `
+        <section class="install-guide-section install-security">
+            <h4><i class="fas fa-shield-halved"></i> Seguridad</h4>
+            <ul>${guide.security.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        </section>
+    ` : '';
+
+    body.innerHTML = `
+        <div class="install-guide-detail">
+            <div class="install-guide-detail-head">
+                <span class="install-guide-logo install-guide-logo-large${guide.logoDark ? ' has-dark-logo' : ''}">
+                    <img class="db-logo-light" src="${escapeHtml(guide.logo)}" alt="${escapeHtml(guide.name)}">
+                    ${guide.logoDark ? `<img class="db-logo-dark" src="${escapeHtml(guide.logoDark)}" alt="" aria-hidden="true">` : ''}
+                </span>
+                <div class="install-guide-detail-copy">
+                    <span class="install-guide-eyebrow">${escapeHtml(guide.type)} · ${escapeHtml(guide.difficulty)}</span>
+                    <h3>${escapeHtml(guide.name)}</h3>
+                    <p>${escapeHtml(guide.summary)}</p>
+                    <div class="install-guide-detail-meta">
+                        <span><i class="fas fa-clock"></i> ${escapeHtml(guide.time)}</span>
+                        <span>Revisado: ${escapeHtml(guide.lastReviewed)}</span>
+                    </div>
+                </div>
+            </div>
+
+            ${cloud}
+            ${osTabs}
+            ${steps}
+            ${verify}
+            ${notes}
+            ${clients}
+            ${commonErrors}
+            ${security}
+
+            <div class="install-guide-footer">
+                <a href="${escapeHtml(guide.officialUrl)}" target="_blank" rel="noopener">
+                    <i class="fas fa-download"></i> Descarga oficial
+                </a>
+                <a href="${escapeHtml(guide.docsUrl)}" target="_blank" rel="noopener">
+                    <i class="fas fa-book"></i> Documentación
+                </a>
+                <span><i class="fas fa-calendar"></i> Última revisión: ${escapeHtml(guide.lastReviewed)}</span>
+            </div>
+        </div>
+    `;
+}
+
+function openInstallGuide(id, pathId = '') {
+    const guide = window.INSTALL_GUIDES?.[id];
+    if (!guide) return;
+    currentInstallGuideId = id;
+    const requestedPath = pathId ? guide.paths.find(path => path.id === pathId) : null;
+    const activePath = requestedPath || guide.paths.find(path => path.recommended) || guide.paths[0];
+    currentInstallPathId = activePath?.id || null;
+    renderInstallGuide();
+    const modal = document.getElementById('installGuideModal');
+    if (modal && !modal.classList.contains('active')) openModal(modal);
+}
+
+function selectInstallOs(pathId) {
+    const guide = getActiveInstallGuide();
+    if (!guide || !guide.paths.some(path => path.id === pathId)) return;
+    currentInstallPathId = pathId;
+    renderInstallGuide();
+}
+
+async function copyInstallCommand(button) {
+    const code = button?.dataset.copyCode || '';
+    if (!code) return;
+    try {
+        await copyTextToClipboard(code);
+        showToast('success', 'Comando copiado.');
+    } catch (error) {
+        showToast('error', 'No se pudo copiar el comando.');
+    }
+}
+
+function openInstallFromDBInfo(dbKey) {
+    closeDBModal();
+    openInstallGuide(dbKey);
+}
+
+function closeInstallGuide() {
+    currentInstallGuideId = null;
+    currentInstallPathId = null;
+    closeModal(document.getElementById('installGuideModal'));
 }
 
 function openConceptLibrary() {
@@ -4800,9 +5151,11 @@ function initLearnLibrary() {
         });
     });
 
+    renderInstallGuides();
     activateLearnTab('guides');
     setGuideFilter('all');
     setConceptFilter('all');
+    setInstallFilter('all');
 }
 
 // ============================================
@@ -5239,7 +5592,13 @@ let challengeAttempts = 0;
 let challengeProgress = {};
 let selectedNoSQLChallengeId = null;
 let learningPathProgress = {};
+let nosqlCourseProgress = {};
+let courseAssessment = {};
 let currentLearningLessonId = null;
+let currentCourseId = null;
+let currentCourseView = 'catalog';
+let currentLessonStep = 'concept';
+let currentCheckpoint = null;
 let learningPathEventsBound = false;
 
 function loadChallengeProgress() {
@@ -5896,6 +6255,1107 @@ function resetDebugChallengeProgress() {
 }
 
 // ============================================
+// PERFIL DE NIVEL Y TEST DE HABILIDAD
+// ============================================
+
+const SKILL_LEVELS = {
+    basico: {
+        id: 'basico',
+        label: 'Básico',
+        description: 'Empieza con lo esencial y gana confianza antes de combinar conceptos.',
+        sqlRecommendation: 'SELECT, WHERE, ORDER BY y LIMIT.',
+        nosqlRecommendation: 'find, filtros simples y proyecciones.'
+    },
+    intermedio: {
+        id: 'intermedio',
+        label: 'Intermedio',
+        description: 'Ya puedes relacionar tablas y resumir datos; toca practicar combinaciones.',
+        sqlRecommendation: 'JOIN, GROUP BY, HAVING, agregaciones y operadores.',
+        nosqlRecommendation: 'sort, limit, CRUD y operadores de actualización.'
+    },
+    avanzado: {
+        id: 'avanzado',
+        label: 'Avanzado',
+        description: 'Dominas las bases y puedes trabajar con consultas menos directas.',
+        sqlRecommendation: 'subconsultas, LEFT JOIN con NULL, consultas combinadas y CRUD.',
+        nosqlRecommendation: 'aggregate, $group, $match y $unwind.'
+    }
+};
+
+const SKILL_LEVEL_ORDER = ['basico', 'intermedio', 'avanzado'];
+
+const SQL_CATEGORY_LEVELS = {
+    basicos: 'basico',
+    filtros: 'basico',
+    orden: 'basico',
+    agregacion: 'intermedio',
+    groupby: 'intermedio',
+    having: 'intermedio',
+    join: 'intermedio',
+    operadores: 'intermedio',
+    subconsultas: 'avanzado',
+    avanzado: 'avanzado',
+    modificacion: 'avanzado'
+};
+
+const NOSQL_EXAMPLE_LEVELS = {
+    Consultas: 'basico',
+    Filtros: 'basico',
+    CRUD: 'intermedio',
+    Agregación: 'avanzado'
+};
+
+const NOSQL_QUICK_SYNTAX = {
+    basico: {
+        examples: [
+            'db.estudiantes.find({})',
+            'db.estudiantes.find({ edad: { $gt: 18 } })',
+            'db.estudiantes.find({}, { nombre: 1, carrera: 1 })'
+        ],
+        operators: ['$gt', '$gte', '$lt', '$in', '$and', '$or']
+    },
+    intermedio: {
+        examples: [
+            'db.estudiantes.find({}).sort({ promedio: -1 }).limit(5)',
+            'db.estudiantes.updateMany({}, { $inc: { edad: 1 } })',
+            'db.estudiantes.deleteOne({ _id: "est-008" })'
+        ],
+        operators: ['$set', '$inc', '$push', '$pull']
+    },
+    avanzado: {
+        examples: [
+            'db.estudiantes.aggregate([{ $group: { _id: "$carrera", total: { $sum: 1 } } }])',
+            'db.pedidos.aggregate([{ $unwind: "$items" }, { $group: { _id: "$items.producto_nombre", total: { $sum: "$items.cantidad" } } }])'
+        ],
+        operators: ['$group', '$sum', '$avg', '$unwind', '$match', '$sort']
+    }
+};
+
+const SKILL_TEST_LENGTH = 6;
+
+const SKILL_TEST_QUESTIONS = {
+    sql: [
+        {
+            id: 'sql-basico-1',
+            level: 'basico',
+            prompt: '¿Qué devuelve SELECT nombre FROM estudiantes WHERE edad > 20;?',
+            options: [
+                'Los nombres de los estudiantes mayores de 20 años.',
+                'Todos los datos de los estudiantes.',
+                'Los nombres de todos los estudiantes.'
+            ],
+            answer: 0
+        },
+        {
+            id: 'sql-basico-2',
+            level: 'basico',
+            prompt: '¿Qué cláusula se usa para ordenar los resultados?',
+            options: ['GROUP BY', 'ORDER BY', 'WHERE'],
+            answer: 1
+        },
+        {
+            id: 'sql-basico-3',
+            level: 'basico',
+            prompt: '¿Qué hace LIMIT 5 al final de una consulta?',
+            options: ['Filtra las edades.', 'Crea una tabla nueva.', 'Devuelve como máximo 5 filas.'],
+            answer: 2
+        },
+        {
+            id: 'sql-intermedio-1',
+            level: 'intermedio',
+            prompt: '¿Qué cláusula filtra los grupos después de GROUP BY?',
+            options: ['WHERE', 'ORDER BY', 'HAVING'],
+            answer: 2
+        },
+        {
+            id: 'sql-intermedio-2',
+            level: 'intermedio',
+            prompt: '¿Qué muestra SELECT carrera, COUNT(*) FROM estudiantes GROUP BY carrera;?',
+            options: [
+                'Todos los estudiantes uno por uno.',
+                'Cuántos estudiantes hay por carrera.',
+                'El promedio de cada carrera.'
+            ],
+            answer: 1
+        },
+        {
+            id: 'sql-intermedio-3',
+            level: 'intermedio',
+            prompt: '¿Qué JOIN conserva todas las filas de la tabla izquierda aunque no tengan coincidencia?',
+            options: ['LEFT JOIN', 'INNER JOIN', 'CROSS JOIN'],
+            answer: 0
+        },
+        {
+            id: 'sql-avanzado-1',
+            level: 'avanzado',
+            prompt: '¿Qué consulta obtiene los estudiantes con promedio superior al promedio general?',
+            options: [
+                'SELECT * FROM estudiantes WHERE promedio > AVG(promedio);',
+                'SELECT * FROM estudiantes GROUP BY promedio HAVING promedio > AVG(promedio);',
+                'SELECT * FROM estudiantes WHERE promedio > (SELECT AVG(promedio) FROM estudiantes);'
+            ],
+            answer: 2
+        },
+        {
+            id: 'sql-avanzado-2',
+            level: 'avanzado',
+            prompt: '¿Qué devuelve SELECT e.nombre FROM estudiantes e LEFT JOIN inscripciones i ON e.id = i.estudiante_id WHERE i.id IS NULL;?',
+            options: [
+                'Estudiantes con al menos una inscripción.',
+                'Estudiantes sin inscripciones.',
+                'Todos los estudiantes con sus cursos.'
+            ],
+            answer: 1
+        },
+        {
+            id: 'sql-avanzado-3',
+            level: 'avanzado',
+            prompt: '¿Qué hace una subconsulta dentro de WHERE?',
+            options: [
+                'Elimina la tabla original.',
+                'Devuelve un valor o conjunto que usa la consulta exterior.',
+                'Solo puede devolver texto.'
+            ],
+            answer: 1
+        }
+    ],
+    nosql: [
+        {
+            id: 'nosql-basico-1',
+            level: 'basico',
+            prompt: '¿Qué devuelve db.estudiantes.find({})?',
+            options: ['Todos los documentos.', 'Solo un documento.', 'Elimina la colección.'],
+            answer: 0
+        },
+        {
+            id: 'nosql-basico-2',
+            level: 'basico',
+            prompt: '¿Qué significa { edad: { $gte: 18 } }?',
+            options: ['Edad distinta de 18.', 'Edad mayor o igual a 18.', 'Edad menor que 18.'],
+            answer: 1
+        },
+        {
+            id: 'nosql-basico-3',
+            level: 'basico',
+            prompt: '¿Qué hace una proyección como { nombre: 1, carrera: 1 }?',
+            options: ['Devuelve todos los campos.', 'Elimina los documentos.', 'Devuelve solo esos campos.'],
+            answer: 2
+        },
+        {
+            id: 'nosql-intermedio-1',
+            level: 'intermedio',
+            prompt: '¿Qué hace .sort({ promedio: -1 })?',
+            options: ['Ordena de menor a mayor.', 'Ordena de mayor a menor.', 'Ordena aleatoriamente.'],
+            answer: 1
+        },
+        {
+            id: 'nosql-intermedio-2',
+            level: 'intermedio',
+            prompt: '¿Qué operador actualiza un campo?',
+            options: ['$set', '$and', '$in'],
+            answer: 0
+        },
+        {
+            id: 'nosql-intermedio-3',
+            level: 'intermedio',
+            prompt: '¿Qué hace db.estudiantes.updateMany({}, { $inc: { edad: 1 } })?',
+            options: ['Elimina todos los documentos.', 'Pone la edad en 1.', 'Incrementa la edad de todos los documentos.'],
+            answer: 2
+        },
+        {
+            id: 'nosql-avanzado-1',
+            level: 'avanzado',
+            prompt: '¿Qué etapa de agregación agrupa documentos?',
+            options: ['$sort', '$limit', '$group'],
+            answer: 2
+        },
+        {
+            id: 'nosql-avanzado-2',
+            level: 'avanzado',
+            prompt: '¿Qué hace $unwind?',
+            options: ['Ordena documentos.', 'Convierte un arreglo en varios documentos.', 'Elimina un campo.'],
+            answer: 1
+        },
+        {
+            id: 'nosql-avanzado-3',
+            level: 'avanzado',
+            prompt: '¿Qué etapa filtra documentos antes de agrupar?',
+            options: ['$match', '$project', '$sum'],
+            answer: 0
+        }
+    ]
+};
+
+const SKILL_QUESTION_TARGETS = {
+    'sql-basico-1': { concept: 'SELECT y WHERE', category: 'filtros', level: 'basico' },
+    'sql-basico-2': { concept: 'ORDER BY', category: 'orden', level: 'basico' },
+    'sql-basico-3': { concept: 'LIMIT', category: 'basicos', level: 'basico' },
+    'sql-intermedio-1': { concept: 'HAVING', category: 'having', level: 'intermedio' },
+    'sql-intermedio-2': { concept: 'GROUP BY', category: 'groupby', level: 'intermedio' },
+    'sql-intermedio-3': { concept: 'JOIN', category: 'join', level: 'intermedio' },
+    'sql-avanzado-1': { concept: 'Subconsultas', category: 'subconsultas', level: 'avanzado' },
+    'sql-avanzado-2': { concept: 'LEFT JOIN y NULL', category: 'join', level: 'avanzado' },
+    'sql-avanzado-3': { concept: 'Subconsultas', category: 'subconsultas', level: 'avanzado' },
+    'nosql-basico-1': { concept: 'find', category: 'Consultas', level: 'basico' },
+    'nosql-basico-2': { concept: 'Filtros', category: 'Filtros', level: 'basico' },
+    'nosql-basico-3': { concept: 'Proyección', category: 'Consultas', level: 'basico' },
+    'nosql-intermedio-1': { concept: 'sort', category: 'Consultas', level: 'intermedio' },
+    'nosql-intermedio-2': { concept: 'Actualización', category: 'CRUD', level: 'intermedio' },
+    'nosql-intermedio-3': { concept: '$inc', category: 'CRUD', level: 'intermedio' },
+    'nosql-avanzado-1': { concept: '$group', category: 'Agregación', level: 'avanzado' },
+    'nosql-avanzado-2': { concept: '$unwind', category: 'Agregación', level: 'avanzado' },
+    'nosql-avanzado-3': { concept: '$match', category: 'Agregación', level: 'avanzado' }
+};
+
+let skillProfile = {
+    sql: null,
+    nosql: null,
+    sqlShowAll: false,
+    nosqlShowAll: false,
+    sqlSource: null,
+    nosqlSource: null,
+    sqlTestedAt: null,
+    nosqlTestedAt: null,
+    sqlWeakConcepts: [],
+    nosqlWeakConcepts: []
+};
+
+let skillTestState = null;
+
+function normalizeSkillLevel(value) {
+    return SKILL_LEVEL_ORDER.includes(value) ? value : null;
+}
+
+function normalizeSkillSource(value) {
+    return value === 'test' || value === 'manual' ? value : null;
+}
+
+function loadSkillProfile() {
+    const stored = readStoredJSON(STORAGE_KEYS.skillProfile, {});
+    const data = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+    skillProfile = {
+        sql: normalizeSkillLevel(data.sql),
+        nosql: normalizeSkillLevel(data.nosql),
+        sqlShowAll: Boolean(data.sqlShowAll),
+        nosqlShowAll: Boolean(data.nosqlShowAll),
+        sqlSource: normalizeSkillSource(data.sqlSource),
+        nosqlSource: normalizeSkillSource(data.nosqlSource),
+        sqlTestedAt: typeof data.sqlTestedAt === 'string' ? data.sqlTestedAt : null,
+        nosqlTestedAt: typeof data.nosqlTestedAt === 'string' ? data.nosqlTestedAt : null,
+        sqlWeakConcepts: Array.isArray(data.sqlWeakConcepts)
+            ? data.sqlWeakConcepts.filter(item => item && typeof item.concept === 'string' && typeof item.category === 'string')
+            : [],
+        nosqlWeakConcepts: Array.isArray(data.nosqlWeakConcepts)
+            ? data.nosqlWeakConcepts.filter(item => item && typeof item.concept === 'string' && typeof item.category === 'string')
+            : []
+    };
+}
+
+function saveSkillProfile() {
+    writeStoredJSON(STORAGE_KEYS.skillProfile, skillProfile);
+}
+
+function getSkillLevel(track) {
+    return skillProfile[track] || 'basico';
+}
+
+function getEffectiveSkillLevel(track) {
+    return skillProfile[`${track}ShowAll`] ? 'all' : getSkillLevel(track);
+}
+
+function getSkillLevelInfo(level) {
+    return SKILL_LEVELS[level] || SKILL_LEVELS.basico;
+}
+
+function getExampleCategoryLevel(categoryKey) {
+    return SQL_CATEGORY_LEVELS[categoryKey] || 'intermedio';
+}
+
+function getNoSQLExampleLevel(example) {
+    return NOSQL_EXAMPLE_LEVELS[example.category] || 'intermedio';
+}
+
+function getVisibleExampleCategories(datasetName = preferences.dataset) {
+    const categories = getExamplesByCategory(datasetName);
+    const effectiveLevel = getEffectiveSkillLevel('sql');
+    if (effectiveLevel === 'all') return categories;
+
+    const filtered = Object.fromEntries(
+        Object.entries(categories).filter(([key]) => getExampleCategoryLevel(key) === effectiveLevel)
+    );
+    return Object.keys(filtered).length ? filtered : categories;
+}
+
+function getWeakConcepts(track) {
+    return Array.isArray(skillProfile[`${track}WeakConcepts`])
+        ? skillProfile[`${track}WeakConcepts`]
+        : [];
+}
+
+function collectWeakConcepts(track, answers) {
+    const unique = new Map();
+    answers.filter(answer => !answer.correct).forEach(answer => {
+        const target = SKILL_QUESTION_TARGETS[answer.questionId];
+        if (!target) return;
+        unique.set(`${target.category}:${target.concept}`, { ...target, track });
+    });
+    return [...unique.values()];
+}
+
+function practiceSkillTarget(track, category, level = '') {
+    if (track === 'sql') {
+        if (!Object.keys(getVisibleExampleCategories()).includes(category)) {
+            setSkillLevel('sql', 'all');
+        }
+        activateSection('practice');
+        const selector = document.getElementById('categorySelector');
+        if (selector) {
+            selector.value = category;
+            showExampleByCategory();
+        }
+        return;
+    }
+
+    setSkillLevel('nosql', 'all');
+    activateSection('nosql');
+    if (typeof window.refreshNoSQLExamples === 'function') {
+        window.refreshNoSQLExamples();
+    }
+    const select = document.getElementById('nosqlExampleSelector');
+    const datasetName = typeof window.getNoSQLActiveDataset === 'function'
+        ? window.getNoSQLActiveDataset()
+        : 'escuela';
+    const examples = typeof window.getNoSQLExamplesForDataset === 'function'
+        ? window.getNoSQLExamplesForDataset(datasetName)
+        : [];
+    const index = examples.findIndex(example => example.category === category);
+    if (select && index >= 0) {
+        select.value = String(index);
+        if (typeof window.loadNoSQLExample === 'function') {
+            window.loadNoSQLExample();
+        }
+    }
+}
+
+function filterNoSQLExamplesBySkill(examples) {
+    const effectiveLevel = getEffectiveSkillLevel('nosql');
+    if (effectiveLevel === 'all') return examples;
+    const filtered = examples.filter(example => getNoSQLExampleLevel(example) === effectiveLevel);
+    return filtered.length ? filtered : examples;
+}
+
+function setSkillLevel(track, value) {
+    if (track !== 'sql' && track !== 'nosql') return;
+
+    if (value === 'all') {
+        skillProfile[`${track}ShowAll`] = true;
+    } else {
+        const level = normalizeSkillLevel(value);
+        if (!level) return;
+        skillProfile[track] = level;
+        skillProfile[`${track}ShowAll`] = false;
+    }
+
+    skillProfile[`${track}Source`] = 'manual';
+
+    saveSkillProfile();
+    applySkillLevelUI();
+    refreshSkillFilters();
+    renderLearningProgressDashboard();
+    showToast('info', `Nivel ${track === 'sql' ? 'SQL' : 'NoSQL'} actualizado.`);
+}
+
+function updateSkillBar(track, elements) {
+    const level = getEffectiveSkillLevel(track);
+    const info = getSkillLevelInfo(getSkillLevel(track));
+    const configured = Boolean(skillProfile[`${track}Source`] || skillProfile[`${track}ShowAll`]);
+    const bar = document.getElementById(elements.bar);
+    const label = document.getElementById(elements.label);
+    const description = document.getElementById(elements.description);
+    const select = document.getElementById(elements.select);
+
+    if (bar) bar.classList.toggle('is-onboarding', !configured);
+    if (select) select.value = level === 'all' ? 'all' : getSkillLevel(track);
+    if (label) {
+        label.textContent = level === 'all'
+            ? 'Ver todo'
+            : (configured ? `Nivel ${info.label}` : `Nivel estimado: ${info.label}`);
+    }
+    if (description) {
+        if (level === 'all') {
+            description.textContent = 'Mostrando todos los niveles.';
+        } else if (!configured) {
+            description.textContent = 'Aún no has hecho el test. Empezamos por lo básico.';
+        } else if (skillProfile[`${track}Source`] === 'test') {
+            description.textContent = `Nivel recomendado. ${info.description}`;
+        } else {
+            description.textContent = info.description;
+        }
+    }
+}
+
+function renderNoSQLQuickSyntax() {
+    const container = document.getElementById('nosqlQuickSyntax');
+    if (!container) return;
+
+    const level = getEffectiveSkillLevel('nosql');
+    const levels = level === 'all' ? SKILL_LEVEL_ORDER : [level];
+    const examples = levels.flatMap(item => NOSQL_QUICK_SYNTAX[item]?.examples || []);
+    const operators = [...new Set(levels.flatMap(item => NOSQL_QUICK_SYNTAX[item]?.operators || []))];
+    const operatorsContainer = document.getElementById('nosqlQuickOperators');
+
+    container.innerHTML = examples.map(code => `<code tabindex="0">${escapeHtml(code)}</code>`).join('');
+    if (operatorsContainer) {
+        operatorsContainer.innerHTML = `Operadores: ${operators.map(operator => `<code tabindex="0">${escapeHtml(operator)}</code>`).join(', ')}.`;
+    }
+}
+
+function applySkillLevelUI() {
+    updateSkillBar('sql', {
+        bar: 'sqlLevelBar',
+        label: 'sqlLevelLabel',
+        description: 'sqlLevelDescription',
+        select: 'sqlLevelSelect'
+    });
+    updateSkillBar('nosql', {
+        bar: 'nosqlLevelBar',
+        label: 'nosqlLevelLabel',
+        description: 'nosqlLevelDescription',
+        select: 'nosqlLevelSelect'
+    });
+    renderNoSQLQuickSyntax();
+}
+
+function refreshSkillFilters() {
+    if (document.getElementById('categorySelector')) {
+        lastSqlExample = null;
+        renderCategorySelector();
+        const status = document.getElementById('sqlExampleStatus');
+        if (status) status.textContent = 'Elige una categoría o pulsa «Siguiente ejemplo»';
+    }
+
+    if (typeof window.refreshNoSQLExamples === 'function') {
+        window.refreshNoSQLExamples();
+    }
+    renderNoSQLQuickSyntax();
+}
+
+function getSkillProfileCard(track) {
+    const label = track === 'sql' ? 'SQL' : 'NoSQL';
+    const sectionLabel = track === 'sql' ? 'Practicar' : 'NoSQL';
+    const icon = track === 'sql' ? 'fa-database' : 'fa-leaf';
+    const level = getEffectiveSkillLevel(track);
+    const selectedLevel = level === 'all' ? 'all' : getSkillLevel(track);
+    const info = getSkillLevelInfo(getSkillLevel(track));
+    const testedAt = skillProfile[`${track}TestedAt`];
+    const source = skillProfile[`${track}Source`];
+    const testButtonLabel = source === 'test' ? 'Repetir test' : 'Test de nivel';
+    const meta = testedAt
+        ? `Test realizado: ${formatLearningActivityDate(testedAt)}`
+        : (source === 'manual' ? 'Nivel elegido manualmente' : 'Todavía sin test');
+    const recommendation = track === 'sql' ? info.sqlRecommendation : info.nosqlRecommendation;
+    const weakConcepts = getWeakConcepts(track);
+
+    return `
+        <article class="skill-profile-card">
+            <div class="skill-profile-head">
+                <span class="skill-profile-icon"><i class="fas ${icon}"></i></span>
+                <div class="skill-profile-heading">
+                    <span>Nivel ${label}</span>
+                    <strong>${escapeHtml(info.label)}</strong>
+                </div>
+                <span class="challenge-level ${escapeHtml(level === 'all' ? 'intermedio' : getSkillLevel(track))}">${level === 'all' ? 'Ver todo' : escapeHtml(info.label)}</span>
+            </div>
+            <p class="skill-profile-description">${escapeHtml(info.description)}</p>
+            <p class="skill-profile-next"><strong>Siguiente paso:</strong> ${escapeHtml(recommendation)}</p>
+            ${weakConcepts.length ? `
+                <div class="skill-profile-weak">
+                    <span>Refuerza:</span>
+                    ${weakConcepts.slice(0, 4).map(item => `
+                        <button type="button" class="skill-weak-chip" onclick="practiceSkillTarget('${escapeHtml(track)}', '${escapeHtml(item.category)}', '${escapeHtml(item.level)}')">
+                            ${escapeHtml(item.concept)}
+                        </button>
+                    `).join('')}
+                </div>
+            ` : ''}
+            <div class="skill-profile-meta">${escapeHtml(meta)}</div>
+            <div class="skill-profile-actions">
+                <label class="skill-profile-select-label" for="dashboard${label}LevelSelect">Nivel</label>
+                <select id="dashboard${label}LevelSelect" class="skill-profile-select" onchange="setSkillLevel('${track}', this.value)" aria-label="Nivel ${label}">
+                    <option value="basico"${selectedLevel === 'basico' ? ' selected' : ''}>Básico</option>
+                    <option value="intermedio"${selectedLevel === 'intermedio' ? ' selected' : ''}>Intermedio</option>
+                    <option value="avanzado"${selectedLevel === 'avanzado' ? ' selected' : ''}>Avanzado</option>
+                    <option value="all"${selectedLevel === 'all' ? ' selected' : ''}>Ver todo</option>
+                </select>
+                <button type="button" class="btn-secondary btn-sm" onclick="openSkillTest('${track}')">${testButtonLabel}</button>
+                <button type="button" class="btn-ghost btn-sm" onclick="goToSkillTrack('${track}')">Ir a ${sectionLabel}</button>
+            </div>
+        </article>
+    `;
+}
+
+function renderSkillProfileCards() {
+    return `
+        <div class="progress-section skill-profile-section">
+            <div class="progress-section-head">
+                <div>
+                    <h3>Tu perfil de nivel</h3>
+                    <p>Dos recorridos independientes para practicar sin ruido.</p>
+                </div>
+                <div class="progress-section-head-actions">
+                    <span class="progress-section-badge">SQL + NoSQL</span>
+                    <button type="button" class="btn-secondary btn-sm" onclick="openProgressReport()">
+                        <i class="fas fa-print"></i> Reporte
+                    </button>
+                </div>
+            </div>
+            <div class="skill-profile-grid">
+                ${getSkillProfileCard('sql')}
+                ${getSkillProfileCard('nosql')}
+            </div>
+        </div>
+    `;
+}
+
+function calculateSkillLevelFromAnswers(answers) {
+    const correct = answers.filter(answer => answer.correct);
+    const advancedCorrect = correct.filter(answer => answer.level === 'avanzado').length;
+    const intermediateCorrect = correct.filter(answer => answer.level === 'intermedio').length;
+    const basicCorrect = correct.filter(answer => answer.level === 'basico').length;
+
+    if (advancedCorrect >= 2 && correct.length >= 4) return 'avanzado';
+    if (intermediateCorrect >= 2 && correct.length >= 3) return 'intermedio';
+    if (basicCorrect >= 2) return 'basico';
+    return 'basico';
+}
+
+function getSkillTestQuestions(track) {
+    return SKILL_TEST_QUESTIONS[track] || [];
+}
+
+function pickSkillTestQuestion(track, level, askedIds) {
+    const bank = getSkillTestQuestions(track);
+    const startIndex = Math.max(0, SKILL_LEVEL_ORDER.indexOf(level));
+    const indexes = [startIndex, startIndex - 1, startIndex + 1, startIndex - 2, startIndex + 2]
+        .filter(index => index >= 0 && index < SKILL_LEVEL_ORDER.length);
+
+    for (const index of indexes) {
+        const candidate = bank.find(question => (
+            question.level === SKILL_LEVEL_ORDER[index] && !askedIds.includes(question.id)
+        ));
+        if (candidate) return candidate;
+    }
+    return null;
+}
+
+function loadNextSkillTestQuestion() {
+    if (!skillTestState) return;
+    const question = pickSkillTestQuestion(
+        skillTestState.track,
+        skillTestState.level,
+        skillTestState.askedIds
+    );
+
+    if (!question) {
+        finishSkillTest();
+        return;
+    }
+
+    skillTestState.question = question;
+    skillTestState.askedIds.push(question.id);
+    skillTestState.selectedIndex = null;
+    renderSkillTestQuestion();
+}
+
+function renderSkillTestQuestion() {
+    const body = document.getElementById('skillTestBody');
+    const state = skillTestState;
+    if (!body || !state || !state.question) return;
+
+    const question = state.question;
+    const questionNumber = state.answers.length + 1;
+    const progress = Math.round((state.answers.length / SKILL_TEST_LENGTH) * 100);
+    const trackLabel = state.track === 'sql' ? 'SQL' : 'NoSQL';
+
+    body.innerHTML = `
+        <div class="skill-test-question">
+            <div class="skill-test-question-head">
+                <div>
+                    <span class="skill-test-eyebrow">${trackLabel} · Pregunta ${questionNumber} de ${SKILL_TEST_LENGTH}</span>
+                    <h3>${escapeHtml(question.prompt)}</h3>
+                </div>
+            </div>
+            <div class="skill-test-progress" role="progressbar" aria-label="Progreso del test" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}">
+                <span style="width:${progress}%"></span>
+            </div>
+            <div class="skill-test-options" role="radiogroup" aria-label="Opciones de respuesta">
+                ${question.options.map((option, index) => `
+                    <button type="button"
+                        class="skill-test-option${state.selectedIndex === index ? ' selected' : ''}"
+                        role="radio"
+                        aria-checked="${state.selectedIndex === index}"
+                        onclick="selectSkillTestOption(${index})">
+                        <span class="skill-test-option-letter">${String.fromCharCode(65 + index)}</span>
+                        <span>${escapeHtml(option)}</span>
+                    </button>
+                `).join('')}
+            </div>
+            <div class="skill-test-footer">
+                <button type="button" class="btn-ghost" onclick="skipSkillTestQuestion()">No estoy seguro</button>
+                <button type="button" class="btn-primary" id="skillTestNextBtn" onclick="nextSkillTestQuestion()" ${state.selectedIndex === null ? 'disabled' : ''}>
+                    ${questionNumber === SKILL_TEST_LENGTH ? 'Ver resultado' : 'Siguiente'}
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function selectSkillTestOption(index) {
+    if (!skillTestState || !skillTestState.question) return;
+    if (!Number.isInteger(index) || index < 0 || index >= skillTestState.question.options.length) return;
+    skillTestState.selectedIndex = index;
+    document.querySelectorAll('#skillTestBody .skill-test-option').forEach((button, buttonIndex) => {
+        const selected = buttonIndex === index;
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-checked', String(selected));
+    });
+    const nextButton = document.getElementById('skillTestNextBtn');
+    if (nextButton) nextButton.disabled = false;
+}
+
+function advanceSkillTest(selectedIndex) {
+    const state = skillTestState;
+    if (!state || !state.question) return;
+
+    const correct = selectedIndex !== null && selectedIndex === state.question.answer;
+    state.answers.push({
+        questionId: state.question.id,
+        level: state.question.level,
+        correct
+    });
+
+    const currentLevelIndex = SKILL_LEVEL_ORDER.indexOf(state.level);
+    const nextLevelIndex = Math.max(
+        0,
+        Math.min(SKILL_LEVEL_ORDER.length - 1, currentLevelIndex + (correct ? 1 : -1))
+    );
+    state.level = SKILL_LEVEL_ORDER[nextLevelIndex];
+    state.selectedIndex = null;
+
+    if (state.answers.length >= SKILL_TEST_LENGTH) {
+        finishSkillTest();
+        return;
+    }
+    loadNextSkillTestQuestion();
+}
+
+function nextSkillTestQuestion() {
+    if (!skillTestState || skillTestState.selectedIndex === null) return;
+    advanceSkillTest(skillTestState.selectedIndex);
+}
+
+function skipSkillTestQuestion() {
+    if (!skillTestState) return;
+    advanceSkillTest(null);
+}
+
+function finishSkillTest() {
+    const state = skillTestState;
+    if (!state) return;
+
+    const level = calculateSkillLevelFromAnswers(state.answers);
+    skillProfile[state.track] = level;
+    skillProfile[`${state.track}ShowAll`] = false;
+    skillProfile[`${state.track}Source`] = 'test';
+    skillProfile[`${state.track}TestedAt`] = new Date().toISOString();
+    skillProfile[`${state.track}WeakConcepts`] = collectWeakConcepts(state.track, state.answers);
+    saveSkillProfile();
+    applySkillLevelUI();
+    refreshSkillFilters();
+    renderLearningProgressDashboard();
+    renderSkillTestResult(level);
+}
+
+function renderSkillTestResult(level) {
+    const body = document.getElementById('skillTestBody');
+    const state = skillTestState;
+    if (!body || !state) return;
+
+    const info = getSkillLevelInfo(level);
+    const track = state.track;
+    const correctCount = state.answers.filter(answer => answer.correct).length;
+    const recommendation = track === 'sql' ? info.sqlRecommendation : info.nosqlRecommendation;
+    const weakConcepts = getWeakConcepts(track);
+
+    body.innerHTML = `
+        <div class="skill-test-result">
+            <span class="skill-test-eyebrow">Test completado</span>
+            <span class="challenge-level ${escapeHtml(level)}">${escapeHtml(info.label)}</span>
+            <h3>Tu nivel recomendado es ${escapeHtml(info.label)}</h3>
+            <p>${escapeHtml(info.description)}</p>
+            <p class="skill-test-score">Acertaste ${correctCount} de ${state.answers.length} preguntas.</p>
+            ${weakConcepts.length ? `
+                <div class="skill-test-weak">
+                    <span>Refuerza estos conceptos</span>
+                    <div class="skill-test-weak-list">
+                        ${weakConcepts.map(item => `
+                            <button type="button" class="skill-weak-chip" onclick="practiceSkillTarget('${escapeHtml(track)}', '${escapeHtml(item.category)}', '${escapeHtml(item.level)}')">
+                                ${escapeHtml(item.concept)}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '<p class="skill-test-score">No se detectaron conceptos débiles en este test.</p>'}
+            <div class="skill-test-next">
+                <span>Siguiente paso</span>
+                <strong>${escapeHtml(recommendation)}</strong>
+            </div>
+            <div class="skill-test-result-actions">
+                <button type="button" class="btn-primary" onclick="goToSkillTrack('${escapeHtml(track)}')">
+                    Empezar en ${track === 'sql' ? 'Practicar' : 'NoSQL'}
+                </button>
+                <button type="button" class="btn-secondary" onclick="startSkillTest('${escapeHtml(track)}')">
+                    Repetir test
+                </button>
+                <button type="button" class="btn-ghost" onclick="showAllSkillContent('${escapeHtml(track)}')">
+                    Ver todo el contenido
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function startSkillTest(track = 'sql') {
+    const normalizedTrack = track === 'nosql' ? 'nosql' : 'sql';
+    const modal = document.getElementById('skillTestModal');
+    const trackLabel = document.getElementById('skillTestTrackLabel');
+    skillTestState = {
+        track: normalizedTrack,
+        level: 'intermedio',
+        askedIds: [],
+        answers: [],
+        question: null,
+        selectedIndex: null
+    };
+    if (trackLabel) {
+        trackLabel.textContent = `${normalizedTrack === 'sql' ? 'SQL' : 'NoSQL'} · ${SKILL_TEST_LENGTH} preguntas`;
+    }
+    if (modal && !modal.classList.contains('active')) {
+        openModal(modal);
+    }
+    loadNextSkillTestQuestion();
+}
+
+function getCurrentSkillTestQuestion() {
+    return skillTestState?.question || null;
+}
+
+function openSkillTest(track = 'sql') {
+    startSkillTest(track);
+}
+
+function goToSkillTrack(track) {
+    closeSkillTest();
+    activateSection(track === 'nosql' ? 'nosql' : 'practice');
+}
+
+function showAllSkillContent(track) {
+    setSkillLevel(track, 'all');
+    goToSkillTrack(track);
+}
+
+function closeSkillTest() {
+    skillTestState = null;
+    closeModal(document.getElementById('skillTestModal'));
+}
+
+// ============================================
+// RECORRIDO GUIADO DE LA FERIA
+// ============================================
+
+const DEMO_TOUR_STEPS = [
+    {
+        title: 'Una academia que se adapta',
+        description: 'SQL Academy combina teoría, práctica y juego. El recorrido empieza en Aprender.',
+        section: 'learn'
+    },
+    {
+        title: 'Descubre tu nivel',
+        description: 'El test adaptativo recomienda un nivel para SQL y otro para NoSQL. Practicar y el laboratorio se ajustan a tu perfil.',
+        section: 'practice',
+        target: 'sqlLevelBar'
+    },
+    {
+        title: 'Practica con datos reales',
+        description: 'Elige un ejemplo, ejecútalo y revisa los resultados. La base SQLite funciona en el navegador.',
+        section: 'practice',
+        target: 'sqlEditor'
+    },
+    {
+        title: 'Explora el laboratorio NoSQL',
+        description: 'Los ejemplos y la sintaxis rápida también se filtran por nivel. La consola documental sigue disponible.',
+        section: 'nosql',
+        target: 'nosqlLevelBar'
+    },
+    {
+        title: 'Ponte a prueba',
+        description: 'Resuelve retos SQL, retos NoSQL o depuraciones con validación por resultado.',
+        section: 'challenges'
+    },
+    {
+        title: 'Sigue tus cursos',
+        description: 'Consulta tu nivel, el avance por curso, las actividades completadas y el siguiente paso recomendado.',
+        section: 'path',
+        progress: true,
+        target: 'learningProgressDashboard'
+    },
+    {
+        title: 'Tecnología y aprendizaje',
+        description: 'SQLite real en el navegador, PWA, pruebas automatizadas y un asistente IA opcional. Gracias por acompañar el recorrido.',
+        section: null
+    }
+];
+
+let demoTourIndex = 0;
+
+function scrollToDemoTarget(targetId) {
+    if (!targetId) return;
+    const target = document.getElementById(targetId);
+    if (target && typeof target.scrollIntoView === 'function') {
+        const reduceMotion = typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    }
+}
+
+function renderDemoTourStep() {
+    const bar = document.getElementById('demoTourBar');
+    if (!bar) return;
+    const step = DEMO_TOUR_STEPS[demoTourIndex];
+    if (!step) {
+        closeDemoTour();
+        return;
+    }
+
+    bar.hidden = false;
+    const stepLabel = document.getElementById('demoTourStepLabel');
+    const title = document.getElementById('demoTourTitle');
+    const description = document.getElementById('demoTourDescription');
+    const previous = document.getElementById('demoTourPrevBtn');
+    const next = document.getElementById('demoTourNextBtn');
+
+    if (stepLabel) stepLabel.textContent = `Paso ${demoTourIndex + 1} de ${DEMO_TOUR_STEPS.length}`;
+    if (title) title.textContent = step.title;
+    if (description) description.textContent = step.description;
+    if (previous) previous.disabled = demoTourIndex === 0;
+    if (next) next.textContent = demoTourIndex === DEMO_TOUR_STEPS.length - 1 ? 'Finalizar' : 'Siguiente';
+
+    if (step.section) {
+        activateSection(step.section);
+        if (step.progress) activatePathTab('progress');
+    }
+    if (step.target) {
+        setTimeout(() => scrollToDemoTarget(step.target), 80);
+    }
+}
+
+function startDemoTour() {
+    demoTourIndex = 0;
+    renderDemoTourStep();
+}
+
+function nextDemoTourStep() {
+    if (demoTourIndex >= DEMO_TOUR_STEPS.length - 1) {
+        closeDemoTour();
+        showToast('success', 'Recorrido completado. Gracias por acompañar SQL Academy.');
+        return;
+    }
+    demoTourIndex += 1;
+    renderDemoTourStep();
+}
+
+function previousDemoTourStep() {
+    if (demoTourIndex <= 0) return;
+    demoTourIndex -= 1;
+    renderDemoTourStep();
+}
+
+function closeDemoTour() {
+    const bar = document.getElementById('demoTourBar');
+    if (bar) bar.hidden = true;
+}
+
+// ============================================
+// REPORTE DE PROGRESO
+// ============================================
+
+function formatReportDate(value = new Date()) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function buildProgressReportHtml(studentName = '') {
+    const stats = getLearningGlobalStats();
+    const concepts = getLearningConceptStats();
+    const recommendation = getLearningRecommendation();
+    const sqlLevel = getSkillLevelInfo(getSkillLevel('sql'));
+    const nosqlLevel = getSkillLevelInfo(getSkillLevel('nosql'));
+    const sqlMeta = skillProfile.sqlTestedAt
+        ? `Test: ${formatReportDate(skillProfile.sqlTestedAt)}`
+        : (skillProfile.sqlSource === 'manual' ? 'Nivel elegido manualmente' : 'Sin test');
+    const nosqlMeta = skillProfile.nosqlTestedAt
+        ? `Test: ${formatReportDate(skillProfile.nosqlTestedAt)}`
+        : (skillProfile.nosqlSource === 'manual' ? 'Nivel elegido manualmente' : 'Sin test');
+    const weak = [...getWeakConcepts('sql'), ...getWeakConcepts('nosql')];
+    const named = studentName.trim();
+
+    const conceptRows = concepts.map(concept => `
+        <tr>
+            <td>${escapeHtml(concept.label)}</td>
+            <td>${concept.percent}%</td>
+            <td>${concept.completed}/${concept.total}</td>
+        </tr>
+    `).join('');
+
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte de aprendizaje - SQL Academy</title>
+<style>
+    @page { size: A4; margin: 16mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #1e293b; font-family: Arial, Helvetica, sans-serif; line-height: 1.45; }
+    .header { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 14px; border-bottom: 3px solid #336791; }
+    .brand { color: #336791; font-size: 20px; font-weight: 800; letter-spacing: .04em; }
+    .subtitle { color: #64748b; font-size: 11px; margin-top: 3px; }
+    .meta { color: #64748b; font-size: 11px; text-align: right; }
+    h1 { margin: 22px 0 4px; font-size: 23px; }
+    .student { color: #475569; font-size: 13px; margin: 0 0 18px; }
+    .grid { display: flex; gap: 10px; margin: 16px 0; }
+    .metric { flex: 1; padding: 11px; border: 1px solid #dbe4ee; border-radius: 8px; background: #f8fafc; }
+    .metric span { display: block; color: #64748b; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 3px; font-size: 20px; color: #1e293b; }
+    .levels { display: flex; gap: 10px; margin: 14px 0; }
+    .level { flex: 1; padding: 12px; border-left: 4px solid #336791; border-radius: 7px; background: #f8fafc; }
+    .level span { display: block; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .level strong { display: block; margin: 2px 0; color: #1e293b; font-size: 17px; }
+    .level small { color: #64748b; font-size: 10px; }
+    h2 { margin: 22px 0 8px; font-size: 14px; color: #334155; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { padding: 7px 8px; background: #eef4fa; color: #475569; text-align: left; border-bottom: 1px solid #dbe4ee; }
+    td { padding: 6px 8px; border-bottom: 1px solid #edf2f7; }
+    .recommendation { margin-top: 16px; padding: 11px 13px; border-left: 4px solid #f39c12; border-radius: 7px; background: #fff9e8; font-size: 11px; }
+    .recommendation strong { display: block; color: #7a5a00; }
+    .weak { margin-top: 10px; color: #8b1e1e; font-size: 11px; }
+    .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #dbe4ee; color: #94a3b8; font-size: 9px; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="brand">SQL ACADEMY</div>
+            <div class="subtitle">Reporte de aprendizaje · MNTWARE</div>
+        </div>
+        <div class="meta">Generado el ${escapeHtml(formatReportDate())}</div>
+    </div>
+
+    <h1>Reporte de aprendizaje</h1>
+    ${named ? `<p class="student">Preparado para: <strong>${escapeHtml(named)}</strong></p>` : '<p class="student">Resumen personal de tu recorrido en SQL Academy.</p>'}
+
+    <div class="levels">
+        <div class="level">
+            <span>Nivel SQL</span>
+            <strong>${escapeHtml(sqlLevel.label)}</strong>
+            <small>${escapeHtml(sqlMeta)}</small>
+        </div>
+        <div class="level">
+            <span>Nivel NoSQL</span>
+            <strong>${escapeHtml(nosqlLevel.label)}</strong>
+            <small>${escapeHtml(nosqlMeta)}</small>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="metric"><span>Lecciones</span><strong>${stats.lessonsCompleted}/${stats.lessonsTotal}</strong></div>
+        <div class="metric"><span>Retos SQL</span><strong>${stats.challengesCompleted}/${stats.challengesTotal}</strong></div>
+        <div class="metric"><span>Actividades</span><strong>${stats.completed}/${stats.total}</strong></div>
+        <div class="metric"><span>Avance global</span><strong>${stats.percent}%</strong></div>
+    </div>
+
+    <h2>Dominio por concepto</h2>
+    <table>
+        <thead><tr><th>Concepto</th><th>Dominio</th><th>Actividades</th></tr></thead>
+        <tbody>${conceptRows}</tbody>
+    </table>
+
+    <div class="recommendation">
+        <strong>Siguiente paso recomendado</strong>
+        ${escapeHtml(recommendation.title)} — ${escapeHtml(recommendation.message)}
+    </div>
+
+    ${weak.length ? `<div class="weak"><strong>Refuerza:</strong> ${escapeHtml(weak.map(item => item.concept).join(', '))}</div>` : ''}
+
+    <div class="footer">
+        <span>SQL Academy · Aprende, practica y comprueba resultados.</span>
+        <span>${escapeHtml(recommendation.action)}</span>
+    </div>
+</body>
+</html>`;
+}
+
+function openProgressReport() {
+    const body = document.getElementById('progressReportBody');
+    const modal = document.getElementById('progressReportModal');
+    if (!body || !modal) return;
+
+    const stats = getLearningGlobalStats();
+    const sqlLevel = getSkillLevelInfo(getSkillLevel('sql'));
+    const nosqlLevel = getSkillLevelInfo(getSkillLevel('nosql'));
+
+    body.innerHTML = `
+        <div class="report-form">
+            <p>Genera un resumen de tu recorrido para imprimir o guardar como PDF.</p>
+            <label class="report-name-label" for="reportStudentName">Nombre para el reporte (opcional)</label>
+            <input id="reportStudentName" type="text" maxlength="80" placeholder="Tu nombre">
+            <div class="report-preview">
+                <div><span>Nivel SQL</span><strong>${escapeHtml(sqlLevel.label)}</strong></div>
+                <div><span>Nivel NoSQL</span><strong>${escapeHtml(nosqlLevel.label)}</strong></div>
+                <div><span>Actividades</span><strong>${stats.completed}/${stats.total}</strong></div>
+            </div>
+            <div class="report-actions">
+                <button type="button" class="btn-primary" onclick="printProgressReport()">
+                    <i class="fas fa-print"></i> Imprimir / Guardar PDF
+                </button>
+                <button type="button" class="btn-secondary" onclick="closeProgressReport()">Cerrar</button>
+            </div>
+        </div>
+    `;
+    openModal(modal);
+}
+
+function printProgressReport() {
+    const name = document.getElementById('reportStudentName')?.value.trim() || '';
+    const report = buildProgressReportHtml(name);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        showToast('warning', 'Permite ventanas emergentes para imprimir el reporte.');
+        return;
+    }
+    try { printWindow.opener = null; } catch (error) { /* ignorar */ }
+    printWindow.document.open();
+    printWindow.document.write(report);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
+}
+
+function closeProgressReport() {
+    closeModal(document.getElementById('progressReportModal'));
+}
+
+// ============================================
 // RUTA DE APRENDIZAJE SQL
 // ============================================
 
@@ -5916,6 +7376,16 @@ const LEARNING_PATH_PROFILES = {
             rightKey: 'estudiante_id',
             columns: 'estudiantes.nombre, inscripciones.anio, inscripciones.nota',
             description: 'Cada inscripción pertenece a un estudiante.'
+        },
+        advanced: {
+            caseField: 'promedio',
+            caseLabel: 'nivel',
+            caseObjective: 'Clasifica a los estudiantes como Alto, Medio o Bajo según su promedio.',
+            caseRules: [
+                { operator: '>=', value: 17, label: 'Alto' },
+                { operator: '>=', value: 14, label: 'Medio' }
+            ],
+            caseElse: 'Bajo'
         }
     },
     tienda: {
@@ -5934,6 +7404,16 @@ const LEARNING_PATH_PROFILES = {
             rightKey: 'id',
             columns: 'clientes.nombre, pedidos.fecha, pedidos.estado',
             description: 'Cada pedido pertenece a un cliente.'
+        },
+        advanced: {
+            caseField: 'stock',
+            caseLabel: 'nivel_stock',
+            caseObjective: 'Clasifica los productos como Alto, Medio o Bajo según su stock.',
+            caseRules: [
+                { operator: '>=', value: 30, label: 'Alto' },
+                { operator: '>=', value: 10, label: 'Medio' }
+            ],
+            caseElse: 'Bajo'
         }
     },
     biblioteca: {
@@ -5952,6 +7432,16 @@ const LEARNING_PATH_PROFILES = {
             rightKey: 'id',
             columns: 'libros.titulo, autores.nombre',
             description: 'Cada libro tiene un autor.'
+        },
+        advanced: {
+            caseField: 'anio',
+            caseLabel: 'categoria',
+            caseObjective: 'Clasifica los libros como Reciente, Moderno o Clásico según su año de publicación.',
+            caseRules: [
+                { operator: '>=', value: 2000, label: 'Reciente' },
+                { operator: '>=', value: 1980, label: 'Moderno' }
+            ],
+            caseElse: 'Clásico'
         }
     }
 };
@@ -5964,7 +7454,10 @@ const LEARNING_CONCEPTS = [
     { id: 'join', label: 'JOIN', icon: 'fa-link', description: 'Combinar tablas relacionadas.' },
     { id: 'group', label: 'Agrupar', icon: 'fa-layer-group', description: 'GROUP BY y COUNT.' },
     { id: 'having', label: 'HAVING', icon: 'fa-list-check', description: 'Filtrar grupos.' },
-    { id: 'subquery', label: 'Subconsultas', icon: 'fa-code-branch', description: 'Consultas dentro de otras.' }
+    { id: 'subquery', label: 'Subconsultas', icon: 'fa-code-branch', description: 'Consultas dentro de otras.' },
+    { id: 'case', label: 'CASE', icon: 'fa-code-branch', description: 'Clasificar filas con condiciones.' },
+    { id: 'cte', label: 'CTE', icon: 'fa-layer-group', description: 'Organizar consultas con WITH.' },
+    { id: 'rank', label: 'Ranking', icon: 'fa-list-ol', description: 'Numerar filas con ventanas.' }
 ];
 
 const CHALLENGE_CONCEPT_BY_ID = {
@@ -6006,6 +7499,26 @@ function getConceptLabel(conceptId) {
     return LEARNING_CONCEPTS.find(concept => concept.id === conceptId)?.label || conceptId;
 }
 
+function enrichLessonContent(lesson, profile, track) {
+    const factory = window.COURSE_CONTENT?.[track]?.[lesson.id];
+    const content = typeof factory === 'function' ? factory(profile) : {};
+    return {
+        ...lesson,
+        track,
+        objectives: content.objectives || [lesson.objective],
+        theory: content.theory || [{
+            title: 'Concepto',
+            body: lesson.explanation,
+            code: lesson.example
+        }],
+        commonMistakes: content.commonMistakes || [],
+        demoQuery: lesson.example,
+        demoNote: content.demoNote || 'Ejecuta el ejemplo y observa el resultado antes de practicar.',
+        quiz: content.quiz || [],
+        summary: content.summary || []
+    };
+}
+
 function buildLearningLessons(profile) {
     const main = profile.mainTable;
     const label = profile.labelColumn;
@@ -6016,8 +7529,23 @@ function buildLearningLessons(profile) {
     const exampleGroup = profile.exampleGroup || { table: main, column: group };
     const join = profile.join;
     const joinCondition = `${join.left}.${join.leftKey} = ${join.right}.${join.rightKey}`;
+    const advanced = profile.advanced || {
+        caseField: sort,
+        caseLabel: 'nivel',
+        caseObjective: `Clasifica las filas de ${main} según ${sort}.`,
+        caseRules: [
+            { operator: '>=', value: 0, label: 'Alto' }
+        ],
+        caseElse: 'Bajo'
+    };
+    const caseWhens = (advanced.caseRules || [])
+        .map(rule => `WHEN ${advanced.caseField} ${rule.operator} ${rule.value} THEN '${rule.label}'`)
+        .join('\n        ');
+    const caseExpression = `CASE\n        ${caseWhens}\n        ELSE '${advanced.caseElse}'\n      END`;
+    const firstCaseRule = advanced.caseRules?.[0] || { operator: '>=', value: 0, label: 'Alto' };
+    const exampleCase = `CASE WHEN ${advanced.caseField} ${firstCaseRule.operator} ${firstCaseRule.value} THEN '${firstCaseRule.label}' ELSE '${advanced.caseElse}' END`;
 
-    return [
+    const lessons = [
         {
             id: 'select',
             title: 'Selecciona columnas',
@@ -6113,8 +7641,46 @@ function buildLearningLessons(profile) {
             expectedSql: `SELECT ${label}, ${sort}\nFROM ${main}\nWHERE ${sort} > (SELECT AVG(${sort}) FROM ${main})\nORDER BY ${sort} DESC, ${label} ASC;`,
             hint: `Sustituye 0 por (SELECT AVG(${sort}) FROM ${main}) y mantén el orden.`,
             ordered: true
+        },
+        {
+            id: 'case',
+            title: 'Clasifica con CASE',
+            level: 'Avanzado',
+            objective: advanced.caseObjective,
+            explanation: 'CASE evalúa las condiciones en orden y devuelve la primera etiqueta que coincide. Es la forma de crear categorías dentro de una consulta sin modificar los datos.',
+            example: `SELECT ${label}, ${advanced.caseField}, ${exampleCase} AS ${advanced.caseLabel}\nFROM ${main}\nORDER BY ${advanced.caseField} DESC, ${label} ASC;`,
+            starter: `SELECT ${label}, ${advanced.caseField}, 'Pendiente' AS ${advanced.caseLabel}\nFROM ${main}\nORDER BY ${advanced.caseField} DESC, ${label} ASC;`,
+            expectedSql: `SELECT ${label}, ${advanced.caseField}, ${caseExpression} AS ${advanced.caseLabel}\nFROM ${main}\nORDER BY ${advanced.caseField} DESC, ${label} ASC;`,
+            hint: `Completa el CASE con las reglas ${advanced.caseRules.map(rule => `${advanced.caseField} ${rule.operator} ${rule.value} → ${rule.label}`).join(', ')} y el ELSE '${advanced.caseElse}'.`,
+            ordered: true
+        },
+        {
+            id: 'cte',
+            title: 'Organiza con WITH',
+            level: 'Avanzado',
+            objective: `Resume ${main} por ${group} y calcula qué porcentaje representa cada grupo.`,
+            explanation: 'Una CTE (Common Table Expression) es una consulta con nombre que puedes reutilizar dentro de otra. WITH hace que los pasos intermedios se lean como una historia.',
+            example: `WITH resumen AS (\n    SELECT ${group}, COUNT(*) AS total\n    FROM ${main}\n    GROUP BY ${group}\n)\nSELECT ${group}, total\nFROM resumen\nORDER BY total DESC, ${group} ASC;`,
+            starter: `SELECT ${group}, COUNT(*) AS total\nFROM ${main}\nGROUP BY ${group}\nORDER BY total DESC, ${group} ASC;`,
+            expectedSql: `WITH resumen AS (\n    SELECT ${group}, COUNT(*) AS total\n    FROM ${main}\n    GROUP BY ${group}\n)\nSELECT ${group}, total,\n       ROUND(total * 100.0 / (SELECT COUNT(*) FROM ${main}), 1) AS porcentaje\nFROM resumen\nORDER BY total DESC, ${group} ASC;`,
+            hint: 'Añade la columna porcentaje usando el total del grupo y el total de filas de la tabla.',
+            ordered: true
+        },
+        {
+            id: 'rank',
+            title: 'Ranking con ventanas',
+            level: 'Avanzado',
+            objective: `Numera ${main} dentro de cada ${group} según ${sort} de mayor a menor.`,
+            explanation: 'ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...) asigna un número a cada fila dentro de su grupo. Es ideal para rankings, comparativas y reportes por categoría.',
+            example: `SELECT ${label}, ${group}, ${sort},\n       ROW_NUMBER() OVER (ORDER BY ${sort} DESC) AS posicion\nFROM ${main}\nORDER BY ${sort} DESC;`,
+            starter: `SELECT ${label}, ${group}, ${sort}\nFROM ${main}\nORDER BY ${group} ASC, ${sort} DESC;`,
+            expectedSql: `SELECT ${label}, ${group}, ${sort},\n       ROW_NUMBER() OVER (PARTITION BY ${group} ORDER BY ${sort} DESC, ${label} ASC) AS posicion\nFROM ${main}\nORDER BY ${group} ASC, posicion ASC;`,
+            hint: `Usa PARTITION BY ${group} y ordena la ventana por ${sort} DESC, ${label} ASC.`,
+            ordered: true
         }
     ];
+
+    return lessons.map(lesson => enrichLessonContent(lesson, profile, 'sql'));
 }
 
 function getLearningDatasetName() {
@@ -6143,21 +7709,532 @@ function getLearningLevelClass(level) {
     return 'avanzado';
 }
 
+function getCourses() {
+    return Array.isArray(window.SQL_ACADEMY_COURSES) ? window.SQL_ACADEMY_COURSES : [];
+}
+
+function getCourseById(id) {
+    return getCourses().find(course => course.id === id) || null;
+}
+
+function getCourseLessonIds(course) {
+    return (course?.modules || []).flatMap(module => Array.isArray(module.lessonIds) ? module.lessonIds : []);
+}
+
+function getNoSQLCourseProfile(datasetName = getNoSQLActiveDatasetName()) {
+    return window.NOSQL_COURSE_PROFILES?.[datasetName]
+        || window.NOSQL_COURSE_PROFILES?.escuela
+        || null;
+}
+
+function buildNoSQLCourseLessons(datasetName = getNoSQLActiveDatasetName()) {
+    const profile = getNoSQLCourseProfile(datasetName);
+    if (!profile) return [];
+
+    const collection = profile.collection;
+    const projection = profile.fields.map(field => `${field}: 1`).join(', ');
+    const sortProjection = `${profile.labelField}: 1, ${profile.sortField}: 1`;
+    const filterClause = `{ ${profile.filterField}: { ${profile.filterOperator}: ${profile.filterValue} } }`;
+    const groupId = "'$" + profile.groupField + "'";
+    const groupStage = `{ $group: { _id: ${groupId}, total: { $sum: 1 } } }`;
+
+    const lessons = [
+        {
+            id: 'nosql-find',
+            track: 'nosql',
+            title: 'Consulta documentos',
+            level: 'Básico',
+            objective: `Muestra solo ${profile.fields.join(', ')} de cada documento de ${collection}.`,
+            explanation: 'find recibe un filtro y una proyección. El filtro decide qué documentos entran; la proyección decide qué campos salen. Así evitas traer datos que no necesitas.',
+            example: `db.${collection}.findOne({})`,
+            starter: `db.${collection}.find({})`,
+            expectedQuery: `db.${collection}.find({}, { ${projection} })`,
+            hint: `Añade un segundo argumento con ${profile.fields.map(field => `${field}: 1`).join(', ')}.`,
+            ordered: true
+        },
+        {
+            id: 'nosql-filter',
+            track: 'nosql',
+            title: 'Filtra con operadores',
+            level: 'Básico',
+            objective: `Encuentra los documentos con ${profile.filterDescription} y muestra ${profile.fields.join(', ')}.`,
+            explanation: 'Los operadores $gt, $gte, $lt, $lte e $in comparan valores dentro del filtro. Es la forma documental de construir un WHERE.',
+            example: `db.${collection}.find(${filterClause}, { ${projection} }).limit(1)`,
+            starter: `db.${collection}.find({}, { ${projection} })`,
+            expectedQuery: `db.${collection}.find(${filterClause}, { ${projection} })`,
+            hint: `Usa ${filterClause} como primer argumento de find.`,
+            ordered: true
+        },
+        {
+            id: 'nosql-sort',
+            track: 'nosql',
+            title: 'Ordena y limita',
+            level: 'Intermedio',
+            objective: `Muestra los 3 documentos con ${profile.sortLabel} más alto, ordenados de mayor a menor.`,
+            explanation: 'sort ordena los documentos y limit corta el resultado. Juntos construyen un top: primero ordenas por el criterio importante y después eliges cuántos quieres ver.',
+            example: `db.${collection}.find({}, { ${sortProjection} }).sort({ ${profile.sortField}: 1 }).limit(2)`,
+            starter: `db.${collection}.find({}, { ${sortProjection} }).limit(3)`,
+            expectedQuery: `db.${collection}.find({}, { ${sortProjection} }).sort({ ${profile.sortField}: -1 }).limit(3)`,
+            hint: `Encadena .sort({ ${profile.sortField}: -1 }) antes de .limit(3).`,
+            ordered: true
+        },
+        {
+            id: 'nosql-aggregate',
+            track: 'nosql',
+            title: 'Agrupa y cuenta',
+            level: 'Intermedio',
+            objective: `Cuenta cuántos documentos hay por ${profile.groupDescription} y ordena de mayor a menor por total.`,
+            explanation: 'aggregate ejecuta un pipeline de etapas. $group crea un documento por categoría y $sum acumula el total. $sort ordena el resultado final, no los documentos originales.',
+            example: `db.${collection}.aggregate([${groupStage}, { $limit: 1 }])`,
+            starter: `db.${collection}.aggregate([${groupStage}, { $sort: { _id: 1 } }])`,
+            expectedQuery: `db.${collection}.aggregate([${groupStage}, { $sort: { total: -1, _id: 1 } }])`,
+            hint: `Añade { $sort: { total: -1, _id: 1 } } al final del pipeline.`,
+            ordered: true
+        }
+    ];
+
+    return lessons.map(lesson => enrichLessonContent(lesson, profile, 'nosql'));
+}
+
+function normalizeNoSQLCourseValue(value) {
+    if (Array.isArray(value)) return value.map(normalizeNoSQLCourseValue);
+    if (value && typeof value === 'object') {
+        return Object.keys(value).sort().reduce((result, key) => {
+            result[key] = normalizeNoSQLCourseValue(value[key]);
+            return result;
+        }, {});
+    }
+    return value;
+}
+
+function compareNoSQLCourseResults(expected, actual) {
+    if (!Array.isArray(expected?.documents) || !Array.isArray(actual?.documents)) {
+        return {
+            ok: false,
+            message: 'La consulta debe devolver una lista de documentos con find o aggregate.'
+        };
+    }
+
+    if (expected.documents.length !== actual.documents.length) {
+        return {
+            ok: false,
+            message: `Se esperaban ${expected.documents.length} documentos y tu consulta devolvió ${actual.documents.length}. Revisa el filtro y el límite.`
+        };
+    }
+
+    const expectedValue = JSON.stringify(normalizeNoSQLCourseValue(expected.documents));
+    const actualValue = JSON.stringify(normalizeNoSQLCourseValue(actual.documents));
+    if (expectedValue === actualValue) {
+        return { ok: true, message: '¡Correcto! Los documentos coinciden.' };
+    }
+
+    return {
+        ok: false,
+        message: 'Los documentos no coinciden. Revisa la proyección, el filtro y el orden.'
+    };
+}
+
+function getCourseDatasetName(course = getActiveCourse()) {
+    return course?.track === 'nosql' ? getNoSQLActiveDatasetName() : getLearningDatasetName();
+}
+
+function getCourseDatasetLabel(course = getActiveCourse()) {
+    if (course?.track === 'nosql') {
+        const profile = getNoSQLCourseProfile(getCourseDatasetName(course));
+        return `Dataset NoSQL: ${profile?.name || getCourseDatasetName(course)}`;
+    }
+    return `Dataset SQL: ${getLearningProfile().name}`;
+}
+
+function getCourseLessons(course = getActiveCourse(), datasetName = getCourseDatasetName(course)) {
+    if (!course) return [];
+    if (course.track === 'nosql') return buildNoSQLCourseLessons(datasetName);
+
+    const lessonsById = new Map(getLearningLessonsForDataset(datasetName).map(lesson => [lesson.id, lesson]));
+    return getCourseLessonIds(course)
+        .map(id => lessonsById.get(id))
+        .filter(Boolean);
+}
+
+function getActiveCourseLessonById(id) {
+    const course = getActiveCourse();
+    if (!course) return getLearningLessonById(id);
+    return getCourseLessons(course).find(lesson => lesson.id === id) || null;
+}
+
+function getCourseForLesson(lessonId) {
+    return getCourses().find(course => getCourseLessonIds(course).includes(lessonId)) || null;
+}
+
+function getActiveCourse() {
+    return getCourseById(currentCourseId)
+        || getCourses().find(course => course.recommended)
+        || getCourses()[0]
+        || null;
+}
+
+function getActiveCourseLessons() {
+    return getCourseLessons(getActiveCourse());
+}
+
+function getCourseModuleForLesson(course, lessonId) {
+    return (course?.modules || []).find(module => (module.lessonIds || []).includes(lessonId)) || null;
+}
+
+function getCourseProgress(course = getActiveCourse(), datasetName = getCourseDatasetName(course)) {
+    const lessons = getCourseLessons(course, datasetName);
+    const completed = lessons.filter(lesson => (
+        course?.track === 'nosql'
+            ? isNoSQLCourseLessonCompleted(lesson.id, datasetName)
+            : isLearningLessonCompletedForDataset(lesson.id, datasetName)
+    )).length;
+    return {
+        total: lessons.length,
+        completed,
+        percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0
+    };
+}
+
+function getCourseLessonStages(course, lessonId) {
+    return course?.track === 'nosql'
+        ? getNoSQLCourseLessonStages(lessonId)
+        : getLearningLessonStages(lessonId);
+}
+
+function markCourseLessonTheoryRead(course, lessonId) {
+    const result = course?.track === 'nosql'
+        ? markNoSQLCourseTheoryRead(lessonId)
+        : markLearningTheoryRead(lessonId);
+    updateCourseCta();
+    return result;
+}
+
+function markCourseLessonPracticeCompleted(course, lessonId) {
+    return course?.track === 'nosql'
+        ? markNoSQLCoursePracticeCompleted(lessonId)
+        : markLearningPracticeCompleted(lessonId);
+}
+
+function markCourseLessonQuizPassed(course, lessonId) {
+    return course?.track === 'nosql'
+        ? markNoSQLCourseQuizPassed(lessonId)
+        : markLearningQuizPassed(lessonId);
+}
+
+function isCourseLessonCompleted(course, lessonId) {
+    return course?.track === 'nosql'
+        ? isNoSQLCourseLessonCompleted(lessonId)
+        : isLearningLessonCompleted(lessonId);
+}
+
+function hasCourseStarted(course = getActiveCourse()) {
+    return getCourseLessons(course).some(lesson => {
+        const stages = getCourseLessonStages(course, lesson.id);
+        return stages.theoryRead || stages.practiceCompleted || stages.quizPassed;
+    }) || Boolean(course && getCourseAssessmentRecord(course).projects[course.id]?.completedAt);
+}
+
+function getCourseStatusLabel(course, progress = getCourseProgress(course)) {
+    if (!progress.total) return 'Sin lecciones';
+    const completion = getCourseCompletionState(course);
+    if (completion.complete) return 'Completado';
+    if (!completion.lessonsComplete) return hasCourseStarted(course) ? 'En progreso' : 'Sin empezar';
+    if (completion.checkpointsPassed < completion.checkpointsTotal) return 'Checkpoints pendientes';
+    return 'Proyecto pendiente';
+}
+
+function getNextCourse(courseId) {
+    const courses = getCourses();
+    const index = courses.findIndex(course => course.id === courseId);
+    return index >= 0 ? courses[index + 1] || null : null;
+}
+
+function getCourseNextMarkup(course, lessons, lesson) {
+    const index = lessons.findIndex(item => item.id === lesson.id);
+    const nextLesson = lessons[index + 1];
+    const nextCourse = getNextCourse(course?.id);
+
+    if (nextLesson) {
+        return `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`;
+    }
+
+    if (course) {
+        const completion = getCourseCompletionState(course);
+        if (!completion.lessonsComplete) {
+            return '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en el curso.</div>';
+        }
+        if (completion.checkpointsPassed < completion.checkpointsTotal) {
+            return `
+                <div class="path-complete"><i class="fas fa-circle-check"></i> Lecciones completadas. Quedan los checkpoints de módulo.</div>
+                <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(course.id)}')">Completar checkpoints <i class="fas fa-arrow-right"></i></button>
+            `;
+        }
+        if (!completion.projectComplete) {
+            return `
+                <div class="path-complete"><i class="fas fa-circle-check"></i> Checkpoints superados. Queda el proyecto final.</div>
+                <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(course.id)}')">Completar proyecto final <i class="fas fa-arrow-right"></i></button>
+            `;
+        }
+        if (nextCourse) {
+            return `
+                <div class="path-complete"><i class="fas fa-trophy"></i> ¡Curso completado!</div>
+                <button type="button" class="btn-primary" onclick="openCourse('${escapeHtml(nextCourse.id)}')">Siguiente curso: ${escapeHtml(nextCourse.title)} <i class="fas fa-arrow-right"></i></button>
+            `;
+        }
+        return `
+            <div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste todos los cursos!</div>
+            <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
+        `;
+    }
+
+    const stats = getLearningProgressStats();
+    if (stats.completed === stats.total) {
+        return '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
+    }
+    return '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes en la ruta.</div>';
+}
+
+function loadActiveCourse() {
+    const stored = readStoredJSON(STORAGE_KEYS.activeCourse, '');
+    return getCourseById(stored) ? stored : null;
+}
+
+function saveActiveCourse() {
+    writeStoredJSON(STORAGE_KEYS.activeCourse, currentCourseId || '');
+}
+
+function loadCourseAssessment() {
+    const stored = readStoredJSON(STORAGE_KEYS.courseAssessment, {});
+    courseAssessment = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+}
+
+function saveCourseAssessment() {
+    writeStoredJSON(STORAGE_KEYS.courseAssessment, courseAssessment);
+}
+
+function getCourseAssessmentRecord(course = getActiveCourse()) {
+    if (!course) return { checkpoints: {}, projects: {} };
+    const key = `${course.track === 'nosql' ? 'nosql' : 'sql'}|${getCourseDatasetName(course)}`;
+    if (!courseAssessment[key] || typeof courseAssessment[key] !== 'object') {
+        courseAssessment[key] = { checkpoints: {}, projects: {} };
+    }
+    const record = courseAssessment[key];
+    record.checkpoints ||= {};
+    record.projects ||= {};
+    return record;
+}
+
+function getModuleCheckpointQuestions(courseId, moduleId) {
+    return window.COURSE_CHECKPOINTS?.[courseId]?.[moduleId] || [];
+}
+
+function isModuleLessonsComplete(course, module) {
+    const lessons = getCourseLessons(course);
+    const moduleLessons = (module.lessonIds || [])
+        .map(id => lessons.find(lesson => lesson.id === id))
+        .filter(Boolean);
+    return moduleLessons.length > 0 && moduleLessons.every(lesson => isCourseLessonCompleted(course, lesson.id));
+}
+
+function isModuleCheckpointPassed(course, moduleId) {
+    return Boolean(getCourseAssessmentRecord(course).checkpoints[moduleId]?.passedAt);
+}
+
+function markModuleCheckpointPassed(course, moduleId) {
+    const record = getCourseAssessmentRecord(course);
+    record.checkpoints[moduleId] = {
+        passedAt: record.checkpoints[moduleId]?.passedAt || new Date().toISOString()
+    };
+    saveCourseAssessment();
+}
+
+function isCourseProjectCompleted(course) {
+    return Boolean(getCourseAssessmentRecord(course).projects[course.id]?.completedAt);
+}
+
+function markCourseProjectCompleted(course, criteria) {
+    const record = getCourseAssessmentRecord(course);
+    record.projects[course.id] = {
+        completedAt: new Date().toISOString(),
+        criteria: Array.isArray(criteria) ? criteria : []
+    };
+    saveCourseAssessment();
+}
+
+function getCourseCompletionState(course = getActiveCourse()) {
+    if (!course) {
+        return { lessonsComplete: false, checkpointsTotal: 0, checkpointsPassed: 0, projectComplete: false, complete: false };
+    }
+    const lessons = getCourseLessons(course);
+    const lessonsComplete = lessons.length > 0 && lessons.every(lesson => isCourseLessonCompleted(course, lesson.id));
+    const modules = course.modules || [];
+    const checkpointsPassed = modules.filter(module => isModuleCheckpointPassed(course, module.id)).length;
+    const projectComplete = isCourseProjectCompleted(course);
+    return {
+        lessonsComplete,
+        checkpointsTotal: modules.length,
+        checkpointsPassed,
+        projectComplete,
+        complete: lessonsComplete && checkpointsPassed === modules.length && projectComplete
+    };
+}
+
+function migrateProgressEntries(progress) {
+    Object.values(progress || {}).forEach(entry => {
+        if (!entry?.completed) return;
+        entry.completedAt ||= new Date().toISOString();
+        entry.theoryReadAt ||= entry.completedAt;
+        entry.practiceCompletedAt ||= entry.completedAt;
+        entry.quizPassedAt ||= entry.completedAt;
+    });
+}
+
+function loadNoSQLCourseProgress() {
+    const stored = readStoredJSON(STORAGE_KEYS.nosqlCourse, {});
+    nosqlCourseProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+    Object.values(nosqlCourseProgress).forEach(migrateProgressEntries);
+}
+
+function saveNoSQLCourseProgress() {
+    writeStoredJSON(STORAGE_KEYS.nosqlCourse, nosqlCourseProgress);
+}
+
+function getNoSQLCourseDatasetProgress(datasetName = getNoSQLActiveDatasetName()) {
+    if (!nosqlCourseProgress[datasetName] || typeof nosqlCourseProgress[datasetName] !== 'object') {
+        nosqlCourseProgress[datasetName] = {};
+    }
+    return nosqlCourseProgress[datasetName];
+}
+
+function getNoSQLCourseProgressEntry(id, datasetName = getNoSQLActiveDatasetName(), create = true) {
+    if (!create && !nosqlCourseProgress[datasetName]?.[id]) return null;
+    return getNoSQLCourseDatasetProgress(datasetName)[id] ||= {};
+}
+
+function getNoSQLCourseLessonStages(id, datasetName = getNoSQLActiveDatasetName()) {
+    const entry = nosqlCourseProgress[datasetName]?.[id] || {};
+    return {
+        theoryRead: Boolean(entry.theoryReadAt),
+        practiceCompleted: Boolean(entry.practiceCompletedAt),
+        quizPassed: Boolean(entry.quizPassedAt),
+        completed: Boolean(entry.completed)
+    };
+}
+
+function finalizeNoSQLCourseLesson(id, entry) {
+    if (!entry.theoryReadAt || !entry.practiceCompletedAt || !entry.quizPassedAt) return;
+    entry.completed = true;
+    entry.completedAt ||= new Date().toISOString();
+}
+
+function markNoSQLCourseTheoryRead(id) {
+    const entry = getNoSQLCourseProgressEntry(id);
+    entry.theoryReadAt ||= new Date().toISOString();
+    finalizeNoSQLCourseLesson(id, entry);
+    saveNoSQLCourseProgress();
+    return entry;
+}
+
+function markNoSQLCoursePracticeCompleted(id) {
+    const entry = getNoSQLCourseProgressEntry(id);
+    entry.practiceCompletedAt ||= new Date().toISOString();
+    finalizeNoSQLCourseLesson(id, entry);
+    saveNoSQLCourseProgress();
+    renderLearningProgressDashboard();
+    return entry;
+}
+
+function markNoSQLCourseQuizPassed(id) {
+    const entry = getNoSQLCourseProgressEntry(id);
+    entry.quizPassedAt ||= new Date().toISOString();
+    finalizeNoSQLCourseLesson(id, entry);
+    saveNoSQLCourseProgress();
+    renderLearningProgressDashboard();
+    return entry;
+}
+
+function isNoSQLCourseLessonCompleted(id, datasetName = getNoSQLActiveDatasetName()) {
+    return Boolean(nosqlCourseProgress[datasetName]?.[id]?.completed);
+}
+
+function markNoSQLCourseLessonCompleted(id) {
+    const now = new Date().toISOString();
+    const entry = getNoSQLCourseProgressEntry(id);
+    entry.theoryReadAt ||= now;
+    entry.practiceCompletedAt ||= now;
+    entry.quizPassedAt ||= now;
+    entry.completed = true;
+    entry.completedAt ||= now;
+    saveNoSQLCourseProgress();
+    renderLearningProgressDashboard();
+}
+
 function loadLearningPathProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.learningPath, {});
     learningPathProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+    Object.values(learningPathProgress).forEach(migrateProgressEntries);
 }
 
 function saveLearningPathProgress() {
     writeStoredJSON(STORAGE_KEYS.learningPath, learningPathProgress);
 }
 
-function getLearningDatasetProgress() {
-    const dataset = getLearningDatasetName();
-    if (!learningPathProgress[dataset] || typeof learningPathProgress[dataset] !== 'object') {
-        learningPathProgress[dataset] = {};
+function getLearningDatasetProgressFor(datasetName = getLearningDatasetName()) {
+    if (!learningPathProgress[datasetName] || typeof learningPathProgress[datasetName] !== 'object') {
+        learningPathProgress[datasetName] = {};
     }
-    return learningPathProgress[dataset];
+    return learningPathProgress[datasetName];
+}
+
+function getLearningDatasetProgress() {
+    return getLearningDatasetProgressFor(getLearningDatasetName());
+}
+
+function getLearningProgressEntry(id, datasetName = getLearningDatasetName(), create = true) {
+    if (!create && !learningPathProgress[datasetName]?.[id]) return null;
+    return getLearningDatasetProgressFor(datasetName)[id] ||= {};
+}
+
+function getLearningLessonStages(id, datasetName = getLearningDatasetName()) {
+    const entry = learningPathProgress[datasetName]?.[id] || {};
+    return {
+        theoryRead: Boolean(entry.theoryReadAt),
+        practiceCompleted: Boolean(entry.practiceCompletedAt),
+        quizPassed: Boolean(entry.quizPassedAt),
+        completed: Boolean(entry.completed)
+    };
+}
+
+function finalizeLearningLesson(id, entry) {
+    if (!entry.theoryReadAt || !entry.practiceCompletedAt || !entry.quizPassedAt) return;
+    entry.completed = true;
+    entry.completedAt ||= new Date().toISOString();
+}
+
+function markLearningTheoryRead(id) {
+    const entry = getLearningProgressEntry(id);
+    entry.theoryReadAt ||= new Date().toISOString();
+    finalizeLearningLesson(id, entry);
+    saveLearningPathProgress();
+    return entry;
+}
+
+function markLearningPracticeCompleted(id) {
+    const entry = getLearningProgressEntry(id);
+    entry.practiceCompletedAt ||= new Date().toISOString();
+    finalizeLearningLesson(id, entry);
+    saveLearningPathProgress();
+    renderLearningProgressDashboard();
+    return entry;
+}
+
+function markLearningQuizPassed(id) {
+    const entry = getLearningProgressEntry(id);
+    entry.quizPassedAt ||= new Date().toISOString();
+    finalizeLearningLesson(id, entry);
+    saveLearningPathProgress();
+    renderLearningProgressDashboard();
+    return entry;
 }
 
 function isLearningLessonCompletedForDataset(id, datasetName) {
@@ -6169,10 +8246,13 @@ function isLearningLessonCompleted(id) {
 }
 
 function markLearningLessonCompleted(id) {
-    getLearningDatasetProgress()[id] = {
-        completed: true,
-        completedAt: new Date().toISOString()
-    };
+    const now = new Date().toISOString();
+    const entry = getLearningProgressEntry(id);
+    entry.theoryReadAt ||= now;
+    entry.practiceCompletedAt ||= now;
+    entry.quizPassedAt ||= now;
+    entry.completed = true;
+    entry.completedAt ||= now;
     saveLearningPathProgress();
     renderLearningProgressDashboard();
 }
@@ -6293,6 +8373,22 @@ function getRecentLearningActivity() {
         });
     });
 
+    Object.entries(nosqlCourseProgress).forEach(([datasetName, progress]) => {
+        Object.entries(progress || {}).forEach(([lessonId, data]) => {
+            if (!data?.completedAt) return;
+            const lesson = buildNoSQLCourseLessons(datasetName)
+                .find(item => item.id === lessonId);
+            if (!lesson) return;
+            activity.push({
+                type: 'Lección NoSQL',
+                title: lesson.title,
+                datasetName,
+                icon: 'fa-leaf',
+                completedAt: data.completedAt
+            });
+        });
+    });
+
     Object.entries(challengeProgress).forEach(([challengeId, data]) => {
         if (!data?.completedAt) return;
         const datasetName = Object.keys(LEARNING_PATH_PROFILES).find(name => (
@@ -6324,19 +8420,39 @@ function getLearningRecommendation() {
         !isLearningLessonCompletedForDataset(lesson.id, datasetName)
     ));
     if (nextLesson) {
-        const completedLessons = lessons.filter(lesson => (
-            isLearningLessonCompletedForDataset(lesson.id, datasetName)
-        )).length;
+        const course = getCourseForLesson(nextLesson.id);
+        const courseLessons = course ? getCourseLessons(course, datasetName) : lessons;
+        const completedLessons = course
+            ? getCourseProgress(course, datasetName).completed
+            : lessons.filter(lesson => isLearningLessonCompletedForDataset(lesson.id, datasetName)).length;
+        const lessonIndex = Math.max(0, courseLessons.findIndex(lesson => lesson.id === nextLesson.id));
         return {
             kind: 'lesson',
             title: nextLesson.title,
             message: completedLessons > 0
-                ? `Continúa la ruta de ${profile.name} con la lección ${lessons.indexOf(nextLesson) + 1}.`
-                : `Empieza la ruta de ${profile.name} con la lección ${lessons.indexOf(nextLesson) + 1}.`,
+                ? `Continúa ${course?.title || 'tu curso'} en ${profile.name} con la lección ${lessonIndex + 1}.`
+                : `Empieza ${course?.title || 'tu curso'} en ${profile.name} con la lección ${lessonIndex + 1}.`,
             action: completedLessons > 0 ? 'Continuar lección' : 'Comenzar lección',
             onclick: `continueLearningLesson('${nextLesson.id}')`,
-            icon: 'fa-route'
+            icon: 'fa-graduation-cap'
         };
+    }
+
+    const nosqlCourse = getCourseById('nosql-esencial');
+    if (nosqlCourse) {
+        const nosqlLessons = getCourseLessons(nosqlCourse);
+        const nextNoSQLLesson = nosqlLessons.find(lesson => !isNoSQLCourseLessonCompleted(lesson.id));
+        if (nextNoSQLLesson) {
+            const nosqlProfile = getNoSQLCourseProfile();
+            return {
+                kind: 'lesson',
+                title: nextNoSQLLesson.title,
+                message: `Explora ${nosqlCourse.title} en ${nosqlProfile?.name || getNoSQLActiveDatasetName()} con una lección corta.`,
+                action: 'Continuar NoSQL',
+                onclick: `continueLearningLesson('${nextNoSQLLesson.id}')`,
+                icon: 'fa-leaf'
+            };
+        }
     }
 
     const challenges = getChallengeCatalog(datasetName);
@@ -6362,7 +8478,7 @@ function getLearningRecommendation() {
     if (otherDataset) {
         return {
             kind: 'dataset',
-            title: `Ruta de ${profile.name} completada`,
+            title: `Cursos de ${profile.name} completados`,
             message: `Ya completaste este dataset. Cambia a ${LEARNING_PATH_PROFILES[otherDataset].name} desde Practicar para seguir avanzando.`,
             action: 'Ir a Practicar',
             onclick: "activateSection('practice')",
@@ -6380,6 +8496,574 @@ function getLearningRecommendation() {
     };
 }
 
+function updateCourseCta() {
+    const button = document.getElementById('pathCtaBtn');
+    if (!button) return;
+    const started = getCourses().some(course => hasCourseStarted(course));
+    button.innerHTML = started
+        ? 'Continuar cursos <i class="fas fa-arrow-right"></i>'
+        : 'Explorar cursos <i class="fas fa-arrow-right"></i>';
+}
+
+function setCourseView(view) {
+    currentCourseView = ['catalog', 'detail', 'player'].includes(view) ? view : 'catalog';
+    const views = {
+        catalog: document.getElementById('courseCatalogView'),
+        detail: document.getElementById('courseDetailView'),
+        player: document.getElementById('coursePlayerView')
+    };
+    Object.entries(views).forEach(([name, element]) => {
+        if (!element) return;
+        const active = name === currentCourseView;
+        element.hidden = !active;
+        element.classList.toggle('active', active);
+    });
+}
+
+function renderCourseCatalog() {
+    const container = document.getElementById('courseCatalogView');
+    if (!container) return;
+
+    const courses = getCourses();
+    const profile = getLearningProfile();
+    const nosqlProfile = getNoSQLCourseProfile();
+    setCourseView('catalog');
+    updateCourseCta();
+
+    if (!courses.length) {
+        container.innerHTML = '<div class="challenge-empty"><i class="fas fa-graduation-cap"></i><h3>No hay cursos disponibles.</h3><p>Vuelve a cargar la página para preparar el catálogo.</p></div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="course-catalog-hero">
+            <div>
+                <span class="course-eyebrow"><i class="fas fa-graduation-cap"></i> Aprende haciendo</span>
+                <h3>Elige tu siguiente misión</h3>
+                <p>Teoría breve, demostraciones, práctica, quiz, checkpoints y proyecto final. Tu progreso se guarda en cada dataset.</p>
+            </div>
+            <div class="course-catalog-dataset">
+                <span>Datasets activos</span>
+                <strong>SQL: ${escapeHtml(profile.name)}</strong>
+                <small>NoSQL: ${escapeHtml(nosqlProfile?.name || getNoSQLActiveDatasetName())}</small>
+            </div>
+        </div>
+        <div class="course-grid">
+            ${courses.map(course => {
+                const progress = getCourseProgress(course);
+                const lessons = getCourseLessons(course);
+                const isActive = currentCourseId === course.id;
+                const started = hasCourseStarted(course);
+                const completion = getCourseCompletionState(course);
+                const status = getCourseStatusLabel(course, progress);
+                const needsAssessment = progress.percent === 100 && !completion.complete;
+                const cta = completion.complete
+                    ? 'Repasar curso'
+                    : needsAssessment
+                        ? 'Completar curso'
+                        : started
+                            ? 'Continuar'
+                            : 'Comenzar';
+                const prerequisites = (course.prerequisites || []).length
+                    ? `<span class="course-card-prerequisite">Después de ${escapeHtml(course.prerequisites.join(', '))}</span>`
+                    : '';
+                return `
+                    <article class="course-card course-card-${escapeHtml(course.tone || 'blue')}${isActive ? ' is-active' : ''}">
+                        <div class="course-card-top">
+                            <span class="course-card-icon"><i class="fas ${escapeHtml(course.icon || 'fa-graduation-cap')}"></i></span>
+                            <div class="course-card-badges">
+                                ${course.recommended ? '<span class="course-card-recommended">Empieza aquí</span>' : ''}
+                                <span class="challenge-level ${getLearningLevelClass(course.level)}">${escapeHtml(course.level)}</span>
+                            </div>
+                        </div>
+                        <h3>${escapeHtml(course.title)}</h3>
+                        <p class="course-card-subtitle">${escapeHtml(course.subtitle)}</p>
+                        <p class="course-card-description">${escapeHtml(course.description)}</p>
+                        <div class="course-card-meta">
+                            <span><i class="fas fa-clock"></i> ${escapeHtml(course.duration)}</span>
+                            <span><i class="fas fa-database"></i> ${course.track === 'nosql' ? 'NoSQL' : 'SQL'}</span>
+                            <span><i class="fas fa-layer-group"></i> ${course.modules.length} módulos</span>
+                            <span><i class="fas fa-list-check"></i> ${lessons.length} lecciones</span>
+                        </div>
+                        <div class="course-card-progress">
+                            <div class="course-card-progress-head">
+                                <span>${escapeHtml(status)}</span>
+                                <strong>${progress.completed} de ${progress.total}</strong>
+                            </div>
+                            <div class="course-card-progress-track" role="progressbar" aria-label="Progreso de ${escapeHtml(course.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}">
+                                <span style="width:${progress.percent}%"></span>
+                            </div>
+                        </div>
+                        ${prerequisites}
+                        <div class="course-card-actions">
+                            <button type="button" class="btn-secondary" data-course-open="${escapeHtml(course.id)}">Ver temario</button>
+                            <button type="button" class="btn-primary" ${needsAssessment ? `data-course-open="${escapeHtml(course.id)}"` : `data-course-start="${escapeHtml(course.id)}"`}>${cta} <i class="fas fa-arrow-right"></i></button>
+                        </div>
+                    </article>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    container.querySelectorAll('[data-course-open]').forEach(button => {
+        button.addEventListener('click', () => openCourse(button.dataset.courseOpen));
+    });
+    container.querySelectorAll('[data-course-start]').forEach(button => {
+        button.addEventListener('click', () => startCourse(button.dataset.courseStart));
+    });
+}
+
+function renderCourseAssessment(course) {
+    const completion = getCourseCompletionState(course);
+    const modules = course.modules || [];
+    const checkpointRows = modules.map((module, index) => {
+        const lessonsComplete = isModuleLessonsComplete(course, module);
+        const passed = isModuleCheckpointPassed(course, module.id);
+        const status = passed ? 'Superado' : lessonsComplete ? 'Listo para comprobar' : 'Completa las lecciones';
+        return `
+            <div class="course-checkpoint-row${passed ? ' passed' : ''}">
+                <span class="course-checkpoint-index">${passed ? '<i class="fas fa-check"></i>' : index + 1}</span>
+                <div class="course-checkpoint-copy">
+                    <strong>${escapeHtml(module.title)}</strong>
+                    <span>${status}</span>
+                </div>
+                <button type="button" class="btn-secondary btn-sm"
+                    ${!lessonsComplete || passed ? 'disabled aria-disabled="true"' : ''}
+                    onclick="openModuleCheckpoint('${escapeHtml(course.id)}', '${escapeHtml(module.id)}')">
+                    ${passed ? 'Superado' : lessonsComplete ? 'Abrir' : 'Bloqueado'}
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    const criteria = course.finalProject?.criteria || [];
+    const projectComplete = isCourseProjectCompleted(course);
+    const projectMarkup = criteria.length ? `
+        <div class="course-project-criteria">
+            ${criteria.map((criterion, index) => `
+                <label class="course-project-criterion">
+                    <input type="checkbox" id="projectCriterion-${escapeHtml(course.id)}-${index}"
+                        ${projectComplete ? 'checked disabled' : ''}>
+                    <span>${escapeHtml(criterion)}</span>
+                </label>
+            `).join('')}
+        </div>
+        <button type="button" class="btn-primary btn-sm" ${projectComplete ? 'disabled' : ''} onclick="completeCourseProject('${escapeHtml(course.id)}')">
+            <i class="fas fa-flag-checkered"></i> ${projectComplete ? 'Proyecto completado' : 'Marcar proyecto como completado'}
+        </button>
+    ` : '<p class="text-muted">Este curso no tiene criterios de proyecto.</p>';
+
+    return `
+        <div class="course-assessment-grid">
+            <section class="course-assessment-card">
+                <div class="course-assessment-head">
+                    <div>
+                        <span class="course-side-eyebrow"><i class="fas fa-circle-check"></i> Checkpoints de módulo</span>
+                        <h4>${completion.checkpointsPassed} de ${completion.checkpointsTotal} superados</h4>
+                    </div>
+                    <span class="course-assessment-badge">${completion.checkpointsPassed === completion.checkpointsTotal ? 'Completo' : 'Pendiente'}</span>
+                </div>
+                <p>Completa las lecciones de cada módulo y supera su checkpoint de tres preguntas.</p>
+                <div class="course-checkpoint-list">${checkpointRows || '<p class="text-muted">Este curso no tiene checkpoints.</p>'}</div>
+            </section>
+            <section class="course-assessment-card course-project-card">
+                <div class="course-assessment-head">
+                    <div>
+                        <span class="course-side-eyebrow"><i class="fas fa-flag-checkered"></i> Proyecto final</span>
+                        <h4>${escapeHtml(course.finalProject?.title || 'Proyecto final')}</h4>
+                    </div>
+                    <span class="course-assessment-badge${projectComplete ? ' is-complete' : ''}">${projectComplete ? 'Completado' : 'Pendiente'}</span>
+                </div>
+                <p>${escapeHtml(course.finalProject?.description || '')}</p>
+                ${projectMarkup}
+            </section>
+        </div>
+    `;
+}
+
+function openModuleCheckpoint(courseId, moduleId) {
+    const course = getCourseById(courseId);
+    const module = course?.modules?.find(item => item.id === moduleId);
+    const questions = getModuleCheckpointQuestions(courseId, moduleId);
+    const modal = document.getElementById('checkpointModal');
+    const body = document.getElementById('checkpointBody');
+    if (!course || !module || !modal || !body) return;
+    if (!questions.length) {
+        showToast('warning', 'Este checkpoint todavía no tiene preguntas.');
+        return;
+    }
+
+    if (!isModuleLessonsComplete(course, module)) {
+        showToast('info', 'Completa las lecciones del módulo antes de abrir su checkpoint.');
+        return;
+    }
+
+    currentCheckpoint = { courseId, moduleId };
+    document.getElementById('checkpointEyebrow').textContent = `${course.title} · ${module.title}`;
+    document.getElementById('checkpointTitle').textContent = isModuleCheckpointPassed(course, moduleId)
+        ? 'Checkpoint superado'
+        : 'Checkpoint del módulo';
+
+    if (isModuleCheckpointPassed(course, moduleId)) {
+        body.innerHTML = `
+            <div class="lesson-check-success">
+                <i class="fas fa-circle-check"></i>
+                <div>
+                    <strong>Checkpoint superado</strong>
+                    <p>Ya completaste esta comprobación. Puedes volver al temario para revisar el módulo.</p>
+                </div>
+            </div>
+            <div class="lesson-step-actions">
+                <button type="button" class="btn-secondary" onclick="closeCheckpointModal()">Cerrar</button>
+            </div>
+        `;
+        openModal(modal);
+        return;
+    }
+
+    const quizMarkup = questions.map((question, questionIndex) => `
+        <fieldset class="lesson-quiz-question">
+            <legend><span>${questionIndex + 1}</span> ${escapeHtml(question.question)}</legend>
+            <div class="lesson-quiz-options">
+                ${question.options.map((option, optionIndex) => `
+                    <label class="lesson-quiz-option">
+                        <input type="radio" name="checkpointQ${questionIndex}" value="${optionIndex}">
+                        <span>${escapeHtml(option)}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </fieldset>
+    `).join('');
+
+    body.innerHTML = `
+        <div class="lesson-check-intro">
+            <span class="course-side-eyebrow"><i class="fas fa-circle-check"></i> Checkpoint de ${escapeHtml(module.title)}</span>
+            <p>Responde las ${questions.length} preguntas. Puedes reintentarlo sin perder el progreso de las lecciones.</p>
+        </div>
+        <form id="checkpointForm" class="lesson-quiz" onsubmit="submitModuleCheckpoint(event)">
+            ${quizMarkup}
+            <button type="submit" class="btn-primary">Comprobar checkpoint <i class="fas fa-arrow-right"></i></button>
+        </form>
+        <div id="checkpointResult" class="challenge-result" aria-live="polite" hidden></div>
+    `;
+    openModal(modal);
+}
+
+function submitModuleCheckpoint(event) {
+    event.preventDefault();
+    const form = event.currentTarget || document.getElementById('checkpointForm');
+    const result = document.getElementById('checkpointResult');
+    if (!currentCheckpoint || !form || !result) return;
+
+    const course = getCourseById(currentCheckpoint.courseId);
+    const questions = getModuleCheckpointQuestions(currentCheckpoint.courseId, currentCheckpoint.moduleId);
+    const answers = questions.map((_, index) => (
+        form.querySelector(`input[name="checkpointQ${index}"]:checked`)
+    ));
+
+    result.hidden = false;
+    if (answers.some(answer => !answer)) {
+        result.className = 'challenge-result warning';
+        result.innerHTML = '<strong><i class="fas fa-circle-exclamation"></i> Faltan respuestas</strong> Responde todas las preguntas antes de comprobar.';
+        return;
+    }
+
+    const wrong = answers
+        .map((answer, index) => Number(answer.value) === questions[index].answer ? null : index)
+        .filter(index => index !== null);
+
+    if (wrong.length) {
+        result.className = 'challenge-result error';
+        result.innerHTML = `
+            <strong><i class="fas fa-circle-xmark"></i> Revisa tus respuestas</strong>
+            <p>Preguntas por revisar: ${wrong.map(index => index + 1).join(', ')}.</p>
+            <ul>${wrong.map(index => `<li>${escapeHtml(questions[index].explanation)}</li>`).join('')}</ul>
+        `;
+        return;
+    }
+
+    markModuleCheckpointPassed(course, currentCheckpoint.moduleId);
+    const courseId = currentCheckpoint.courseId;
+    closeCheckpointModal();
+    if (currentCourseView === 'detail' && currentCourseId === courseId) {
+        renderCourseDetail(courseId);
+    } else {
+        renderCourseCatalog();
+    }
+    showToast('success', 'Checkpoint superado.');
+}
+
+function closeCheckpointModal() {
+    currentCheckpoint = null;
+    closeModal(document.getElementById('checkpointModal'));
+}
+
+function focusCourseAssessment() {
+    const grid = document.querySelector('#courseDetailView .course-assessment-grid');
+    if (!grid) return;
+    if (typeof grid.scrollIntoView === 'function') {
+        grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    const firstAction = grid.querySelector('.course-checkpoint-row button:not([disabled])');
+    if (firstAction) firstAction.focus();
+}
+
+function completeCourseProject(courseId) {
+    const course = getCourseById(courseId);
+    const criteria = course?.finalProject?.criteria || [];
+    if (!course) return;
+    if (!criteria.length) {
+        showToast('warning', 'Este curso no tiene criterios de proyecto.');
+        return;
+    }
+
+    const checked = criteria.map((_, index) => (
+        document.getElementById(`projectCriterion-${courseId}-${index}`)?.checked
+    ));
+    if (checked.some(value => !value)) {
+        showToast('warning', 'Marca todos los criterios del proyecto antes de completarlo.');
+        return;
+    }
+
+    markCourseProjectCompleted(course, criteria);
+    if (currentCourseView === 'detail' && currentCourseId === courseId) {
+        renderCourseDetail(courseId);
+    } else {
+        renderCourseCatalog();
+    }
+    showToast('success', 'Proyecto final completado.');
+}
+
+function renderCourseDetail(courseId) {
+    const container = document.getElementById('courseDetailView');
+    const course = getCourseById(courseId);
+    if (!container || !course) {
+        showCourseCatalog();
+        return;
+    }
+
+    currentCourseId = course.id;
+    saveActiveCourse();
+    updateCourseCta();
+    setCourseView('detail');
+
+    const progress = getCourseProgress(course);
+    const completion = getCourseCompletionState(course);
+    const needsAssessment = progress.percent === 100 && !completion.complete;
+    const lessons = getCourseLessons(course);
+    const lessonIndexById = new Map(lessons.map((lesson, index) => [lesson.id, index]));
+    const moduleMarkup = course.modules.map((module, moduleIndex) => {
+        const moduleLessons = (module.lessonIds || [])
+            .map(id => lessons.find(lesson => lesson.id === id))
+            .filter(Boolean);
+        const completed = moduleLessons.filter(lesson => isCourseLessonCompleted(course, lesson.id)).length;
+        return `
+            <section class="course-module">
+                <div class="course-module-head">
+                    <div>
+                        <span>Módulo ${moduleIndex + 1}</span>
+                        <h4>${escapeHtml(module.title)}</h4>
+                        <p>${escapeHtml(module.description || '')}</p>
+                    </div>
+                    <strong>${completed}/${moduleLessons.length}</strong>
+                </div>
+                <div class="course-module-lessons">
+                    ${moduleLessons.map(lesson => {
+                        const index = lessonIndexById.get(lesson.id) ?? 0;
+                        const stages = getCourseLessonStages(course, lesson.id);
+                        const done = stages.completed;
+                        const status = done ? 'Completada' : stages.practiceCompleted ? 'Por comprobar' : 'Abrir';
+                        return `
+                            <button type="button" class="course-lesson-row${done ? ' completed' : ''}" data-course-lesson="${escapeHtml(lesson.id)}">
+                                <span class="course-lesson-index">${done ? '<i class="fas fa-check"></i>' : index + 1}</span>
+                                <span class="course-lesson-copy">
+                                    <strong>${escapeHtml(lesson.title)}</strong>
+                                    <span>${escapeHtml(lesson.level)} · Lección ${index + 1}</span>
+                                </span>
+                                <span class="course-lesson-status">${status}</span>
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            </section>
+        `;
+    }).join('');
+
+    const practiceButtons = (course.practiceConcepts || []).length ? `
+        <div class="course-practice-card">
+            <span class="course-side-eyebrow"><i class="fas fa-bullseye"></i> Práctica recomendada</span>
+            <p>Refuerza estos conceptos con práctica del dataset activo.</p>
+            <div class="course-practice-buttons">
+                ${course.practiceConcepts.map(concept => `
+                    <button type="button" class="btn-ghost btn-sm" data-course-practice="${escapeHtml(concept)}">
+                        ${escapeHtml(getConceptLabel(concept))} <i class="fas fa-arrow-right"></i>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    ` : '';
+
+    const finalProject = course.finalProject || null;
+    container.innerHTML = `
+        <button type="button" class="course-back-btn" onclick="showCourseCatalog()">
+            <i class="fas fa-arrow-left"></i> Volver a cursos
+        </button>
+        <div class="course-detail-hero course-detail-hero-${escapeHtml(course.tone || 'blue')}">
+            <div class="course-detail-icon"><i class="fas ${escapeHtml(course.icon || 'fa-graduation-cap')}"></i></div>
+            <div class="course-detail-copy">
+                <span class="course-eyebrow">${course.recommended ? 'Curso recomendado' : 'Curso guiado'}</span>
+                <h3>${escapeHtml(course.title)}</h3>
+                <p>${escapeHtml(course.description)}</p>
+                <div class="course-detail-meta">
+                    <span class="challenge-level ${getLearningLevelClass(course.level)}">${escapeHtml(course.level)}</span>
+                    <span><i class="fas fa-database"></i> ${course.track === 'nosql' ? 'NoSQL' : 'SQL'}</span>
+                    <span><i class="fas fa-clock"></i> ${escapeHtml(course.duration)}</span>
+                    <span><i class="fas fa-layer-group"></i> ${course.modules.length} módulos</span>
+                    <span><i class="fas fa-list-check"></i> ${lessons.length} lecciones</span>
+                </div>
+                <p class="course-detail-flow"><i class="fas fa-bolt"></i> Cada lección combina teoría breve, demostración, práctica y comprobación; después, checkpoints y proyecto final.</p>
+            </div>
+            <div class="course-detail-score">
+                <strong>${progress.percent}%</strong>
+                <span>${progress.completed} de ${progress.total}</span>
+            </div>
+        </div>
+        <div class="course-detail-grid">
+            <section class="course-syllabus">
+                <div class="course-syllabus-head">
+                    <div>
+                        <span class="course-side-eyebrow"><i class="fas fa-map"></i> Tu recorrido</span>
+                        <h4>Temario</h4>
+                    </div>
+                    <span>${progress.completed} de ${progress.total} lecciones</span>
+                </div>
+                ${moduleMarkup}
+            </section>
+            <aside class="course-detail-side">
+                <div class="course-outcomes">
+                    <span class="course-side-eyebrow"><i class="fas fa-check-double"></i> Al terminar podrás</span>
+                    <ul>${(course.outcomes || []).map(outcome => `<li>${escapeHtml(outcome)}</li>`).join('')}</ul>
+                </div>
+                ${practiceButtons}
+                ${finalProject ? `
+                    <div class="course-final-project">
+                        <span class="course-side-eyebrow"><i class="fas fa-flag-checkered"></i> Proyecto final</span>
+                        <h4>${escapeHtml(finalProject.title || 'Proyecto final')}</h4>
+                        <p>${escapeHtml(finalProject.description || '')}</p>
+                    </div>
+                ` : ''}
+            </aside>
+        </div>
+        ${renderCourseAssessment(course)}
+        <div class="course-detail-actions">
+            ${needsAssessment
+                ? `<button type="button" class="btn-primary" onclick="focusCourseAssessment()">Completar evaluación <i class="fas fa-arrow-down"></i></button>`
+                : `<button type="button" class="btn-primary" data-course-start="${escapeHtml(course.id)}">
+                    ${completion.complete ? 'Repasar curso' : hasCourseStarted(course) ? 'Continuar curso' : 'Comenzar curso'} <i class="fas fa-arrow-right"></i>
+                </button>`}
+            <button type="button" class="btn-secondary" onclick="showCourseCatalog()">Elegir otro curso</button>
+        </div>
+    `;
+
+    container.querySelectorAll('[data-course-lesson]').forEach(button => {
+        button.addEventListener('click', () => startCourse(course.id, button.dataset.courseLesson));
+    });
+    container.querySelectorAll('[data-course-start]').forEach(button => {
+        button.addEventListener('click', () => startCourse(course.id));
+    });
+    container.querySelectorAll('[data-course-practice]').forEach(button => {
+        button.addEventListener('click', () => practiceCourseConcept(button.dataset.coursePractice));
+    });
+}
+
+function showCourseCatalog() {
+    activateSection('path');
+    activatePathTab('lessons');
+    renderCourseCatalog();
+}
+
+function openCourse(courseId) {
+    const course = getCourseById(courseId);
+    if (!course) return;
+    activateSection('path');
+    activatePathTab('lessons');
+    renderCourseDetail(course.id);
+}
+
+function startCourse(courseId = currentCourseId, lessonId = null) {
+    const course = getCourseById(courseId) || getActiveCourse();
+    if (!course) return;
+
+    activateSection('path');
+    activatePathTab('lessons');
+    currentCourseId = course.id;
+    saveActiveCourse();
+    const lessons = getCourseLessons(course);
+    const requested = lessonId && lessons.some(lesson => lesson.id === lessonId) ? lessonId : null;
+    const next = requested
+        || lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id))?.id
+        || lessons[0]?.id
+        || null;
+    currentLearningLessonId = next;
+    const nextLesson = lessons.find(lesson => lesson.id === next);
+    currentLessonStep = nextLesson ? getDefaultLessonStep(course, nextLesson) : 'concept';
+    setCourseView('player');
+    renderCoursePlayer();
+    const editor = document.getElementById('pathEditor');
+    if (editor) editor.focus();
+}
+
+function refreshActiveCourseDataset() {
+    const course = getActiveCourse();
+    const pathSection = document.getElementById('section-path');
+    const pathActive = pathSection?.classList.contains('active');
+    if (currentCourseView === 'player') {
+        if (pathActive && course?.track === 'nosql') {
+            currentLearningLessonId = null;
+            startCourse(course.id);
+        }
+        return;
+    }
+    if (currentCourseView === 'detail' && currentCourseId) {
+        renderCourseDetail(currentCourseId);
+        return;
+    }
+    renderCourseCatalog();
+}
+
+function renderCoursePlayer() {
+    const course = getActiveCourse();
+    const breadcrumb = document.getElementById('coursePlayerBreadcrumb');
+    if (breadcrumb && course) {
+        const lesson = getActiveCourseLessonById(currentLearningLessonId);
+        breadcrumb.innerHTML = `
+            <button type="button" class="course-back-btn" onclick="showCourseCatalog()">
+                <i class="fas fa-arrow-left"></i> Cursos
+            </button>
+            <span class="course-breadcrumb-sep">/</span>
+            <button type="button" class="course-back-btn" onclick="openCourse('${escapeHtml(course.id)}')">${escapeHtml(course.title)}</button>
+            ${lesson ? `<span class="course-breadcrumb-sep">/</span><span>${escapeHtml(lesson.title)}</span>` : ''}
+        `;
+    }
+    renderLearningPathList();
+    renderLearningLessonDetail();
+}
+
+function practiceCourseConcept(conceptId) {
+    const course = getActiveCourse();
+    if (course) {
+        currentCourseId = course.id;
+        saveActiveCourse();
+        const pendingLesson = getCourseLessons(course)
+            .find(lesson => lesson.id === conceptId && !isCourseLessonCompleted(course, lesson.id));
+        if (pendingLesson) {
+            startCourse(course.id, pendingLesson.id);
+            return;
+        }
+    }
+    practiceLearningConcept(conceptId);
+}
+
 function formatLearningActivityDate(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '';
@@ -6392,43 +9076,41 @@ function renderLearningPathList() {
     const list = document.getElementById('pathLessonList');
     if (!list) return;
 
-    const lessons = getLearningLessons();
-    const profile = getLearningProfile();
-    const stats = getLearningProgressStats();
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
+    const stats = course ? getCourseProgress(course) : getLearningProgressStats();
     const progressText = document.getElementById('pathProgressText');
     const progressBar = document.getElementById('pathProgressBar');
     const progressTrack = document.getElementById('pathProgressTrack');
+    const progressLabel = document.getElementById('pathCourseProgressLabel');
     const datasetLabel = document.getElementById('pathDatasetLabel');
 
     if (progressText) progressText.textContent = `${stats.completed} de ${stats.total}`;
     if (progressBar) progressBar.style.width = `${stats.percent}%`;
-    if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(stats.percent));
-    if (datasetLabel) datasetLabel.textContent = `Dataset SQL: ${profile.name}`;
-
-    const ctaButton = document.getElementById('pathCtaBtn');
-    if (ctaButton) {
-        const ctaLabel = stats.completed === stats.total
-            ? 'Repasar ruta'
-            : stats.completed > 0
-                ? 'Continuar ruta'
-                : 'Comenzar ruta';
-        ctaButton.innerHTML = `${ctaLabel} <i class="fas fa-arrow-right"></i>`;
+    if (progressTrack) {
+        progressTrack.setAttribute('aria-valuenow', String(stats.percent));
+        progressTrack.setAttribute('aria-label', course ? `Progreso de ${course.title}` : 'Progreso del curso');
     }
+    if (progressLabel) progressLabel.textContent = course ? 'Progreso del curso' : 'Tu progreso';
+    if (datasetLabel) datasetLabel.textContent = getCourseDatasetLabel(course);
 
     if (!lessons.length) {
-        list.innerHTML = '<p class="text-muted">No hay lecciones disponibles.</p>';
+        list.innerHTML = '<p class="text-muted">Este curso no tiene lecciones disponibles.</p>';
         return;
     }
 
     if (!currentLearningLessonId || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
-        const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
+        const next = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id)) || lessons[0];
         currentLearningLessonId = next.id;
+        currentLessonStep = getDefaultLessonStep(course, next);
     }
 
-    list.innerHTML = lessons.map((lesson, index) => {
-        const completed = isLearningLessonCompleted(lesson.id);
+    const renderLessonRow = lesson => {
+        const index = lessons.findIndex(item => item.id === lesson.id);
+        const stages = getCourseLessonStages(course, lesson.id);
+        const completed = stages.completed;
         const active = lesson.id === currentLearningLessonId;
-        const status = completed ? 'Completada' : (active ? 'En curso' : 'Pendiente');
+        const status = completed ? 'Completada' : stages.practiceCompleted ? 'Por comprobar' : (active ? 'En curso' : 'Pendiente');
         return `
             <button type="button" class="challenge-card path-step${active ? ' active' : ''}${completed ? ' completed' : ''}" data-learning-lesson="${escapeHtml(lesson.id)}" aria-pressed="${active}">
                 <span class="challenge-card-title">
@@ -6441,13 +9123,71 @@ function renderLearningPathList() {
                 </span>
             </button>
         `;
-    }).join('');
+    };
+
+    if (course) {
+        list.innerHTML = course.modules.map(module => {
+            const moduleLessons = (module.lessonIds || [])
+                .map(id => lessons.find(lesson => lesson.id === id))
+                .filter(Boolean);
+            const completed = moduleLessons.filter(lesson => isCourseLessonCompleted(course, lesson.id)).length;
+            return `
+                <div class="course-lesson-group">
+                    <div class="course-lesson-group-head">
+                        <span>${escapeHtml(module.title)}</span>
+                        <span>${completed}/${moduleLessons.length}</span>
+                    </div>
+                    ${moduleLessons.map(renderLessonRow).join('')}
+                </div>
+            `;
+        }).join('');
+    } else {
+        list.innerHTML = lessons.map(renderLessonRow).join('');
+    }
 
     list.querySelectorAll('[data-learning-lesson]').forEach(button => {
         button.addEventListener('click', () => selectLearningLesson(button.dataset.learningLesson));
     });
 
+    updateCourseCta();
     renderLearningProgressDashboard();
+}
+
+function renderCourseProgressSection() {
+    const courses = getCourses();
+    if (!courses.length) return '';
+    return `
+        <div class="progress-section course-progress-section">
+            <div class="progress-section-head">
+                <div>
+                    <h3>Tus cursos</h3>
+                    <p>Avance de cada itinerario con sus datasets activos.</p>
+                </div>
+                <button type="button" class="btn-secondary" onclick="showCourseCatalog()">
+                    Ver cursos <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+            <div class="progress-course-grid">
+                ${courses.map(course => {
+                    const progress = getCourseProgress(course);
+                    const status = getCourseStatusLabel(course, progress);
+                    return `
+                        <button type="button" class="progress-course-card" onclick="openCourse('${escapeHtml(course.id)}')">
+                            <span class="progress-course-icon"><i class="fas ${escapeHtml(course.icon || 'fa-graduation-cap')}"></i></span>
+                            <span class="progress-course-copy">
+                                <strong>${escapeHtml(course.title)}</strong>
+                                <span>${progress.completed} de ${progress.total} lecciones · ${status}</span>
+                                <span class="progress-course-track" role="progressbar" aria-label="${escapeHtml(course.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}">
+                                    <span style="width:${progress.percent}%"></span>
+                                </span>
+                            </span>
+                            <span class="progress-course-percent">${progress.percent}%</span>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
 }
 
 function renderLearningProgressDashboard() {
@@ -6462,14 +9202,15 @@ function renderLearningProgressDashboard() {
     const started = conceptStats.filter(concept => concept.percent > 0).length;
     const profile = getLearningProfile();
     const conceptLibrary = getConceptMasteryStats();
+    const sqlCourseCount = getCourses().filter(course => course.track !== 'nosql').length;
 
     const metrics = [
         {
-            label: 'Lecciones',
+            label: 'Lecciones SQL',
             value: `${globalStats.lessonsCompleted}/${globalStats.lessonsTotal}`,
             icon: 'fa-book-open',
             tone: 'tone-blue',
-            hint: 'Ruta de aprendizaje'
+            hint: `${globalStats.lessonsTotal} lecciones en ${sqlCourseCount} cursos SQL`
         },
         {
             label: 'Retos',
@@ -6486,7 +9227,7 @@ function renderLearningProgressDashboard() {
             hint: 'Lecciones + retos'
         },
         {
-            label: 'Conceptos de ruta',
+            label: 'Conceptos de cursos',
             value: `${dominated}/${conceptStats.length}`,
             icon: 'fa-graduation-cap',
             tone: 'tone-violet',
@@ -6509,6 +9250,10 @@ function renderLearningProgressDashboard() {
                 <span>global</span>
             </div>
         </div>
+
+        ${renderSkillProfileCards()}
+
+        ${renderCourseProgressSection()}
 
         <div class="progress-recommendation progress-recommendation-${recommendation.kind}">
             <span class="progress-recommendation-icon"><i class="fas ${recommendation.icon}"></i></span>
@@ -6693,9 +9438,17 @@ function activatePathTab(tabName) {
 function openLearningPath() {
     activateSection('path');
     activatePathTab('lessons');
+    showCourseCatalog();
 }
 
 function continueLearningLesson(id) {
+    const course = getCourseForLesson(id);
+    if (course) {
+        activateSection('path');
+        activatePathTab('lessons');
+        startCourse(course.id, id);
+        return;
+    }
     openLearningPath();
     selectLearningLesson(id);
 }
@@ -6746,74 +9499,105 @@ function practiceLearningConcept(conceptId) {
     showToast('success', `¡Ya dominas ${getConceptLabel(conceptId)}!`);
 }
 
-function renderLearningLessonDetail() {
-    const detail = document.getElementById('pathLessonDetail');
-    if (!detail) return;
+function getDefaultLessonStep(course, lesson) {
+    const stages = getCourseLessonStages(course, lesson.id);
+    if (stages.completed) return 'concept';
+    if (stages.practiceCompleted) return 'check';
+    if (stages.theoryRead) return 'practice';
+    return 'concept';
+}
 
-    const lessons = getLearningLessons();
-    const lesson = getLearningLessonById(currentLearningLessonId);
-    if (!lesson) {
-        detail.innerHTML = `
-            <div class="challenge-empty">
-                <i class="fas fa-route"></i>
-                <h3>Elige una lección</h3>
-                <p>Selecciona un paso de la ruta para empezar a practicar.</p>
-            </div>
-        `;
-        return;
-    }
+function renderLessonStepButton(step, number, label, icon, done, disabled = false) {
+    const active = currentLessonStep === step;
+    return `
+        <button type="button" class="lesson-step${active ? ' active' : ''}${done ? ' completed' : ''}"
+            data-lesson-step="${step}" role="tab" aria-selected="${active}" aria-controls="lessonStepContent"
+            ${disabled ? 'disabled aria-disabled="true"' : ''}
+            onclick="goToLessonStep('${step}')">
+            <span class="lesson-step-number">${done ? '<i class="fas fa-check"></i>' : number}</span>
+            <span class="lesson-step-label"><i class="fas ${icon}"></i> ${label}</span>
+        </button>
+    `;
+}
 
-    const profile = getLearningProfile();
-    const tables = dbInitialized && typeof getUserTables === 'function' ? getUserTables() : [];
-    if (tables.length > 0 && !tables.includes(profile.mainTable)) {
-        detail.innerHTML = `
-            <div class="challenge-empty">
-                <i class="fas fa-database"></i>
-                <h3>Dataset no compatible</h3>
-                <p>La ruta de ${escapeHtml(profile.name)} necesita la tabla <code>${escapeHtml(profile.mainTable)}</code>. Cambia de dataset o reinicia la base para practicar.</p>
-            </div>
-        `;
-        return;
-    }
+function renderLessonConceptStep(lesson, course, stages) {
+    const objectives = (lesson.objectives || []).map(item => `<li>${escapeHtml(item)}</li>`).join('');
+    const theory = (lesson.theory || []).map(card => `
+        <article class="lesson-theory-card">
+            <h4>${escapeHtml(card.title)}</h4>
+            <p>${escapeHtml(card.body)}</p>
+            ${card.code ? `<pre><code>${escapeHtml(card.code)}</code></pre>` : ''}
+        </article>
+    `).join('');
+    const mistakes = (lesson.commonMistakes || []).map(item => `
+        <div class="lesson-mistake">
+            <strong>${escapeHtml(item.mistake)}</strong>
+            <p>${escapeHtml(item.fix)}</p>
+        </div>
+    `).join('');
 
-    const index = lessons.findIndex(item => item.id === lesson.id);
-    const completed = isLearningLessonCompleted(lesson.id);
-    const nextLesson = lessons[index + 1];
-    const stats = getLearningProgressStats();
-    const allComplete = stats.completed === stats.total;
-    const nextMarkup = nextLesson
-        ? `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`
-        : allComplete
-            ? '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>'
-            : '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes.</div>';
-
-    detail.innerHTML = `
-        <div class="challenge-detail-header">
-            <div>
-                <h3>${index + 1}. ${escapeHtml(lesson.title)}</h3>
-                <div class="challenge-detail-meta">
-                    <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
-                    <span class="text-muted">Lección ${index + 1} de ${lessons.length}</span>
-                    <span id="pathLessonStatus" class="path-completed-badge" ${completed ? '' : 'hidden'}><i class="fas fa-check"></i> Completada</span>
+    return `
+        <div class="lesson-objectives">
+            <span class="course-side-eyebrow"><i class="fas fa-bullseye"></i> Al terminar podrás</span>
+            <ul>${objectives}</ul>
+        </div>
+        <div class="lesson-theory-grid">${theory}</div>
+        <div class="lesson-demo-card">
+            <div class="lesson-demo-head">
+                <div>
+                    <span class="course-side-eyebrow"><i class="fas fa-play"></i> Demostración guiada</span>
+                    <p>Ejecuta el ejemplo y observa el resultado antes de escribir tu consulta.</p>
                 </div>
+                <button type="button" class="btn-secondary btn-sm" onclick="runLessonDemo()">
+                    <i class="fas fa-play"></i> Ejecutar ejemplo
+                </button>
             </div>
+            <pre><code>${escapeHtml(lesson.demoQuery)}</code></pre>
+            <p class="lesson-demo-note">${escapeHtml(lesson.demoNote)}</p>
+            <div id="lessonDemoResult" class="lesson-demo-result" hidden></div>
         </div>
-        <div class="path-objective">
-            <span>Objetivo</span>
+        ${mistakes ? `<div class="lesson-mistakes"><span class="course-side-eyebrow"><i class="fas fa-triangle-exclamation"></i> Errores comunes</span>${mistakes}</div>` : ''}
+        <div class="lesson-step-actions">
+            <button type="button" class="btn-primary" onclick="goToLessonStep('practice')">
+                Continuar a la práctica <i class="fas fa-arrow-right"></i>
+            </button>
+            ${stages.theoryRead ? '' : `
+                <button type="button" class="btn-ghost" onclick="markTheoryReadAndGoPractice()">
+                    Ya conozco esto: ir a la práctica
+                </button>
+            `}
+        </div>
+    `;
+}
+
+function renderLessonPracticeStep(lesson, course, stages) {
+    const isNoSQL = course?.track === 'nosql';
+    const initialResult = stages.practiceCompleted
+        ? '<strong><i class="fas fa-circle-check"></i> Práctica superada</strong> Puedes repetirla o continuar a la comprobación.'
+        : `<strong><i class="fas fa-circle-info"></i> Listo para practicar</strong> ${isNoSQL ? 'Escribe un comando NoSQL' : 'Escribe tu consulta'} y pulsa «Comprobar lección».`;
+
+    return `
+        <div class="lesson-practice-intro">
+            <span class="course-side-eyebrow"><i class="fas fa-laptop-code"></i> Tu turno</span>
+            <h4>${escapeHtml(lesson.title)}</h4>
             <p>${escapeHtml(lesson.objective)}</p>
+            <ul class="lesson-practice-checklist">
+                <li>Revisa el concepto y la demostración si necesitas repasar.</li>
+                <li>Completa la plantilla del editor con lo que pide la misión.</li>
+                <li>Pulsa «Comprobar lección» y revisa el resultado.</li>
+            </ul>
         </div>
-        <div class="challenge-description">${escapeHtml(lesson.explanation)}</div>
         <div class="path-example">
             <div class="path-example-head">
-                <span><i class="fas fa-code"></i> Ejemplo</span>
+                <span><i class="fas fa-code"></i> Ejemplo de apoyo</span>
                 <button type="button" class="btn-ghost btn-sm" onclick="loadLearningExample()">
                     <i class="fas fa-arrow-down"></i> Usar ejemplo
                 </button>
             </div>
             <pre><code>${escapeHtml(lesson.example)}</code></pre>
         </div>
-        <label for="pathEditor" class="sr-only">Consulta SQL para la lección</label>
-        <textarea id="pathEditor" spellcheck="false" placeholder="Escribe tu consulta SQL aquí...">${escapeHtml(lesson.starter)}</textarea>
+        <label for="pathEditor" class="sr-only">${isNoSQL ? 'Comando NoSQL para la lección' : 'Consulta SQL para la lección'}</label>
+        <textarea id="pathEditor" spellcheck="false" placeholder="${isNoSQL ? 'Escribe un comando NoSQL...' : 'Escribe tu consulta SQL aquí...'}">${escapeHtml(lesson.starter)}</textarea>
         <div class="challenge-actions">
             <button type="button" id="pathRunBtn" onclick="runLearningLesson()">
                 <i class="fas fa-play"></i> Comprobar lección
@@ -6826,12 +9610,217 @@ function renderLearningLessonDetail() {
             </button>
         </div>
         <div id="pathHint" class="challenge-hint" hidden>${escapeHtml(lesson.hint)}</div>
-        <div id="pathResult" class="challenge-result" aria-live="polite">
-            <strong><i class="fas fa-circle-info"></i> Listo para practicar</strong>
-            Escribe tu consulta y pulsa «Comprobar lección».
+        <div id="pathResult" class="challenge-result" aria-live="polite">${initialResult}</div>
+        <div id="pathNext" class="path-next" ${stages.practiceCompleted ? '' : 'hidden'}>
+            ${stages.practiceCompleted ? '<button type="button" class="btn-primary" onclick="goToLessonStep(\'check\')">Ir a la comprobación <i class="fas fa-arrow-right"></i></button>' : ''}
         </div>
-        <div id="pathNext" class="path-next" ${completed ? '' : 'hidden'}>${completed ? nextMarkup : ''}</div>
     `;
+}
+
+function renderLessonSummary(lesson) {
+    return `
+        <div class="lesson-summary-card">
+            <span class="course-side-eyebrow"><i class="fas fa-bookmark"></i> Resumen</span>
+            <ul>${(lesson.summary || []).map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+        </div>
+    `;
+}
+
+function renderLessonCheckStep(lesson, course, lessons, stages, index) {
+    if (!stages.practiceCompleted) {
+        return '<div class="challenge-empty"><i class="fas fa-lock"></i><h3>Primero completa la práctica</h3><p>La comprobación se desbloquea cuando superas el laboratorio.</p></div>';
+    }
+
+    if (stages.completed) {
+        return `
+            ${renderLessonSummary(lesson)}
+            <div class="lesson-check-success">
+                <i class="fas fa-circle-check"></i>
+                <div>
+                    <strong>Lección completada</strong>
+                    <p>Has leído el concepto, superado la práctica y aprobado la comprobación.</p>
+                </div>
+            </div>
+            <div id="pathNext" class="path-next">
+                ${getCourseNextMarkup(course, lessons, lesson)}
+            </div>
+        `;
+    }
+
+    const quiz = lesson.quiz || [];
+    const quizMarkup = quiz.map((question, questionIndex) => `
+        <fieldset class="lesson-quiz-question">
+            <legend><span>${questionIndex + 1}</span> ${escapeHtml(question.question)}</legend>
+            <div class="lesson-quiz-options">
+                ${question.options.map((option, optionIndex) => `
+                    <label class="lesson-quiz-option">
+                        <input type="radio" name="lessonQuizQ${questionIndex}" value="${optionIndex}">
+                        <span>${escapeHtml(option)}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </fieldset>
+    `).join('');
+
+    return `
+        <div class="lesson-check-intro">
+            <span class="course-side-eyebrow"><i class="fas fa-circle-check"></i> Comprueba tu comprensión</span>
+            <h4>${escapeHtml(lesson.title)}</h4>
+            <p>Responde las ${quiz.length} preguntas. Si fallas alguna, puedes intentarlo de nuevo sin perder el progreso de la práctica.</p>
+        </div>
+        <form id="lessonQuizForm" class="lesson-quiz" onsubmit="submitLessonQuiz(event)">
+            ${quizMarkup}
+            <button type="submit" class="btn-primary">
+                Comprobar respuestas <i class="fas fa-arrow-right"></i>
+            </button>
+        </form>
+        <div id="lessonQuizResult" class="challenge-result" aria-live="polite" hidden></div>
+        <p class="lesson-check-hint"><i class="fas fa-lock"></i> La siguiente lección se desbloquea al aprobar esta comprobación.</p>
+    `;
+}
+
+function renderLessonStepContent(lesson, course, lessons, stages, index) {
+    const container = document.getElementById('lessonStepContent');
+    if (!container) return;
+    if (currentLessonStep === 'practice') {
+        container.innerHTML = renderLessonPracticeStep(lesson, course, stages);
+    } else if (currentLessonStep === 'check') {
+        container.innerHTML = renderLessonCheckStep(lesson, course, lessons, stages, index);
+    } else {
+        container.innerHTML = renderLessonConceptStep(lesson, course, stages);
+    }
+}
+
+function renderLearningLessonDetail() {
+    const detail = document.getElementById('pathLessonDetail');
+    if (!detail) return;
+
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
+    const lesson = lessons.find(item => item.id === currentLearningLessonId);
+    if (!lesson) {
+        detail.innerHTML = `
+            <div class="challenge-empty">
+                <i class="fas fa-graduation-cap"></i>
+                <h3>Elige una lección</h3>
+                <p>Selecciona una lección del curso para empezar a practicar.</p>
+            </div>
+        `;
+        return;
+    }
+
+    if (course?.track !== 'nosql') {
+        const profile = getLearningProfile();
+        const tables = dbInitialized && typeof getUserTables === 'function' ? getUserTables() : [];
+        if (tables.length > 0 && !tables.includes(profile.mainTable)) {
+            detail.innerHTML = `
+                <div class="challenge-empty">
+                    <i class="fas fa-database"></i>
+                    <h3>Dataset no compatible</h3>
+                    <p>El curso de ${escapeHtml(profile.name)} necesita la tabla <code>${escapeHtml(profile.mainTable)}</code>. Cambia de dataset o reinicia la base para practicar.</p>
+                </div>
+            `;
+            return;
+        }
+    }
+
+    const index = lessons.findIndex(item => item.id === lesson.id);
+    const stages = getCourseLessonStages(course, lesson.id);
+    if (currentLessonStep === 'check' && !stages.practiceCompleted) currentLessonStep = 'practice';
+    const module = getCourseModuleForLesson(course, lesson.id);
+    const completed = stages.completed;
+
+    detail.innerHTML = `
+        <div class="challenge-detail-header">
+            <div>
+                <span class="course-lesson-eyebrow">${escapeHtml(course?.title || 'Curso')}${module ? ` · ${escapeHtml(module.title)}` : ''}</span>
+                <h3>${index + 1}. ${escapeHtml(lesson.title)}</h3>
+                <div class="challenge-detail-meta">
+                    <span class="challenge-level ${getLearningLevelClass(lesson.level)}">${escapeHtml(lesson.level)}</span>
+                    <span class="text-muted">Lección ${index + 1} de ${lessons.length}</span>
+                    <span id="pathLessonStatus" class="path-completed-badge" ${completed ? '' : 'hidden'}><i class="fas fa-check"></i> Completada</span>
+                </div>
+            </div>
+        </div>
+        <div class="lesson-stepper" role="tablist" aria-label="Pasos de la lección">
+            ${renderLessonStepButton('concept', 1, 'Concepto', 'fa-book-open', stages.theoryRead)}
+            ${renderLessonStepButton('practice', 2, 'Práctica', 'fa-laptop-code', stages.practiceCompleted)}
+            ${renderLessonStepButton('check', 3, 'Comprobación', 'fa-circle-check', stages.quizPassed, !stages.practiceCompleted)}
+        </div>
+        <div id="lessonStepContent" role="tabpanel"></div>
+    `;
+
+    detail.querySelectorAll('[data-lesson-step]').forEach(button => {
+        button.addEventListener('click', () => goToLessonStep(button.dataset.lessonStep));
+    });
+    renderLessonStepContent(lesson, course, lessons, stages, index);
+}
+
+function goToLessonStep(step) {
+    const course = getActiveCourse();
+    const lesson = getActiveCourseLessonById(currentLearningLessonId);
+    if (!lesson) return;
+    const stages = getCourseLessonStages(course, lesson.id);
+    if (step === 'check' && !stages.practiceCompleted) {
+        showToast('info', 'Completa la práctica antes de abrir la comprobación.');
+        return;
+    }
+    if (step === 'practice' && !stages.theoryRead) {
+        markCourseLessonTheoryRead(course, lesson.id);
+    }
+    currentLessonStep = ['concept', 'practice', 'check'].includes(step) ? step : 'concept';
+    renderLearningLessonDetail();
+}
+
+function markTheoryReadAndGoPractice() {
+    const course = getActiveCourse();
+    const lesson = getActiveCourseLessonById(currentLearningLessonId);
+    if (!lesson) return;
+    markCourseLessonTheoryRead(course, lesson.id);
+    currentLessonStep = 'practice';
+    renderLearningLessonDetail();
+}
+
+function renderLessonDemoSets(sets) {
+    const set = sets?.[0];
+    if (!set || !Array.isArray(set.values) || set.values.length === 0) {
+        return '<p class="lesson-demo-empty">El ejemplo no devolvió filas.</p>';
+    }
+    const rows = set.values.slice(0, 6);
+    return `
+        <div class="lesson-demo-table-wrap">
+            <table>
+                <thead><tr>${set.columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr></thead>
+                <tbody>${rows.map(row => `<tr>${row.map(value => `<td>${escapeHtml(value === null ? '' : String(value))}</td>`).join('')}</tr>`).join('')}</tbody>
+            </table>
+        </div>
+        ${set.values.length > rows.length ? `<p class="lesson-demo-more">Mostrando ${rows.length} de ${set.values.length} filas.</p>` : ''}
+    `;
+}
+
+function runLessonDemo() {
+    const result = document.getElementById('lessonDemoResult');
+    const lesson = getActiveCourseLessonById(currentLearningLessonId);
+    const course = getActiveCourse();
+    if (!result || !lesson) return;
+
+    try {
+        if (course?.track === 'nosql') {
+            if (!window.NoSQL || !window.NOSQL_DATASETS) throw new Error('El motor NoSQL no está disponible.');
+            const command = window.NoSQL.createDatabase(window.NOSQL_DATASETS[getNoSQLActiveDatasetName()]);
+            const output = window.NoSQL.executeCommand(command, lesson.demoQuery);
+            const documents = output.documents || (output.document ? [output.document] : []);
+            result.innerHTML = `<pre>${escapeHtml(JSON.stringify(documents.slice(0, 5), null, 2))}</pre>`;
+        } else {
+            if (!dbInitialized || !db) throw new Error('La base de datos aún no está lista.');
+            if (!isReadOnlyQuery(lesson.demoQuery)) throw new Error('La demostración debe ser una consulta de lectura.');
+            result.innerHTML = renderLessonDemoSets(db.exec(lesson.demoQuery));
+        }
+        result.hidden = false;
+    } catch (error) {
+        result.hidden = false;
+        result.innerHTML = `<p class="lesson-demo-error">${escapeHtml(error.message || String(error))}</p>`;
+    }
 }
 
 function renderLearningPath() {
@@ -6840,18 +9829,42 @@ function renderLearningPath() {
 }
 
 function refreshLearningPath(options = {}) {
-    const lessons = getLearningLessons();
-    if (options.selectFirst || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
-        const next = lessons.find(lesson => !isLearningLessonCompleted(lesson.id)) || lessons[0];
-        currentLearningLessonId = next?.id || null;
+    const course = getActiveCourse();
+    if (!course) {
+        renderCourseCatalog();
+        return;
     }
-    renderLearningPath();
+
+    const player = document.getElementById('coursePlayerView');
+    if (player && player.hidden) {
+        if (currentCourseView === 'detail') {
+            renderCourseDetail(course.id);
+        } else {
+            renderCourseCatalog();
+        }
+        return;
+    }
+
+    const lessons = getCourseLessons(course);
+    if (options.selectFirst || !lessons.some(lesson => lesson.id === currentLearningLessonId)) {
+        const next = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id)) || lessons[0];
+        currentLearningLessonId = next?.id || null;
+        currentLessonStep = next ? getDefaultLessonStep(course, next) : 'concept';
+    }
+    renderCoursePlayer();
 }
 
 function initLearningPath() {
     loadLearningPathProgress();
+    loadNoSQLCourseProgress();
+    loadCourseAssessment();
+    currentCourseId = loadActiveCourse()
+        || getCourses().find(course => course.recommended)?.id
+        || getCourses()[0]?.id
+        || null;
     currentLearningLessonId = null;
-    refreshLearningPath({ selectFirst: true });
+    currentCourseView = 'catalog';
+    renderCourseCatalog();
     activatePathTab('lessons');
 
     if (learningPathEventsBound) return;
@@ -6872,6 +9885,14 @@ function initLearningPath() {
         });
     });
 
+    const nosqlSelector = document.getElementById('nosqlDatasetSelector');
+    if (nosqlSelector) {
+        nosqlSelector.addEventListener('change', () => {
+            syncCourseDatasetControls();
+            setTimeout(refreshActiveCourseDataset, 0);
+        });
+    }
+
     document.addEventListener('keydown', event => {
         if (event.target?.id !== 'pathEditor') return;
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -6879,12 +9900,29 @@ function initLearningPath() {
             runLearningLesson();
         }
     });
+
+    setTimeout(() => {
+        syncCourseDatasetControls();
+        refreshActiveCourseDataset();
+    }, 0);
 }
 
 function selectLearningLesson(id) {
-    if (!getLearningLessonById(id)) return;
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
+    if (!lessons.some(lesson => lesson.id === id)) {
+        const targetCourse = getCourseForLesson(id);
+        if (!targetCourse) return;
+        startCourse(targetCourse.id, id);
+        return;
+    }
+    const changed = currentLearningLessonId !== id;
     currentLearningLessonId = id;
-    renderLearningPath();
+    if (changed) {
+        const lesson = lessons.find(item => item.id === id);
+        currentLessonStep = lesson ? getDefaultLessonStep(course, lesson) : 'concept';
+    }
+    renderCoursePlayer();
     const editor = document.getElementById('pathEditor');
     if (editor) editor.focus();
 }
@@ -6899,8 +9937,9 @@ function setLearningResult(type, html) {
 function resetLearningResult() {
     const result = document.getElementById('pathResult');
     if (!result) return;
+    const isNoSQL = getActiveCourse()?.track === 'nosql';
     result.className = 'challenge-result';
-    result.innerHTML = '<strong><i class="fas fa-circle-info"></i> Listo para practicar</strong> Escribe tu consulta y pulsa «Comprobar lección».';
+    result.innerHTML = `<strong><i class="fas fa-circle-info"></i> Listo para practicar</strong> ${isNoSQL ? 'Escribe un comando NoSQL' : 'Escribe tu consulta'} y pulsa «Comprobar lección».`;
 }
 
 function learningComparisonMessage(comparison) {
@@ -6919,25 +9958,138 @@ function learningComparisonMessage(comparison) {
     return 'Todavía no coincide con el resultado esperado.';
 }
 
+function showPracticeNext() {
+    const container = document.getElementById('pathNext');
+    if (!container) return;
+    container.hidden = false;
+    container.innerHTML = '<button type="button" class="btn-primary" onclick="goToLessonStep(\'check\')">Ir a la comprobación <i class="fas fa-arrow-right"></i></button>';
+}
+
+function submitLessonQuiz(event) {
+    event.preventDefault();
+    const course = getActiveCourse();
+    const lesson = getActiveCourseLessonById(currentLearningLessonId);
+    const form = event.currentTarget || document.getElementById('lessonQuizForm');
+    const result = document.getElementById('lessonQuizResult');
+    if (!lesson || !form || !result) return;
+
+    const quiz = lesson.quiz || [];
+    const answers = quiz.map((_, index) => (
+        form.querySelector(`input[name="lessonQuizQ${index}"]:checked`)
+    ));
+
+    result.hidden = false;
+    if (answers.some(answer => !answer)) {
+        result.className = 'challenge-result warning';
+        result.innerHTML = '<strong><i class="fas fa-circle-exclamation"></i> Faltan respuestas</strong> Responde todas las preguntas antes de comprobar.';
+        return;
+    }
+
+    const wrong = answers
+        .map((answer, index) => Number(answer.value) === quiz[index].answer ? null : index)
+        .filter(index => index !== null);
+
+    if (wrong.length) {
+        result.className = 'challenge-result error';
+        result.innerHTML = `
+            <strong><i class="fas fa-circle-xmark"></i> Revisa tus respuestas</strong>
+            <p>Preguntas por revisar: ${wrong.map(index => index + 1).join(', ')}.</p>
+            <ul>${wrong.map(index => `<li>${escapeHtml(quiz[index].explanation)}</li>`).join('')}</ul>
+        `;
+        return;
+    }
+
+    markCourseLessonQuizPassed(course, lesson.id);
+    renderLearningPathList();
+    renderLearningLessonDetail();
+    showToast('success', '¡Lección completada!');
+}
+
 function showLearningNext(lesson) {
     const container = document.getElementById('pathNext');
     if (!container) return;
-    const lessons = getLearningLessons();
-    const index = lessons.findIndex(item => item.id === lesson.id);
-    const nextLesson = lessons[index + 1];
-    const stats = getLearningProgressStats();
-
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
     container.hidden = false;
-    if (nextLesson) {
-        container.innerHTML = `<button type="button" class="btn-primary" onclick="nextLearningLesson()">Siguiente: ${escapeHtml(nextLesson.title)} <i class="fas fa-arrow-right"></i></button>`;
-    } else if (stats.completed === stats.total) {
-        container.innerHTML = '<div class="path-complete"><i class="fas fa-trophy"></i> ¡Completaste la ruta!</div>';
-    } else {
-        container.innerHTML = '<div class="path-complete"><i class="fas fa-circle-check"></i> Lección completada. Aún quedan pendientes.</div>';
+    container.innerHTML = getCourseNextMarkup(course, lessons, lesson);
+}
+
+function runNoSQLCourseLesson() {
+    const course = getActiveCourse();
+    const lesson = course?.track === 'nosql'
+        ? getCourseLessons(course).find(item => item.id === currentLearningLessonId)
+        : null;
+    const editor = document.getElementById('pathEditor');
+    if (!lesson || !editor) return;
+
+    const query = editor.value.trim();
+    if (!query) {
+        setLearningResult('warning', '<strong><i class="fas fa-circle-exclamation"></i> Falta el comando</strong> Escribe un comando NoSQL antes de comprobarlo.');
+        return;
+    }
+    if (!window.NoSQL || !window.NOSQL_DATASETS) {
+        setLearningResult('warning', '<strong><i class="fas fa-hourglass-half"></i> Motor NoSQL no disponible</strong> Recarga la página e inténtalo de nuevo.');
+        return;
+    }
+
+    let command = null;
+    try {
+        command = window.NoSQL.parseCommand(query);
+    } catch (error) {
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Comando no válido</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+        `);
+        return;
+    }
+
+    const method = command.methods?.[0]?.name;
+    if (!['find', 'findOne', 'aggregate'].includes(method)) {
+        setLearningResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> El curso solo permite <code>find</code>, <code>findOne</code> y <code>aggregate</code>.');
+        return;
+    }
+
+    try {
+        const dataset = window.NOSQL_DATASETS[getNoSQLActiveDatasetName()];
+        const state = window.NoSQL.createDatabase(dataset);
+        const expected = window.NoSQL.executeCommand(state, lesson.expectedQuery);
+        const actual = window.NoSQL.executeCommand(state, query);
+        const comparison = compareNoSQLCourseResults(expected, actual);
+
+        if (comparison.ok) {
+            markCourseLessonPracticeCompleted(course, lesson.id);
+            const stages = getCourseLessonStages(course, lesson.id);
+            renderLearningPathList();
+            const status = document.getElementById('pathLessonStatus');
+            if (status) status.hidden = !stages.completed;
+            setLearningResult('success', `
+                <strong><i class="fas fa-circle-check"></i> ${stages.completed ? 'Lección completada' : 'Práctica superada'}</strong>
+                ${stages.completed ? 'Ya puedes continuar con la siguiente lección.' : 'Tu comando devuelve los documentos esperados. Ahora completa la comprobación.'}
+            `);
+            showPracticeNext();
+            showToast('success', stages.completed ? 'Lección completada.' : 'Práctica superada. Te falta la comprobación.');
+            return;
+        }
+
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-xmark"></i> Todavía no</strong>
+            ${escapeHtml(comparison.message)}
+        `);
+    } catch (error) {
+        setLearningResult('error', `
+            <strong><i class="fas fa-circle-exclamation"></i> Error en el comando</strong>
+            <code>${escapeHtml(error.message || String(error))}</code>
+        `);
     }
 }
 
 function runLearningLesson(database = db, initialized = dbInitialized) {
+    const course = getActiveCourse();
+    if (course?.track === 'nosql') {
+        runNoSQLCourseLesson();
+        return;
+    }
+
     const lesson = getLearningLessonById(currentLearningLessonId);
     const editor = document.getElementById('pathEditor');
     if (!lesson || !editor) return;
@@ -6948,7 +10100,7 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
         return;
     }
     if (!isReadOnlyQuery(query)) {
-        setLearningResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> La ruta solo permite consultas <code>SELECT</code> o <code>WITH</code>.');
+        setLearningResult('warning', '<strong><i class="fas fa-lock"></i> Solo lectura</strong> El curso solo permite consultas <code>SELECT</code> o <code>WITH</code>.');
         return;
     }
     if (!initialized || !database) {
@@ -6962,25 +10114,17 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
         const comparison = compareChallengeResults(expected, actual, lesson.ordered);
 
         if (comparison.ok) {
-            markLearningLessonCompleted(lesson.id);
+            markCourseLessonPracticeCompleted(course, lesson.id);
+            const stages = getCourseLessonStages(course, lesson.id);
             renderLearningPathList();
             const status = document.getElementById('pathLessonStatus');
-            if (status) status.hidden = false;
-            const stats = getLearningProgressStats();
-            const lessons = getLearningLessons();
-            const currentIndex = lessons.findIndex(item => item.id === lesson.id);
-            const hasNext = Boolean(lessons[currentIndex + 1]);
-            const nextMessage = stats.completed === stats.total
-                ? 'Has terminado la ruta.'
-                : hasNext
-                    ? 'Puedes continuar con la siguiente lección.'
-                    : 'Has completado esta lección. Aún quedan pendientes en la ruta.';
+            if (status) status.hidden = !stages.completed;
             setLearningResult('success', `
-                <strong><i class="fas fa-circle-check"></i> Lección completada</strong>
-                Tu consulta devuelve el resultado esperado. ${nextMessage}
+                <strong><i class="fas fa-circle-check"></i> ${stages.completed ? 'Lección completada' : 'Práctica superada'}</strong>
+                ${stages.completed ? 'Ya puedes continuar con la siguiente lección.' : 'Tu consulta devuelve el resultado esperado. Ahora completa la comprobación.'}
             `);
-            showLearningNext(lesson);
-            showToast('success', 'Lección completada.');
+            showPracticeNext();
+            showToast('success', stages.completed ? 'Lección completada.' : 'Práctica superada. Te falta la comprobación.');
             return;
         }
 
@@ -6997,13 +10141,14 @@ function runLearningLesson(database = db, initialized = dbInitialized) {
 }
 
 function nextLearningLesson() {
-    const lessons = getLearningLessons();
+    const course = getActiveCourse();
+    const lessons = course ? getCourseLessons(course) : getLearningLessons();
     const index = lessons.findIndex(lesson => lesson.id === currentLearningLessonId);
     const next = lessons[index + 1];
     if (next) {
         selectLearningLesson(next.id);
     } else {
-        showToast('success', '¡Has llegado al final de la ruta!');
+        showToast('success', course ? '¡Has llegado al final del curso!' : '¡Has llegado al final de la ruta!');
     }
 }
 
@@ -7028,7 +10173,10 @@ function clearLearningEditor() {
 }
 
 function loadLearningExample() {
-    const lesson = getLearningLessonById(currentLearningLessonId);
+    const course = getActiveCourse();
+    const lesson = course?.track === 'nosql'
+        ? getCourseLessons(course).find(item => item.id === currentLearningLessonId)
+        : getLearningLessonById(currentLearningLessonId);
     const editor = document.getElementById('pathEditor');
     if (!lesson || !editor) return;
     editor.value = lesson.example;
@@ -7038,14 +10186,45 @@ function loadLearningExample() {
 }
 
 function resetLearningProgress() {
-    const profile = getLearningProfile();
-    if (!confirm(`¿Reiniciar tu progreso de la ruta de ${profile.name}?`)) return;
+    const course = getActiveCourse();
+    const isNoSQL = course?.track === 'nosql';
+    const datasetName = isNoSQL ? getNoSQLActiveDatasetName() : getLearningDatasetName();
+    const datasetLabel = isNoSQL
+        ? (getNoSQLCourseProfile(datasetName)?.name || datasetName)
+        : getLearningProfile().name;
+    const scope = course ? `el curso ${course.title}` : `la ruta de ${datasetLabel}`;
+    if (!confirm(`¿Reiniciar tu progreso de ${scope} en ${datasetLabel}?`)) return;
 
-    delete learningPathProgress[getLearningDatasetName()];
-    saveLearningPathProgress();
+    if (isNoSQL) {
+        const datasetProgress = nosqlCourseProgress[datasetName];
+        if (datasetProgress) {
+            getCourseLessonIds(course).forEach(id => delete datasetProgress[id]);
+            if (!Object.keys(datasetProgress).length) delete nosqlCourseProgress[datasetName];
+        }
+        saveNoSQLCourseProgress();
+    } else if (course) {
+        const datasetProgress = learningPathProgress[datasetName];
+        if (datasetProgress) {
+            getCourseLessonIds(course).forEach(id => delete datasetProgress[id]);
+            if (!Object.keys(datasetProgress).length) delete learningPathProgress[datasetName];
+        }
+        saveLearningPathProgress();
+    } else {
+        delete learningPathProgress[datasetName];
+        saveLearningPathProgress();
+    }
+
     currentLearningLessonId = null;
-    refreshLearningPath({ selectFirst: true });
-    showToast('info', `Progreso de la ruta de ${profile.name} reiniciado.`);
+    if (course) {
+        const lessons = getCourseLessons(course);
+        const nextLesson = lessons.find(lesson => !isCourseLessonCompleted(course, lesson.id)) || lessons[0] || null;
+        currentLearningLessonId = nextLesson?.id || null;
+        currentLessonStep = nextLesson ? getDefaultLessonStep(course, nextLesson) : 'concept';
+        renderCoursePlayer();
+    } else {
+        refreshLearningPath({ selectFirst: true });
+    }
+    showToast('info', `Progreso de ${scope} en ${datasetLabel} reiniciado.`);
 }
 
 // ============================================
@@ -7302,6 +10481,55 @@ function openNoSQLChallengesHub() {
     activateChallengeTab('nosql');
 }
 
+function syncMobileNavigation(sectionName) {
+    const moreSections = ['game', 'nosql', 'analyze'];
+    document.querySelectorAll('[data-mobile-section]').forEach(button => {
+        const active = button.dataset.mobileSection === sectionName;
+        button.classList.toggle('active', active);
+        if (active) {
+            button.setAttribute('aria-current', 'page');
+        } else {
+            button.removeAttribute('aria-current');
+        }
+    });
+
+    const moreActive = moreSections.includes(sectionName);
+    const moreButton = document.getElementById('mobileMoreBtn');
+    if (moreButton) {
+        moreButton.classList.toggle('active', moreActive);
+        if (moreActive) {
+            moreButton.setAttribute('aria-current', 'page');
+        } else {
+            moreButton.removeAttribute('aria-current');
+        }
+    }
+
+    document.querySelectorAll('[data-mobile-more-section]').forEach(button => {
+        const active = button.dataset.mobileMoreSection === sectionName;
+        button.classList.toggle('active', active);
+        if (active) {
+            button.setAttribute('aria-current', 'page');
+        } else {
+            button.removeAttribute('aria-current');
+        }
+    });
+}
+
+function openMobileMore() {
+    const modal = document.getElementById('mobileMoreModal');
+    const button = document.getElementById('mobileMoreBtn');
+    if (!modal) return;
+    button?.setAttribute('aria-expanded', 'true');
+    openModal(modal);
+}
+
+function closeMobileMore() {
+    const modal = document.getElementById('mobileMoreModal');
+    if (!modal) return;
+    closeModal(modal);
+    document.getElementById('mobileMoreBtn')?.focus();
+}
+
 function activateSection(sectionName) {
     document.querySelectorAll('.nav-btn').forEach(btn => {
         const active = btn.dataset.section === sectionName;
@@ -7326,6 +10554,18 @@ function activateSection(sectionName) {
         const activeTab = document.querySelector('.challenge-tab.active')?.dataset.challengeTab || 'sql';
         activateChallengeTab(activeTab);
     }
+
+    if (sectionName === 'path') {
+        if (currentCourseView === 'player') {
+            renderCoursePlayer();
+        } else if (currentCourseView === 'detail' && currentCourseId) {
+            renderCourseDetail(currentCourseId);
+        } else {
+            renderCourseCatalog();
+        }
+    }
+
+    syncMobileNavigation(sectionName);
 }
 
 // NAVEGACIÓN ENTRE SECCIONES
@@ -7340,6 +10580,11 @@ document.addEventListener('DOMContentLoaded', function() {
             activateSection(this.dataset.section);
         });
     });
+
+    document.querySelectorAll('[data-mobile-section]').forEach(btn => {
+        btn.addEventListener('click', () => activateSection(btn.dataset.mobileSection));
+    });
+    syncMobileNavigation(document.querySelector('.section.active')?.id.replace('section-', '') || 'learn');
 
     document.querySelectorAll('.challenge-tab').forEach(tab => {
         tab.addEventListener('click', () => activateChallengeTab(tab.dataset.challengeTab));
@@ -7359,6 +10604,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Preferencias e historial guardados en el navegador.
     loadPreferences();
     applyPreferences();
+    loadSkillProfile();
+    applySkillLevelUI();
     loadHistoryFromStorage();
     updateHistoryDisplay();
     renderCategorySelector();
@@ -7384,6 +10631,14 @@ document.addEventListener('click', function(e) {
     if (e.target.classList && e.target.classList.contains('modal')) {
         closeModal(e.target);
     }
+    const toolbarMenu = document.getElementById('sqlMoreMenu');
+    if (toolbarMenu && toolbarMenu.open && !toolbarMenu.contains(e.target)) {
+        toolbarMenu.open = false;
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeToolbarMore();
 });
 
 document.addEventListener('dblclick', function(e) {
@@ -7844,7 +11099,7 @@ function renderGuideStep(index) {
                 <i class="fas ${step.icon}"></i>
             </div>
             <div>
-                <div style="font-size:0.8em; color:#999;">Paso ${index + 1} de ${totalSteps}</div>
+                <div style="font-size:0.8em; color:var(--text-muted);">Paso ${index + 1} de ${totalSteps}</div>
                 <h3 style="color:#2c3e50; margin:0; font-size:1.2em;">${step.title}</h3>
             </div>
         </div>
@@ -7858,7 +11113,7 @@ function renderGuideStep(index) {
             <button onclick="previousGuideStep()" class="btn-secondary" ${index === 0 ? 'style="visibility:hidden;"' : ''}>
                 <i class="fas fa-arrow-left"></i> Anterior
             </button>
-            <span style="color:#999; font-size:0.85em; display:flex; align-items:center;">
+            <span style="color:var(--text-muted); font-size:0.85em; display:flex; align-items:center;">
                 ${index + 1} / ${totalSteps}
             </span>
             <button onclick="nextGuideStep()" class="btn-secondary">
@@ -7895,7 +11150,7 @@ window.showExamples = showExamples;
 window.clearHistory = clearHistory;
 window.loadHistoryQuery = loadHistoryQuery;
 window.exportDatabase = exportDatabase;
-window.importDatabase = importDatabase;
+window.closeToolbarMore = closeToolbarMore;
 window.loadTableEditor = loadTableEditor;
 window.deleteRow = deleteRow;
 window.addRow = addRow;
@@ -7932,6 +11187,34 @@ window.openDebugChallenge = openDebugChallenge;
 window.runDebugChallenge = runDebugChallenge;
 window.showDebugHint = showDebugHint;
 window.showDebugSolution = showDebugSolution;
+window.getSkillLevel = getSkillLevel;
+window.getEffectiveSkillLevel = getEffectiveSkillLevel;
+window.setSkillLevel = setSkillLevel;
+window.openSkillTest = openSkillTest;
+window.closeSkillTest = closeSkillTest;
+window.selectSkillTestOption = selectSkillTestOption;
+window.nextSkillTestQuestion = nextSkillTestQuestion;
+window.skipSkillTestQuestion = skipSkillTestQuestion;
+window.getCurrentSkillTestQuestion = getCurrentSkillTestQuestion;
+window.calculateSkillLevelFromAnswers = calculateSkillLevelFromAnswers;
+window.getVisibleExampleCategories = getVisibleExampleCategories;
+window.getNoSQLExampleLevel = getNoSQLExampleLevel;
+window.getSkillLevelInfo = getSkillLevelInfo;
+window.getWeakConcepts = getWeakConcepts;
+window.renderSkillProfileCards = renderSkillProfileCards;
+window.practiceSkillTarget = practiceSkillTarget;
+window.startDemoTour = startDemoTour;
+window.nextDemoTourStep = nextDemoTourStep;
+window.previousDemoTourStep = previousDemoTourStep;
+window.closeDemoTour = closeDemoTour;
+window.openProgressReport = openProgressReport;
+window.printProgressReport = printProgressReport;
+window.closeProgressReport = closeProgressReport;
+window.buildProgressReportHtml = buildProgressReportHtml;
+window.filterNoSQLExamplesBySkill = filterNoSQLExamplesBySkill;
+window.getSkillTestQuestions = getSkillTestQuestions;
+window.renderNoSQLQuickSyntax = renderNoSQLQuickSyntax;
+window.loadSkillProfile = loadSkillProfile;
 window.resetDebugQuery = resetDebugQuery;
 window.nextDebugChallenge = nextDebugChallenge;
 window.resetDebugChallengeProgress = resetDebugChallengeProgress;
@@ -7943,6 +11226,14 @@ window.showDonationQR = showDonationQR;
 window.openDBInfo = openDBInfo;
 window.closeDBModal = closeDBModal;
 window.openConcept = openConcept;
+window.renderInstallGuides = renderInstallGuides;
+window.filterInstallGuides = filterInstallGuides;
+window.setInstallFilter = setInstallFilter;
+window.openInstallGuide = openInstallGuide;
+window.selectInstallOs = selectInstallOs;
+window.copyInstallCommand = copyInstallCommand;
+window.closeInstallGuide = closeInstallGuide;
+window.openInstallFromDBInfo = openInstallFromDBInfo;
 window.closeConceptModal = closeConceptModal;
 window.openSQLGuide = openSQLGuide;
 window.closeSQLGuide = closeSQLGuide;

@@ -29,3 +29,7 @@ build/
 # Temporales
 *.tmp
 *.bak
+
+# Playwright
+playwright-report/
+test-results/

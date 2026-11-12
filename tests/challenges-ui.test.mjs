@@ -68,6 +68,9 @@ const { window } = dom;
 window.confirm = () => true;
 window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
 window.eval(fs.readFileSync(new URL('../nosql-datasets.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
 window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 await new Promise(resolve => setTimeout(resolve, 20));

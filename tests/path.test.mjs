@@ -53,6 +53,9 @@ window.localStorage.setItem(
     JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
 );
 window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
+window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
 window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 await new Promise(resolve => setTimeout(resolve, 30));
@@ -122,16 +125,16 @@ function createSqliteAdapter(sql) {
     };
 }
 
-test('la ruta tiene ocho lecciones por dataset', () => {
-    const expectedIds = ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery'];
+test('la ruta tiene once lecciones por dataset', () => {
+    const expectedIds = ['select', 'where', 'order', 'limit', 'join', 'group', 'having', 'subquery', 'case', 'cte', 'rank'];
 
     for (const datasetName of ['escuela', 'tienda', 'biblioteca']) {
         const lessons = window.getLearningLessonsForDataset(datasetName);
-        assert.equal(lessons.length, 8);
+        assert.equal(lessons.length, 11);
         assert.deepEqual([...lessons.map(lesson => lesson.id)], expectedIds);
 
         for (const lesson of lessons) {
-            assert.match(lesson.expectedSql, /^SELECT\b/i);
+            assert.match(lesson.expectedSql, /^(SELECT|WITH)\b/i);
             assert.ok(lesson.objective);
             assert.ok(lesson.explanation);
             assert.ok(lesson.example);
@@ -211,28 +214,29 @@ test('los ejemplos de la ruta no resuelven el ejercicio directamente', () => {
     }
 });
 
-test('la ruta renderiza pasos, editor, dataset y progreso', () => {
+test('el curso renderiza pasos, editor, dataset y progreso', () => {
     window.localStorage.setItem(
         'sql-academy-preferences-v1',
         JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
     );
     window.loadPreferences();
-    window.refreshLearningPath({ selectFirst: true });
+    window.startCourse('sql-desde-cero');
+    window.goToLessonStep('practice');
 
-    assert.equal(document.querySelectorAll('#pathLessonList [data-learning-lesson]').length, 8);
+    assert.equal(document.querySelectorAll('#pathLessonList [data-learning-lesson]').length, 4);
     assert.match(document.getElementById('pathDatasetLabel').textContent, /Tienda/);
-    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 8');
+    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
     assert.ok(document.getElementById('pathEditor'));
     assert.match(document.getElementById('pathEditor').value, /productos/);
 
     window.markLearningLessonCompleted('select');
     window.renderLearningPathList();
 
-    assert.equal(document.getElementById('pathProgressText').textContent, '1 de 8');
+    assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
     assert.equal(document.querySelectorAll('#pathLessonList .completed').length, 1);
 
     window.resetLearningProgress();
-    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 8');
+    assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
 });
 
 test('el dashboard muestra progreso, conceptos, actividad y recomendación', () => {
@@ -254,11 +258,11 @@ test('el dashboard muestra progreso, conceptos, actividad y recomendación', () 
     assert.match(dashboard.textContent, /Progreso global/);
     assert.match(dashboard.textContent, /Dataset activo: Tienda/);
     assert.match(dashboard.textContent, /Dominio por concepto/);
-    assert.match(dashboard.textContent, /1\/24/);
+    assert.match(dashboard.textContent, /1\/33/);
     assert.match(dashboard.textContent, /1\/20/);
     assert.match(dashboard.textContent, /Seleccionar/);
     assert.match(dashboard.textContent, /Filtros/);
-    assert.match(dashboard.textContent, /2 de 14 actividades/);
+    assert.match(dashboard.textContent, /2 de 17 actividades/);
     assert.match(dashboard.textContent, /Selecciona columnas/);
     assert.match(dashboard.textContent, /Productos con stock bajo/);
     assert.match(dashboard.textContent, /Siguiente paso recomendado/);
@@ -296,21 +300,27 @@ test('runLearningLesson valida una consulta y muestra el siguiente paso', () => 
     const { database, adapter } = createSqliteAdapter(window.SQL_ACADEMY_DATASETS.tienda.sql);
 
     try {
-        window.refreshLearningPath({ selectFirst: true });
+        window.startCourse('sql-desde-cero');
+        window.goToLessonStep('practice');
         const editor = document.getElementById('pathEditor');
         editor.value = 'SELECT nombre, precio FROM productos;';
         window.runLearningLesson(adapter, true);
 
-        assert.match(document.getElementById('pathResult').textContent, /Lección completada/);
-        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 8');
+        assert.match(document.getElementById('pathResult').textContent, /Práctica superada/);
+        assert.equal(document.getElementById('pathProgressText').textContent, '0 de 4');
         assert.equal(document.getElementById('pathNext').hidden, false);
 
+        window.markLearningQuizPassed('select');
+        window.renderLearningPathList();
+        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
+
         window.selectLearningLesson('where');
+        window.goToLessonStep('practice');
         document.getElementById('pathEditor').value = "SELECT nombre, categoria FROM productos WHERE categoria = 'Audio';";
         window.runLearningLesson(adapter, true);
 
         assert.match(document.getElementById('pathResult').textContent, /Todavía no/);
-        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 8');
+        assert.equal(document.getElementById('pathProgressText').textContent, '1 de 4');
     } finally {
         database.close();
     }

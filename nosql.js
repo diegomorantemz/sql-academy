@@ -62,12 +62,14 @@
     }
 
     function getActiveExamples() {
-        if (typeof global.getNoSQLExamplesForDataset === 'function') {
-            return global.getNoSQLExamplesForDataset(datasetName);
-        }
-        return Array.isArray(global.NOSQL_EXAMPLES)
-            ? global.NOSQL_EXAMPLES.filter(example => example.dataset === datasetName)
-            : [];
+        const examples = typeof global.getNoSQLExamplesForDataset === 'function'
+            ? global.getNoSQLExamplesForDataset(datasetName)
+            : (Array.isArray(global.NOSQL_EXAMPLES)
+                ? global.NOSQL_EXAMPLES.filter(example => example.dataset === datasetName)
+                : []);
+        return typeof global.filterNoSQLExamplesBySkill === 'function'
+            ? global.filterNoSQLExamplesBySkill(examples)
+            : examples;
     }
 
     function getActiveChallenges() {
@@ -328,9 +330,16 @@
         }
 
         select.disabled = false;
-        select.innerHTML = examples.map((example, index) => (
-            `<option value="${index}">${escapeHtml(example.category)} · ${escapeHtml(example.title)}</option>`
-        )).join('');
+        const showLevels = typeof global.getEffectiveSkillLevel === 'function'
+            && global.getEffectiveSkillLevel('nosql') === 'all';
+        select.innerHTML = examples.map((example, index) => {
+            const levelLabel = showLevels
+                && typeof global.getNoSQLExampleLevel === 'function'
+                && typeof global.getSkillLevelInfo === 'function'
+                ? `[${global.getSkillLevelInfo(global.getNoSQLExampleLevel(example)).label}] `
+                : '';
+            return `<option value="${index}">${levelLabel}${escapeHtml(example.category)} · ${escapeHtml(example.title)}</option>`;
+        }).join('');
         if (status) status.textContent = 'Elige un ejemplo para cargarlo en el editor';
     }
 
@@ -605,6 +614,9 @@
                     saveChallengeProgress();
                     renderChallenges();
                 }
+                if (typeof global.playSound === 'function') {
+                    global.playSound(feedback.ok ? 'success' : 'error');
+                }
             }
 
             showToast(result.type === 'write' ? 'success' : 'info', getResultSummary(result));
@@ -757,6 +769,9 @@
                 }
                 feedback.canRevealSolution = !feedback.ok && activeChallengeAttempts >= 2;
                 feedback.challengeId = activeChallengeId;
+                if (typeof global.playSound === 'function') {
+                    global.playSound(feedback.ok ? 'success' : 'error');
+                }
             }
 
             showToast(result.type === 'write' ? 'success' : 'info', getResultSummary(result));
@@ -893,6 +908,7 @@
     global.clearNoSQLQuery = clearQuery;
     global.loadNoSQLExample = loadExample;
     global.loadNextNoSQLExample = loadNextExample;
+    global.refreshNoSQLExamples = populateExamples;
     global.loadNoSQLCollection = loadCollection;
     global.resetNoSQLDatabase = resetDatabase;
     global.changeNoSQLDataset = changeDataset;
