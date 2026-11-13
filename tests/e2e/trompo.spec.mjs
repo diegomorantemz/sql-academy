@@ -7,7 +7,7 @@ async function openGame(page) {
     await page.evaluate(() => window.activateSection('game'));
 }
 
-test('Trompo corre, salta y pausa sin afectar Torre de Datos', async ({ page }, testInfo) => {
+test('Monte Mamut corre, salta, ataca y pausa sin afectar Torre de Datos', async ({ page }, testInfo) => {
     test.skip(!['mobile-390', 'desktop-1280'].includes(testInfo.project.name), 'Prueba en móvil y escritorio');
 
     await openGame(page);
@@ -31,8 +31,10 @@ test('Trompo corre, salta y pausa sin afectar Torre de Datos', async ({ page }, 
     await page.waitForTimeout(150);
     expect(await page.evaluate(() => window.Trompo.getState().onGround)).toBe(false);
 
-    await page.locator('#trompoRollbackBtn').click();
-    expect(await page.evaluate(() => window.Trompo.getState().rollbackAvailable)).toBe(false);
+    await page.locator('#trompoTrunkBtn').click();
+    await page.locator('#trompoStompBtn').dispatchEvent('pointerdown');
+    await page.waitForTimeout(120);
+    expect(await page.evaluate(() => window.Trompo.getState().mode)).toBe('running');
 
     await page.locator('#trompoPauseBtn').click();
     await expect(page.locator('#trompoOverlay')).toBeVisible();
@@ -45,7 +47,7 @@ test('Trompo corre, salta y pausa sin afectar Torre de Datos', async ({ page }, 
     await expect(page.locator('#gameTrompoPanel')).toBeHidden();
 });
 
-test('Trompo completa un nivel y avanza al siguiente', async ({ page }, testInfo) => {
+test('Monte Mamut completa un nivel y avanza al siguiente', async ({ page }, testInfo) => {
     test.skip(!['mobile-390', 'desktop-1280'].includes(testInfo.project.name), 'Prueba en móvil y escritorio');
 
     await openGame(page);
@@ -54,13 +56,13 @@ test('Trompo completa un nivel y avanza al siguiente', async ({ page }, testInfo
         window.TrompoInternals.LEVELS[0].rows = 5;
     });
     await page.locator('[data-trompo-action="start"]').click();
-    await expect(page.locator('#trompoOverlay')).toContainText('Nivel completado', { timeout: 5000 });
+    await expect(page.locator('#trompoOverlay')).toContainText('Nivel superado', { timeout: 5000 });
     await page.locator('[data-trompo-action="next"]').click();
-    await expect(page.locator('#trompoLevelLabel')).toHaveText('2 / 5');
+    await expect(page.locator('#trompoLevelLabel')).toHaveText('2 / 3');
     await expect(page.locator('#trompoOverlay')).toBeHidden();
 });
 
-test('Trompo responde a un mando conectado', async ({ page }, testInfo) => {
+test('Monte Mamut responde a un mando conectado', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-1280', 'Prueba de mando en escritorio');
 
     await page.addInitScript(() => {

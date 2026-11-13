@@ -7136,8 +7136,8 @@ const DEMO_TOUR_STEPS = [
         target: 'gameTower'
     },
     {
-        title: 'Corre con Trompo',
-        description: 'Un runner de cinco niveles: salta los NULL, aplasta bugs y recoge INDEX, CACHÉ y BACKUP. También se juega con mando.',
+        title: 'Corre con Monte Mamut',
+        description: 'Un runner de tres niveles por montañas nevadas: salta insectos, usa la trompa, come espinaca y encuentra aliados tecnológicos. También se juega con mando.',
         section: 'game',
         gameMode: 'trompo',
         target: 'trompoCanvas'

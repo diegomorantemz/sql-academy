@@ -688,7 +688,7 @@
         <section id="section-game" class="section">
             <div class="section-header">
                 <h2><i class="fas fa-gamepad"></i> Juegos</h2>
-                <p>Elige entre construir consultas con cartas o correr con Trompo, el elefante de las bases de datos</p>
+                <p>Elige entre construir consultas con cartas o acompañar a Trompo por Monte Mamut</p>
             </div>
 
             <div class="game-mode-bar" role="tablist" aria-label="Juegos disponibles">
@@ -696,7 +696,7 @@
                     <i class="fas fa-layer-group"></i> Torre de Datos
                 </button>
                 <button type="button" id="gameModeTrompoBtn" class="game-mode-btn" role="tab" aria-selected="false" aria-controls="gameTrompoPanel" onclick="switchGameMode('trompo')">
-                    <i class="fas fa-person-running"></i> Trompo
+                    <i class="fas fa-mountain"></i> Monte Mamut
                 </button>
             </div>
 
@@ -801,19 +801,21 @@
                         <div class="trompo-hud" aria-live="polite">
                             <div class="trompo-hud-item">
                                 <span>Nivel</span>
-                                <strong id="trompoLevelLabel">1 / 5</strong>
+                                <strong id="trompoLevelLabel">1 / 3</strong>
                             </div>
-                            <div class="trompo-hud-item">
-                                <span>Filas</span>
-                                <strong id="trompoRowsLabel">0 / 1200</strong>
+                            <div class="trompo-hud-item trompo-hud-meter">
+                                <span>Vida</span>
+                                <div class="trompo-meter"><span id="trompoHealthBar"></span></div>
+                                <strong id="trompoHealthLabel">100 / 100</strong>
+                            </div>
+                            <div class="trompo-hud-item trompo-hud-meter">
+                                <span>Escudo</span>
+                                <div class="trompo-meter trompo-meter-shield"><span id="trompoShieldBar"></span></div>
+                                <strong id="trompoShieldLabel">0 / 100</strong>
                             </div>
                             <div class="trompo-hud-item">
                                 <span>Puntos</span>
                                 <strong id="trompoScoreLabel">0</strong>
-                            </div>
-                            <div class="trompo-hud-item">
-                                <span>Vidas</span>
-                                <strong id="trompoLivesLabel">3</strong>
                             </div>
                         </div>
                         <div class="trompo-actions">
@@ -829,8 +831,10 @@
                         </div>
                     </div>
 
+                    <div id="trompoEffects" class="trompo-effects" aria-live="polite"></div>
+
                     <div class="trompo-stage">
-                        <canvas id="trompoCanvas" width="1000" height="360" tabindex="0" role="img" aria-label="Trompo, el elefante azul, corre por una tabla de base de datos. Salta los NULL y aplasta los bugs."></canvas>
+                        <canvas id="trompoCanvas" width="1000" height="360" tabindex="0" role="img" aria-label="Monte Mamut: Trompo, el mamut azul, corre por montañas nevadas, salta insectos y usa su trompa."></canvas>
                         <div id="trompoOverlay" class="trompo-overlay" hidden></div>
                     </div>
 
@@ -842,18 +846,18 @@
                         <button type="button" id="trompoJumpBtn" class="btn-primary">
                             <i class="fas fa-arrow-up"></i> Saltar
                         </button>
-                        <button type="button" id="trompoSmashBtn" class="btn-secondary">
-                            <i class="fas fa-bug"></i> Aplastar
+                        <button type="button" id="trompoTrunkBtn" class="btn-secondary">
+                            <i class="fas fa-hand-fist"></i> Trompa
                         </button>
-                        <button type="button" id="trompoRollbackBtn" class="btn-secondary">
-                            <i class="fas fa-rotate-left"></i> ROLLBACK
+                        <button type="button" id="trompoStompBtn" class="btn-secondary">
+                            <i class="fas fa-bug"></i> Aplastar
                         </button>
                     </div>
 
                     <div class="trompo-help">
-                        <p><strong>Teclado:</strong> Espacio o flecha arriba para saltar · flecha abajo o S para aplastar y agacharte · R para ROLLBACK · P para pausa.</p>
-                        <p><strong>Mando:</strong> A salta · X aplasta · B usa ROLLBACK · Start pausa.</p>
-                        <p>Recoge <strong>INDEX</strong> para acelerar, <strong>CACHÉ</strong> para protegerte y <strong>BACKUP</strong> para recuperar una vida. Cada nivel dura alrededor de un minuto.</p>
+                        <p><strong>Teclado:</strong> Espacio o flecha arriba para saltar · X o K para atacar con la trompa · flecha abajo o S para aplastar y agacharte · P para pausa.</p>
+                        <p><strong>Mando:</strong> A salta · X usa la trompa · B aplasta · Start pausa.</p>
+                        <p>La <strong>espinaca</strong> recupera vida y activa el modo relax: Trompo se pone verde, se le ponen los ojos rojos y camina más despacio, pero aplasta insectos al tocarlos. El <strong>escarabajo rojo Vocho</strong> devuelve toda la vida y el escudo. Los animales tecnológicos son aliados temporales.</p>
                     </div>
 
                     <div id="trompoGamepadStatus" class="trompo-gamepad-status" hidden>

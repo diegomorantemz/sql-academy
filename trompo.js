@@ -1,71 +1,86 @@
 /**
- * Trompo: runner educativo con un elefante azul y referencias a bases de datos.
+ * Monte Mamut: runner de descanso protagonizado por Trompo, un mamut azul.
  * Funciona con teclado, controles táctiles y mando (Gamepad API).
  */
 (function (global) {
     'use strict';
 
-    const STORAGE_KEY = 'sql-academy-trompo-v1';
-    const MUTE_KEY = 'sql-academy-trompo-muted';
+    const STORAGE_KEY = 'sql-academy-monte-mamut-v1';
+    const MUTE_KEY = 'sql-academy-monte-mamut-muted';
     const VIEW_W = 1000;
     const VIEW_H = 360;
     const GROUND_Y = 292;
     const ROW_PX = 12;
-    const PLAYER_X = 138;
+    const PLAYER_X = 140;
 
     const LEVELS = [
         {
-            id: 'from',
-            name: 'FROM',
-            title: 'El inicio de la consulta',
-            rows: 1200,
-            speed: 260,
-            spawn: 1.3,
-            accent: '#2563eb'
+            id: 'base',
+            name: 'Base del cerro',
+            rows: 2400,
+            speed: 270,
+            spawn: 1.15,
+            accent: '#5b8db8'
         },
         {
-            id: 'where',
-            name: 'WHERE',
-            title: 'Filtra los errores',
-            rows: 1400,
-            speed: 292,
-            spawn: 1.2,
-            accent: '#0f766e'
+            id: 'forest',
+            name: 'Bosque nevado',
+            rows: 2800,
+            speed: 300,
+            spawn: 1.0,
+            accent: '#3f7f6a'
         },
         {
-            id: 'group',
-            name: 'GROUP BY',
-            title: 'Agrupa y resiste',
-            rows: 1600,
-            speed: 324,
-            spawn: 1.08,
-            accent: '#7c3aed'
-        },
-        {
-            id: 'order',
-            name: 'ORDER BY',
-            title: 'Ordena el caos',
-            rows: 1800,
-            speed: 356,
-            spawn: 0.96,
-            accent: '#b45309'
-        },
-        {
-            id: 'limit',
-            name: 'LIMIT',
-            title: 'La recta final',
-            rows: 2000,
-            speed: 388,
-            spawn: 0.84,
-            accent: '#be123c'
+            id: 'summit',
+            name: 'Cumbre',
+            rows: 3200,
+            speed: 330,
+            spawn: 0.86,
+            accent: '#7c5cbf'
         }
     ];
 
-    const POWERUPS = {
-        index: { label: 'INDEX', color: '#16a34a', ink: '#052e16' },
-        cache: { label: 'CACHÉ', color: '#0284c7', ink: '#082f49' },
-        backup: { label: 'BACKUP', color: '#9333ea', ink: '#2e1065' },
-        truncate: { label: 'TRUNC', color: '#ea580c', ink: '#431407' }
+    const ALLIES = {
+        python: {
+            name: 'Serpiente',
+            label: 'PYTHON',
+            color: '#16a34a',
+            ink: '#052e16',
+            duration: 8,
+            effect: 'Doble salto'
+        },
+        git: {
+            name: 'Gato',
+            label: 'GIT',
+            color: '#ea580c',
+            ink: '#431407',
+            duration: 8,
+            effect: 'Checkpoint'
+        },
+        docker: {
+            name: 'Ballena',
+            label: 'DOCKER',
+            color: '#0284c7',
+            ink: '#082f49',
+            duration: 8,
+            effect: 'Escudo'
+        },
+        go: {
+            name: 'Topo',
+            label: 'GO',
+            color: '#0ea5e9',
+            ink: '#082f49',
+            duration: 6,
+            effect: 'Velocidad'
+        },
+        rust: {
+            name: 'Cangrejo',
+            label: 'RUST',
+            color: '#dc2626',
+            ink: '#450a0a',
+            duration: 8,
+            effect: 'Armadura'
+        }
     };
 
     let canvas = null;
@@ -102,6 +117,16 @@
         return clamp(state.rows / state.level.rows, 0, 1);
     }
 
+    function makeSnow() {
+        return Array.from({ length: 42 }, () => ({
+            x: Math.random() * VIEW_W,
+            y: Math.random() * VIEW_H,
+            size: 1 + Math.random() * 2.6,
+            speed: 14 + Math.random() * 34,
+            drift: -8 + Math.random() * 16
+        }));
+    }
+
     function makeState(levelIndex = 0, totalScore = 0) {
         const level = LEVELS[levelIndex] || LEVELS[0];
         return {
@@ -111,27 +136,42 @@
             distance: 0,
             rows: 0,
             score: 0,
-            lives: 3,
-            maxLives: 3,
+            health: 100,
+            maxHealth: 100,
+            shield: 0,
+            maxShield: 100,
             combo: 0,
             maxCombo: 0,
-            bugs: 0,
-            shield: 0,
+            insects: 0,
+            spinachTimer: 0,
             invincible: 0,
             boost: 0,
-            rollbackAvailable: true,
+            armorTimer: 0,
+            extraJumpTimer: 0,
+            checkpointActive: false,
+            checkpointTimer: 0,
+            dockerTimer: 0,
             ducking: false,
-            smashTimer: 0,
+            stompTimer: 0,
+            attackTimer: 0,
+            attackCooldown: 0,
             playerY: GROUND_Y,
             vy: 0,
             onGround: true,
+            airJumps: 0,
             obstacles: [],
             powerups: [],
             particles: [],
-            spawnTimer: 1.2,
-            powerTimer: 6,
+            snow: makeSnow(),
+            spawnTimer: 1.1,
+            powerTimer: 8,
+            allySpawns: [0.36, 0.72],
+            allySpawnIndex: 0,
+            alliesUsed: [],
+            vochoSpawned: false,
             shake: 0,
             flash: 0,
+            flashText: '',
             elapsed: 0
         };
     }
@@ -186,7 +226,7 @@
         try {
             audioContext = new AudioContextClass();
             masterGain = audioContext.createGain();
-            masterGain.gain.value = muted ? 0 : 0.11;
+            masterGain.gain.value = muted ? 0 : 0.1;
             masterGain.connect(audioContext.destination);
             if (audioContext.state === 'suspended') {
                 audioContext.resume().catch(() => {});
@@ -199,7 +239,7 @@
         }
     }
 
-    function playTone({ frequency, endFrequency = frequency, duration = 0.12, type = 'sine', gain = 0.05, delay = 0 }) {
+    function playTone({ frequency, endFrequency = frequency, duration = 0.12, type = 'sine', gain = 0.045, delay = 0 }) {
         if (muted) return;
         const context = ensureAudio();
         if (!context || !masterGain) return;
@@ -221,16 +261,22 @@
     function playSound(name) {
         if (muted) return;
         if (name === 'jump') {
-            playTone({ frequency: 360, endFrequency: 640, duration: 0.13, type: 'sine', gain: 0.045 });
-        } else if (name === 'smash') {
-            playTone({ frequency: 120, endFrequency: 55, duration: 0.14, type: 'square', gain: 0.05 });
-        } else if (name === 'collect') {
-            playTone({ frequency: 720, endFrequency: 980, duration: 0.11, type: 'triangle', gain: 0.045 });
+            playTone({ frequency: 350, endFrequency: 620, duration: 0.13, type: 'sine', gain: 0.04 });
+        } else if (name === 'trunk') {
+            playTone({ frequency: 190, endFrequency: 95, duration: 0.12, type: 'square', gain: 0.04 });
+        } else if (name === 'squash') {
+            playTone({ frequency: 125, endFrequency: 55, duration: 0.13, type: 'square', gain: 0.045 });
         } else if (name === 'hit') {
-            playTone({ frequency: 190, endFrequency: 70, duration: 0.28, type: 'sawtooth', gain: 0.045 });
-        } else if (name === 'rollback') {
-            playTone({ frequency: 280, endFrequency: 880, duration: 0.22, type: 'triangle', gain: 0.04 });
-            playTone({ frequency: 440, endFrequency: 220, duration: 0.18, type: 'sine', gain: 0.035, delay: 0.18 });
+            playTone({ frequency: 180, endFrequency: 65, duration: 0.28, type: 'sawtooth', gain: 0.045 });
+        } else if (name === 'spinach') {
+            playTone({ frequency: 600, endFrequency: 920, duration: 0.15, type: 'triangle', gain: 0.04 });
+        } else if (name === 'vocho') {
+            playTone({ frequency: 280, endFrequency: 560, duration: 0.18, type: 'triangle', gain: 0.05 });
+            playTone({ frequency: 420, endFrequency: 840, duration: 0.2, type: 'sine', gain: 0.04, delay: 0.14 });
+        } else if (name === 'ally') {
+            playTone({ frequency: 720, endFrequency: 980, duration: 0.12, type: 'triangle', gain: 0.04 });
+        } else if (name === 'checkpoint') {
+            playTone({ frequency: 440, endFrequency: 660, duration: 0.16, type: 'sine', gain: 0.04 });
         } else if (name === 'level') {
             [523.25, 659.25, 783.99].forEach((frequency, index) => {
                 playTone({ frequency, duration: 0.16, type: 'triangle', gain: 0.04, delay: index * 0.12 });
@@ -250,7 +296,7 @@
             ? '<i class="fas fa-volume-xmark"></i> <span>Silencio</span>'
             : '<i class="fas fa-volume-high"></i> <span>Sonido</span>';
         if (masterGain && audioContext) {
-            masterGain.gain.setTargetAtTime(muted ? 0 : 0.11, audioContext.currentTime, 0.02);
+            masterGain.gain.setTargetAtTime(muted ? 0 : 0.1, audioContext.currentTime, 0.02);
         }
     }
 
@@ -258,22 +304,42 @@
         muted = !muted;
         writeStored(MUTE_KEY, muted);
         updateMuteButton();
-        if (!muted) playSound('collect');
+        if (!muted) playSound('ally');
+    }
+
+    function getEffects(state = game) {
+        const effects = [];
+        if (state.spinachTimer > 0) effects.push({ label: 'ESPINACA', time: Math.ceil(state.spinachTimer), tone: 'green' });
+        if (state.extraJumpTimer > 0) effects.push({ label: 'PYTHON', time: Math.ceil(state.extraJumpTimer), tone: 'green' });
+        if (state.checkpointActive) effects.push({ label: 'GIT', time: Math.ceil(state.checkpointTimer), tone: 'orange' });
+        if (state.dockerTimer > 0) effects.push({ label: 'DOCKER', time: Math.ceil(state.dockerTimer), tone: 'blue' });
+        if (state.boost > 0) effects.push({ label: 'GO', time: Math.ceil(state.boost), tone: 'blue' });
+        if (state.armorTimer > 0) effects.push({ label: 'RUST', time: Math.ceil(state.armorTimer), tone: 'red' });
+        return effects;
+    }
+
+    function updateEffects() {
+        if (!els.effects || !game) return;
+        const effects = getEffects();
+        const signature = effects.map(effect => `${effect.label}-${effect.time}`).join('|');
+        if (els.effects.dataset.signature === signature) return;
+        els.effects.dataset.signature = signature;
+        els.effects.innerHTML = effects.map(effect => `
+            <span class="trompo-effect trompo-effect-${effect.tone}">${effect.label} <b>${effect.time}s</b></span>
+        `).join('');
     }
 
     function updateHud() {
         if (!game) return;
         if (els.level) els.level.textContent = `${game.levelIndex + 1} / ${LEVELS.length}`;
-        if (els.rows) els.rows.textContent = `${formatNumber(game.rows)} / ${formatNumber(game.level.rows)}`;
         if (els.score) els.score.textContent = formatNumber(getRunScore());
-        if (els.lives) els.lives.textContent = `${game.lives} / ${game.maxLives}`;
+        if (els.healthBar) els.healthBar.style.width = `${Math.round(game.health / game.maxHealth * 100)}%`;
+        if (els.healthLabel) els.healthLabel.textContent = `${Math.round(game.health)} / ${game.maxHealth}`;
+        if (els.shieldBar) els.shieldBar.style.width = `${Math.round(game.shield / game.maxShield * 100)}%`;
+        if (els.shieldLabel) els.shieldLabel.textContent = `${Math.round(game.shield)} / ${game.maxShield}`;
         if (els.progressBar) els.progressBar.style.width = `${Math.round(getProgress() * 100)}%`;
         if (els.progressTrack) {
             els.progressTrack.setAttribute('aria-valuenow', String(Math.round(getProgress() * 100)));
-        }
-        if (els.rollback) {
-            els.rollback.disabled = !game.rollbackAvailable;
-            els.rollback.setAttribute('aria-disabled', String(!game.rollbackAvailable));
         }
         if (els.pause) {
             const labels = {
@@ -293,6 +359,7 @@
                 if (label) label.textContent = current.text;
             }
         }
+        updateEffects();
     }
 
     function setOverlayContent(html) {
@@ -308,18 +375,15 @@
         }
     }
 
-    function levelLabel(level) {
-        return `${level.name} · ${level.title}`;
-    }
-
     function showStartOverlay() {
         const bestText = best.score > 0
             ? `<p class="trompo-overlay-note">Mejor puntaje: <strong>${formatNumber(best.score)}</strong></p>`
             : '';
         setOverlayContent(`
-            <span class="trompo-overlay-kicker">5 niveles · 5 minutos</span>
-            <h3>Trompo</h3>
-            <p>Corre por la tabla, salta los <strong>NULL</strong> y aplasta los <strong>bugs</strong>. Recoge índices, caché y backups para llegar al final de la consulta.</p>
+            <span class="trompo-overlay-kicker">3 niveles · modo descanso</span>
+            <h3>Monte Mamut</h3>
+            <p>Acompaña a Trompo por la montaña nevada. Salta, usa la trompa y aplasta insectos.</p>
+            <p class="trompo-relax-phrase">“No todo es estudiar o programar. También hay tiempo para jugar.”</p>
             <div class="trompo-level-list">
                 ${LEVELS.map((level, index) => `
                     <span class="${index === 0 ? 'is-next' : ''}">
@@ -330,16 +394,16 @@
             ${bestText}
             <div class="trompo-overlay-actions">
                 <button type="button" class="btn-primary" data-trompo-action="start">
-                    <i class="fas fa-play"></i> Comenzar nivel 1
+                    <i class="fas fa-play"></i> Comenzar en la base
                 </button>
             </div>
-            <p class="trompo-overlay-note">Teclado: Espacio para saltar · ↓ o S para aplastar · R para ROLLBACK · P para pausa.</p>
+            <p class="trompo-overlay-note">Espacio salta · X usa la trompa · ↓ o S aplasta · P pausa. También funciona con mando.</p>
         `);
     }
 
     function showPauseOverlay() {
         setOverlayContent(`
-            <span class="trompo-overlay-kicker">Consulta en pausa</span>
+            <span class="trompo-overlay-kicker">La montaña puede esperar</span>
             <h3>Pausa</h3>
             <p>El nivel ${game.level.name} está detenido. Puedes continuar o reiniciar este nivel.</p>
             <div class="trompo-overlay-actions">
@@ -354,31 +418,30 @@
     }
 
     function showLevelOverlay(completed) {
-        const runScore = getRunScore();
         const next = LEVELS[game.levelIndex + 1];
         setOverlayContent(`
             <span class="trompo-overlay-kicker">Nivel ${game.levelIndex + 1} de ${LEVELS.length}</span>
-            <h3>${completed ? 'Nivel completado' : 'Consulta interrumpida'}</h3>
+            <h3>${completed ? 'Nivel superado' : 'Trompo se quedó sin fuerza'}</h3>
             <p>${completed
-                ? `Superaste <strong>${game.level.name}</strong>. ${next ? `Ahora toca ${next.name}.` : 'Completaste todos los niveles.'}`
-                : `Trompo chocó con un error en <strong>${game.level.name}</strong>. Puedes intentarlo otra vez.`}</p>
+                ? `Llegaste al final de <strong>${game.level.name}</strong>. ${next ? `Ahora toca ${next.name}.` : 'Alcanzaste la cumbre.'}`
+                : `La montaña puede esperar. Descansa un momento y vuelve a intentar <strong>${game.level.name}</strong>.`}</p>
             <div class="trompo-summary">
-                <div><span>Puntos</span><strong>${formatNumber(runScore)}</strong></div>
-                <div><span>Filas</span><strong>${formatNumber(game.rows)}</strong></div>
-                <div><span>Bugs</span><strong>${formatNumber(game.bugs)}</strong></div>
+                <div><span>Puntos</span><strong>${formatNumber(getRunScore())}</strong></div>
+                <div><span>Insectos</span><strong>${formatNumber(game.insects)}</strong></div>
+                <div><span>Vida</span><strong>${Math.round(game.health)}</strong></div>
                 <div><span>Combo</span><strong>x${game.maxCombo}</strong></div>
             </div>
             <div class="trompo-overlay-actions">
                 ${completed && next
                     ? `<button type="button" class="btn-primary" data-trompo-action="next">
-                        <i class="fas fa-arrow-right"></i> Jugar ${next.name}
+                        <i class="fas fa-arrow-right"></i> Ir a ${next.name}
                     </button>`
                     : completed
                         ? `<button type="button" class="btn-primary" data-trompo-action="restart-game">
                             <i class="fas fa-rotate-left"></i> Jugar de nuevo
                         </button>`
                         : `<button type="button" class="btn-primary" data-trompo-action="restart">
-                            <i class="fas fa-rotate-left"></i> Reintentar ${game.level.name}
+                            <i class="fas fa-rotate-left"></i> Reintentar nivel
                         </button>`}
                 ${completed && next ? `
                     <button type="button" class="btn-secondary" data-trompo-action="restart">
@@ -391,12 +454,13 @@
 
     function showVictoryOverlay() {
         setOverlayContent(`
-            <span class="trompo-overlay-kicker">Consulta completada</span>
-            <h3>¡Trompo llegó al LIMIT!</h3>
-            <p>Completaste los cinco niveles. La consulta terminó sin errores.</p>
+            <span class="trompo-overlay-kicker">Cumbre alcanzada</span>
+            <h3>¡Trompo llegó a la cima!</h3>
+            <p>Terminaste los tres niveles. La montaña puede esperar; tú también puedes descansar.</p>
+            <p class="trompo-relax-phrase">“No todo es estudiar o programar. También hay tiempo para jugar.”</p>
             <div class="trompo-summary">
                 <div><span>Puntos</span><strong>${formatNumber(getRunScore())}</strong></div>
-                <div><span>Bugs</span><strong>${formatNumber(game.bugs)}</strong></div>
+                <div><span>Insectos</span><strong>${formatNumber(game.insects)}</strong></div>
                 <div><span>Nivel</span><strong>${LEVELS.length} / ${LEVELS.length}</strong></div>
             </div>
             <div class="trompo-overlay-actions">
@@ -479,38 +543,137 @@
     }
 
     function jump() {
-        if (mode !== 'running' || !game.onGround) return;
-        game.vy = -590;
-        game.onGround = false;
-        game.ducking = false;
-        game.smashTimer = 0;
-        playSound('jump');
+        if (mode !== 'running') return;
+        if (game.onGround) {
+            game.vy = -620;
+            game.onGround = false;
+            game.airJumps = 0;
+            game.ducking = false;
+            game.stompTimer = 0;
+            playSound('jump');
+            return;
+        }
+        if (game.extraJumpTimer > 0 && game.airJumps < 1) {
+            game.vy = -520;
+            game.airJumps += 1;
+            playSound('jump');
+        }
     }
 
-    function smash(hold = false) {
+    function attack() {
+        if (mode !== 'running' || game.attackCooldown > 0) return;
+        game.attackTimer = 0.28;
+        game.attackCooldown = 0.42;
+        game.ducking = false;
+        playSound('trunk');
+    }
+
+    function stomp() {
         if (mode !== 'running') return;
         game.ducking = true;
-        game.smashTimer = 0.28;
-        if (!hold) {
+        game.stompTimer = 0.3;
+        if (!keyDuckHeld) {
             clearTimeout(duckReleaseTimer);
             duckReleaseTimer = setTimeout(() => {
                 if (mode === 'running' && !keyDuckHeld) {
                     game.ducking = false;
-                    game.smashTimer = 0;
+                    game.stompTimer = 0;
                 }
-            }, 280);
+            }, 300);
         }
     }
 
-    function rollback() {
-        if (mode !== 'running' || !game.rollbackAvailable) return;
-        game.rollbackAvailable = false;
-        game.obstacles.forEach(obstacle => { obstacle.dead = true; });
-        game.invincible = 1.4;
-        game.shake = 0.7;
-        game.flash = 0.55;
-        playSound('rollback');
+    function applySpinach(state = game) {
+        state.health = Math.min(state.maxHealth, state.health + 35);
+        state.spinachTimer = 8;
+        return state;
+    }
+
+    function applyVocho(state = game) {
+        state.health = state.maxHealth;
+        state.shield = state.maxShield;
+        state.score += 150;
+        return state;
+    }
+
+    function applyAlly(state = game, type) {
+        const ally = ALLIES[type];
+        if (!ally) return state;
+        state.score += 40;
+        if (type === 'python') state.extraJumpTimer = ally.duration;
+        else if (type === 'git') {
+            state.checkpointActive = true;
+            state.checkpointTimer = ally.duration;
+        } else if (type === 'docker') {
+            state.shield = Math.min(state.maxShield, state.shield + 60);
+            state.dockerTimer = ally.duration;
+        } else if (type === 'go') {
+            state.boost = ally.duration;
+        } else if (type === 'rust') {
+            state.armorTimer = ally.duration;
+        }
+        return state;
+    }
+
+    function applyDamageToState(state, amount) {
+        let remaining = amount;
+        if (state.armorTimer > 0) remaining *= 0.5;
+        if (state.shield > 0) {
+            const absorbed = Math.min(state.shield, remaining);
+            state.shield -= absorbed;
+            remaining -= absorbed;
+        }
+        if (remaining > 0) {
+            state.health = Math.max(0, state.health - remaining);
+        }
+        return { state, remaining };
+    }
+
+    function damage(amount = 22) {
+        if (mode !== 'running' || game.invincible > 0) return;
+
+        if (game.checkpointActive) {
+            game.checkpointActive = false;
+            game.checkpointTimer = 0;
+            game.invincible = 1.2;
+            game.flashText = 'CHECKPOINT';
+            game.flash = 0.4;
+            playSound('checkpoint');
+            updateHud();
+            return;
+        }
+
+        const result = applyDamageToState(game, amount);
+        game.invincible = 1.2;
+        game.combo = 0;
+        game.shake = 0.6;
+        game.flashText = result.remaining > 0 ? `-${Math.round(result.remaining)}` : 'ESCUDO';
+        game.flash = 0.32;
+        playSound('hit');
         updateHud();
+        if (game.health <= 0) gameOver();
+    }
+
+    function gameOver() {
+        if (mode !== 'running') return;
+        mode = 'gameOver';
+        stopLoop();
+        saveBest(getRunScore(), game.levelIndex);
+        updateHud();
+        showLevelOverlay(false);
+        playSound('gameover');
+    }
+
+    function completeLevel() {
+        if (mode !== 'running') return;
+        const isLast = game.levelIndex >= LEVELS.length - 1;
+        mode = isLast ? 'victory' : 'levelComplete';
+        stopLoop();
+        saveBest(getRunScore(), game.levelIndex + 1, isLast);
+        updateHud();
+        if (isLast) showVictoryOverlay();
+        else showLevelOverlay(true);
+        playSound('level');
     }
 
     function startLoop() {
@@ -537,9 +700,15 @@
         }
     }
 
+    function getSpeed() {
+        const base = game.level.speed * (1 + 0.2 * getProgress());
+        const spinach = game.spinachTimer > 0 ? 0.72 : 1;
+        const boost = game.boost > 0 ? 1.22 : 1;
+        return base * spinach * boost;
+    }
+
     function update(dt) {
-        const level = game.level;
-        const speed = level.speed * (1 + 0.28 * getProgress()) + (game.boost > 0 ? 95 : 0);
+        const speed = getSpeed();
         const previousRows = game.rows;
         game.distance += speed * dt;
         game.rows = Math.floor(game.distance / ROW_PX);
@@ -548,126 +717,196 @@
         }
         game.elapsed += dt;
 
-        if (game.rows >= level.rows) {
-            game.rows = level.rows;
+        if (game.rows >= game.level.rows) {
+            game.rows = game.level.rows;
             completeLevel();
             return;
         }
 
-        if (game.boost > 0) game.boost = Math.max(0, game.boost - dt);
-        if (game.shield > 0) game.shield = Math.max(0, game.shield - dt);
+        if (game.spinachTimer > 0) game.spinachTimer = Math.max(0, game.spinachTimer - dt);
         if (game.invincible > 0) game.invincible = Math.max(0, game.invincible - dt);
+        if (game.boost > 0) game.boost = Math.max(0, game.boost - dt);
+        if (game.armorTimer > 0) game.armorTimer = Math.max(0, game.armorTimer - dt);
+        if (game.extraJumpTimer > 0) game.extraJumpTimer = Math.max(0, game.extraJumpTimer - dt);
+        if (game.dockerTimer > 0) game.dockerTimer = Math.max(0, game.dockerTimer - dt);
+        if (game.checkpointTimer > 0) {
+            game.checkpointTimer = Math.max(0, game.checkpointTimer - dt);
+            if (game.checkpointTimer === 0) game.checkpointActive = false;
+        }
+        if (game.attackTimer > 0) game.attackTimer = Math.max(0, game.attackTimer - dt);
+        if (game.attackCooldown > 0) game.attackCooldown = Math.max(0, game.attackCooldown - dt);
+        if (game.stompTimer > 0) {
+            game.stompTimer = Math.max(0, game.stompTimer - dt);
+            if (game.stompTimer === 0 && !keyDuckHeld) game.ducking = false;
+        }
         if (game.shake > 0) game.shake = Math.max(0, game.shake - dt * 2.5);
-        if (game.flash > 0) game.flash = Math.max(0, game.flash - dt * 2);
+        if (game.flash > 0) {
+            game.flash = Math.max(0, game.flash - dt * 2);
+            if (game.flash === 0) game.flashText = '';
+        }
 
         if (!game.onGround) {
-            game.vy += 1600 * dt;
+            game.vy += 1650 * dt;
             game.playerY += game.vy * dt;
             if (game.playerY >= GROUND_Y) {
                 game.playerY = GROUND_Y;
                 game.vy = 0;
                 game.onGround = true;
+                game.airJumps = 0;
             }
-        }
-
-        if (game.smashTimer > 0) {
-            game.smashTimer = Math.max(0, game.smashTimer - dt);
-            if (game.smashTimer === 0 && !keyDuckHeld) game.ducking = false;
         }
 
         game.spawnTimer -= dt;
         if (game.spawnTimer <= 0) {
-            spawnObstacle();
-            game.spawnTimer = Math.max(0.62, level.spawn - game.levelIndex * 0.04) + Math.random() * 0.52;
+            spawnInsect();
+            game.spawnTimer = Math.max(0.62, game.level.spawn - game.levelIndex * 0.06) + Math.random() * 0.5;
         }
 
         game.powerTimer -= dt;
         if (game.powerTimer <= 0) {
-            spawnPowerup();
-            game.powerTimer = 7 + Math.random() * 4;
+            spawnSpinach();
+            game.powerTimer = 12 + Math.random() * 5;
         }
 
-        moveEntities(game.obstacles, speed, dt);
-        moveEntities(game.powerups, speed, dt);
+        if (!game.vochoSpawned && getProgress() >= 0.55) {
+            game.vochoSpawned = true;
+            spawnVocho();
+        }
+
+        while (game.allySpawnIndex < game.allySpawns.length && getProgress() >= game.allySpawns[game.allySpawnIndex]) {
+            spawnAlly();
+            game.allySpawnIndex += 1;
+        }
+
+        moveEntities(speed, dt);
         checkCollisions();
+        updateSnow(dt);
         updateParticles(dt);
         pollGamepad();
         updateHud();
     }
 
-    function moveEntities(entities, speed, dt) {
-        for (const entity of entities) {
-            entity.x -= speed * dt;
-            if (entity.type === 'bird') {
-                entity.y += Math.sin(game.elapsed * 4 + entity.seed) * 12 * dt;
+    function moveEntities(speed, dt) {
+        for (const insect of game.obstacles) {
+            insect.x -= speed * dt;
+            if (insect.variant === 'cricket') {
+                insect.y = insect.baseY - Math.abs(Math.sin(game.elapsed * 5 + insect.seed)) * 22;
+            } else if (insect.flying) {
+                insect.y = insect.baseY + Math.sin(game.elapsed * 3.2 + insect.seed) * 18;
             }
-            if (entity.x + entity.w < -30) entity.dead = true;
+            if (insect.x + insect.w < -40) insect.dead = true;
         }
-        game.obstacles = game.obstacles.filter(entity => !entity.dead);
-        game.powerups = game.powerups.filter(entity => !entity.dead);
+
+        for (const item of game.powerups) {
+            item.x -= speed * dt;
+            item.y += Math.sin(game.elapsed * 4 + item.seed) * 8 * dt;
+            if (item.x + item.w < -40) item.dead = true;
+        }
+
+        game.obstacles = game.obstacles.filter(insect => !insect.dead);
+        game.powerups = game.powerups.filter(item => !item.dead);
     }
 
-    function spawnObstacle() {
-        const options = ['null', 'bug', 'lock'];
-        if (game.levelIndex >= 1) options.push('bird');
-        if (game.levelIndex >= 2) options.push('duplicate');
-        if (game.levelIndex >= 3) options.push('bug', 'null');
-        const type = options[Math.floor(Math.random() * options.length)];
-        const obstacle = {
-            type,
+    function spawnInsect() {
+        const pool = ['cockroach', 'cricket'];
+        if (game.levelIndex >= 1) pool.push('mantis', 'fly');
+        if (game.levelIndex >= 2) pool.push('moth', 'fly', 'cockroach');
+        const variant = pool[Math.floor(Math.random() * pool.length)];
+        const insect = {
+            variant,
             x: VIEW_W + 30,
             y: GROUND_Y,
-            w: 36,
-            h: 46,
+            w: 38,
+            h: 24,
+            baseY: GROUND_Y,
             seed: Math.random() * Math.PI * 2,
+            flying: false,
             dead: false
         };
 
-        if (type === 'bug') {
-            obstacle.w = 40;
-            obstacle.h = 24;
-            obstacle.y = GROUND_Y - obstacle.h;
-        } else if (type === 'lock') {
-            obstacle.w = 48;
-            obstacle.h = 60;
-            obstacle.y = GROUND_Y - obstacle.h;
-        } else if (type === 'bird') {
-            obstacle.w = 54;
-            obstacle.h = 28;
-            obstacle.y = GROUND_Y - 92;
-        } else if (type === 'duplicate') {
-            obstacle.w = 58;
-            obstacle.h = 44;
-            obstacle.y = GROUND_Y - obstacle.h;
-        } else {
-            obstacle.y = GROUND_Y - obstacle.h;
+        if (variant === 'cockroach') {
+            insect.w = 38;
+            insect.h = 24;
+        } else if (variant === 'cricket') {
+            insect.w = 42;
+            insect.h = 30;
+        } else if (variant === 'mantis') {
+            insect.w = 46;
+            insect.h = 56;
+        } else if (variant === 'fly') {
+            insect.w = 46;
+            insect.h = 28;
+            insect.flying = true;
+            insect.baseY = GROUND_Y - 96;
+        } else if (variant === 'moth') {
+            insect.w = 46;
+            insect.h = 32;
+            insect.flying = true;
+            insect.baseY = GROUND_Y - 122;
         }
 
-        game.obstacles.push(obstacle);
+        insect.y = insect.baseY - insect.h;
+        game.obstacles.push(insect);
     }
 
-    function spawnPowerup() {
-        const types = ['index', 'cache', 'backup'];
-        if (game.levelIndex >= 2) types.push('truncate');
-        const type = types[Math.floor(Math.random() * types.length)];
+    function spawnSpinach() {
         game.powerups.push({
-            type,
+            type: 'spinach',
             x: VIEW_W + 30,
-            y: GROUND_Y - 92 - Math.random() * 45,
-            w: 36,
-            h: 36,
+            y: GROUND_Y - 86,
+            w: 40,
+            h: 40,
+            seed: Math.random() * Math.PI * 2,
+            dead: false
+        });
+    }
+
+    function spawnVocho() {
+        game.powerups.push({
+            type: 'vocho',
+            x: VIEW_W + 30,
+            y: GROUND_Y - 76,
+            w: 64,
+            h: 48,
+            seed: Math.random() * Math.PI * 2,
+            dead: false
+        });
+    }
+
+    function spawnAlly() {
+        const available = Object.keys(ALLIES).filter(type => !game.alliesUsed.includes(type));
+        const type = available.length
+            ? available[Math.floor(Math.random() * available.length)]
+            : Object.keys(ALLIES)[Math.floor(Math.random() * Object.keys(ALLIES).length)];
+        game.alliesUsed.push(type);
+        game.powerups.push({
+            type: 'ally',
+            ally: type,
+            x: VIEW_W + 30,
+            y: GROUND_Y - 112 - Math.random() * 20,
+            w: 44,
+            h: 44,
             seed: Math.random() * Math.PI * 2,
             dead: false
         });
     }
 
     function getPlayerRect() {
-        const height = game.ducking ? 27 : 50;
+        const height = game.ducking ? 28 : 52;
         return {
-            x: PLAYER_X - 29,
+            x: PLAYER_X - 28,
             y: game.playerY - height,
-            w: 58,
+            w: 56,
             h: height
+        };
+    }
+
+    function getTrunkHitbox() {
+        return {
+            x: PLAYER_X + 14,
+            y: game.playerY - 102,
+            w: 112,
+            h: 104
         };
     }
 
@@ -677,103 +916,82 @@
 
     function checkCollisions() {
         const player = getPlayerRect();
+        const trunk = game.attackTimer > 0 ? getTrunkHitbox() : null;
 
-        for (const obstacle of game.obstacles) {
-            if (obstacle.dead || !overlaps(player, obstacle)) continue;
+        for (const insect of game.obstacles) {
+            if (insect.dead) continue;
 
-            if (obstacle.type === 'bug' && game.smashTimer > 0) {
-                squashBug(obstacle);
+            if (trunk && overlaps(trunk, insect)) {
+                squashInsect(insect, true);
                 continue;
             }
 
-            if (game.invincible > 0) continue;
+            if (!overlaps(player, insect)) continue;
 
-            if (game.shield > 0) {
-                game.shield = 0;
-                game.invincible = 0.8;
-                obstacle.dead = true;
-                game.shake = 0.35;
-                burst(obstacle.x + obstacle.w / 2, obstacle.y, '#38bdf8', 8);
-                playSound('hit');
+            if (game.spinachTimer > 0) {
+                squashInsect(insect, false);
                 continue;
             }
 
-            obstacle.dead = true;
-            hit();
+            if (game.stompTimer > 0 && !insect.flying) {
+                squashInsect(insect, false);
+                continue;
+            }
+
+            insect.dead = true;
+            damage(insect.flying ? 18 : 22);
         }
 
-        for (const powerup of game.powerups) {
-            if (powerup.dead || !overlaps(player, powerup)) continue;
-            powerup.dead = true;
-            collectPowerup(powerup);
+        for (const item of game.powerups) {
+            if (item.dead || !overlaps(player, item)) continue;
+            item.dead = true;
+            collectPowerup(item);
         }
     }
 
-    function squashBug(obstacle) {
-        obstacle.dead = true;
-        game.bugs += 1;
+    function squashInsect(insect, fromTrunk) {
+        insect.dead = true;
+        game.insects += 1;
         game.combo += 1;
         game.maxCombo = Math.max(game.maxCombo, game.combo);
-        game.score += 25 * clamp(game.combo, 1, 5);
-        game.shake = 0.25;
-        burst(obstacle.x + obstacle.w / 2, obstacle.y + obstacle.h / 2, '#a855f7', 10);
-        playSound('smash');
+        game.score += (fromTrunk ? 35 : 25) * clamp(game.combo, 1, 5);
+        game.shake = 0.2;
+        burst(insect.x + insect.w / 2, insect.y + insect.h / 2, '#8b5a2b', 10);
+        playSound(fromTrunk ? 'trunk' : 'squash');
     }
 
-    function collectPowerup(powerup) {
-        game.score += 50;
-        if (powerup.type === 'index') {
-            game.boost = 5;
-            playSound('collect');
-        } else if (powerup.type === 'cache') {
-            game.shield = 7;
-            playSound('collect');
-        } else if (powerup.type === 'backup') {
-            game.lives = Math.min(game.maxLives, game.lives + 1);
-            game.score += 25;
-            playSound('collect');
-        } else if (powerup.type === 'truncate') {
-            game.obstacles.forEach(obstacle => { obstacle.dead = true; });
-            game.score += 100;
-            game.flash = 0.45;
-            playSound('rollback');
+    function collectPowerup(item) {
+        if (item.type === 'spinach') {
+            applySpinach();
+            game.flashText = 'ESPINACA';
+            game.flash = 0.55;
+            playSound('spinach');
+        } else if (item.type === 'vocho') {
+            applyVocho();
+            game.flashText = 'VOCHO';
+            game.flash = 0.85;
+            playSound('vocho');
+        } else if (item.type === 'ally') {
+            applyAlly(game, item.ally);
+            game.flashText = ALLIES[item.ally].label;
+            game.flash = 0.5;
+            playSound('ally');
         }
-        burst(powerup.x + powerup.w / 2, powerup.y + powerup.h / 2, POWERUPS[powerup.type].color, 12);
-    }
-
-    function hit() {
-        game.lives -= 1;
-        game.combo = 0;
-        game.invincible = 1.7;
-        game.shake = 0.65;
-        playSound('hit');
-        if (game.lives <= 0) {
-            game.lives = 0;
-            gameOver();
-        }
-    }
-
-    function gameOver() {
-        mode = 'gameOver';
-        stopLoop();
-        saveBest(getRunScore(), game.levelIndex);
+        burst(item.x + item.w / 2, item.y + item.h / 2, item.type === 'vocho' ? '#dc2626' : '#16a34a', 14);
         updateHud();
-        showLevelOverlay(false);
-        playSound('gameover');
     }
 
-    function completeLevel() {
-        const isLast = game.levelIndex >= LEVELS.length - 1;
-        mode = isLast ? 'victory' : 'levelComplete';
-        stopLoop();
-        saveBest(getRunScore(), game.levelIndex + 1, isLast);
-        updateHud();
-        if (isLast) {
-            showVictoryOverlay();
-        } else {
-            showLevelOverlay(true);
+    function updateSnow(dt) {
+        for (const flake of game.snow) {
+            flake.y += flake.speed * dt;
+            flake.x += flake.drift * dt;
+            if (flake.y > VIEW_H + 5) {
+                flake.y = -5;
+                flake.x = Math.random() * VIEW_W;
+            }
+            if (flake.x < -5) flake.x = VIEW_W + 5;
+            if (flake.x > VIEW_W + 5) flake.x = -5;
         }
-        playSound('level');
     }
 
     function burst(x, y, color, count) {
@@ -819,8 +1037,8 @@
         const justPressed = index => Boolean(pressed[index] && !previousGamepadButtons[index]);
 
         if (justPressed(0) || justPressed(12)) jump();
-        if (justPressed(2) || justPressed(13)) smash(false);
-        if (justPressed(1)) rollback();
+        if (justPressed(2) || justPressed(13)) attack();
+        if (justPressed(1)) stomp();
         if (justPressed(9)) togglePause();
         previousGamepadButtons = pressed;
     }
@@ -842,394 +1060,601 @@
         drawBackground();
         drawGround();
         drawPowerups();
-        drawObstacles();
-        drawElephant();
+        drawInsects();
+        drawMammoth();
         drawParticles();
         drawFlash();
         ctx.restore();
     }
 
     function drawBackground() {
-        const gradient = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-        gradient.addColorStop(0, '#dbeafe');
-        gradient.addColorStop(0.7, '#eff6ff');
-        gradient.addColorStop(1, '#e2e8f0');
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = '#cfe8f5';
         ctx.fillRect(0, 0, VIEW_W, VIEW_H);
 
+        drawMountainLayer(0.04, '#a9c3d6', '#f8fafc', GROUND_Y - 60, 165, 270);
+        drawMountainLayer(0.08, '#7e9fb6', '#eef6fb', GROUND_Y - 20, 125, 205);
+        drawPineLayer(0.16, '#2f5d50', '#f8fafc', GROUND_Y - 8, 86, 120);
+
+        for (const flake of game.snow) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.arc(flake.x, flake.y, flake.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         ctx.save();
-        ctx.globalAlpha = 0.14;
-        ctx.strokeStyle = '#2563eb';
-        ctx.lineWidth = 1;
-        const offset = -(game.distance * 0.12) % 90;
-        for (let x = offset; x < VIEW_W + 90; x += 90) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, GROUND_Y);
-            ctx.stroke();
-        }
-        for (let y = 60; y < GROUND_Y; y += 52) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(VIEW_W, y);
-            ctx.stroke();
-        }
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.beginPath();
+        ctx.arc(860, 68, 30, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
 
         ctx.save();
         ctx.globalAlpha = 0.18;
         ctx.fillStyle = game.level.accent;
-        ctx.font = '700 46px "Segoe UI", Arial, sans-serif';
+        ctx.font = '800 42px "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(game.level.name, VIEW_W - 24, 72);
-        ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
-        ctx.fillText('consulta en progreso', VIEW_W - 24, 92);
+        ctx.fillText(game.level.name.toUpperCase(), VIEW_W - 24, 66);
+        ctx.font = '600 11px "Segoe UI", Arial, sans-serif';
+        ctx.fillText('MONTE MAMUT', VIEW_W - 24, 84);
         ctx.restore();
+    }
 
-        if (game.boost > 0) {
-            ctx.save();
-            ctx.globalAlpha = 0.35;
-            ctx.strokeStyle = '#16a34a';
-            ctx.lineWidth = 3;
-            for (let index = 0; index < 4; index += 1) {
-                const y = 110 + index * 42 + Math.sin(game.elapsed * 10 + index) * 8;
-                ctx.beginPath();
-                ctx.moveTo(40, y);
-                ctx.lineTo(180 + index * 18, y);
-                ctx.stroke();
-            }
-            ctx.restore();
+    function drawMountainLayer(parallax, color, snowColor, baseY, height, spacing) {
+        const offset = -(game.distance * parallax) % spacing;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#5d7486';
+        for (let x = offset - spacing; x < VIEW_W + spacing; x += spacing) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x, baseY);
+            ctx.lineTo(x + spacing * 0.5, baseY - height);
+            ctx.lineTo(x + spacing, baseY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = snowColor;
+            ctx.beginPath();
+            ctx.moveTo(x + spacing * 0.5, baseY - height);
+            ctx.lineTo(x + spacing * 0.38, baseY - height * 0.7);
+            ctx.lineTo(x + spacing * 0.46, baseY - height * 0.78);
+            ctx.lineTo(x + spacing * 0.54, baseY - height * 0.66);
+            ctx.lineTo(x + spacing * 0.62, baseY - height * 0.7);
+            ctx.closePath();
+            ctx.fill();
+        }
+    }
+
+    function drawPineLayer(parallax, color, snowColor, baseY, height, spacing) {
+        const offset = -(game.distance * parallax) % spacing;
+        for (let x = offset - spacing; x < VIEW_W + spacing; x += spacing) {
+            const y = baseY - height;
+            ctx.fillStyle = color;
+            ctx.strokeStyle = '#1f3a33';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + spacing * 0.5, y);
+            ctx.lineTo(x + spacing * 0.78, baseY);
+            ctx.lineTo(x + 2, baseY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = snowColor;
+            ctx.beginPath();
+            ctx.moveTo(x + spacing * 0.5, y);
+            ctx.lineTo(x + spacing * 0.58, y + height * 0.28);
+            ctx.lineTo(x + spacing * 0.42, y + height * 0.28);
+            ctx.closePath();
+            ctx.fill();
         }
     }
 
     function drawGround() {
-        ctx.fillStyle = '#cbd5e1';
+        ctx.fillStyle = '#eaf4fb';
         ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = '#c7dbe8';
         ctx.fillRect(0, GROUND_Y, VIEW_W, 4);
-        ctx.save();
-        ctx.globalAlpha = 0.45;
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 1;
-        const offset = -(game.distance * 0.8) % 64;
-        for (let x = offset; x < VIEW_W + 64; x += 64) {
+        ctx.strokeStyle = '#9fb8c9';
+        ctx.lineWidth = 2;
+        const offset = -(game.distance * 0.8) % 74;
+        for (let x = offset; x < VIEW_W + 74; x += 74) {
             ctx.beginPath();
             ctx.moveTo(x, GROUND_Y + 8);
-            ctx.lineTo(x - 12, VIEW_H);
+            ctx.lineTo(x - 18, VIEW_H);
             ctx.stroke();
         }
-        ctx.restore();
-        ctx.save();
-        ctx.globalAlpha = 0.5;
-        ctx.fillStyle = '#475569';
-        ctx.font = '700 9px "Courier New", monospace';
-        ctx.fillText('ROW', 18, VIEW_H - 14);
-        ctx.fillText(`#${formatNumber(game.rows)}`, 54, VIEW_H - 14);
-        ctx.restore();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for (let x = 50; x < VIEW_W; x += 160) {
+            ctx.beginPath();
+            ctx.ellipse(x, GROUND_Y + 18, 35, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     function drawPowerups() {
-        for (const powerup of game.powerups) {
-            if (powerup.dead) continue;
-            const info = POWERUPS[powerup.type];
-            const float = Math.sin(game.elapsed * 5 + powerup.seed) * 5;
-            ctx.save();
-            ctx.translate(powerup.x, powerup.y + float);
-            ctx.shadowColor = info.color;
-            ctx.shadowBlur = 16;
-            ctx.fillStyle = info.color;
-            roundedRect(0, 0, powerup.w, powerup.h, 10);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            roundedRect(3, 3, powerup.w - 6, powerup.h - 6, 7);
-            ctx.stroke();
-            ctx.fillStyle = '#fff';
-            ctx.font = '800 9px "Segoe UI", Arial, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(info.label, powerup.w / 2, powerup.h / 2 + 1);
-            ctx.restore();
+        for (const item of game.powerups) {
+            if (item.dead) continue;
+            const float = Math.sin(game.elapsed * 5 + item.seed) * 5;
+            if (item.type === 'spinach') drawSpinach(item, float);
+            else if (item.type === 'vocho') drawVocho(item, float);
+            else if (item.type === 'ally') drawAlly(item, float);
         }
     }
 
-    function drawObstacles() {
-        for (const obstacle of game.obstacles) {
-            if (obstacle.dead) continue;
-            if (obstacle.type === 'null') drawNullCactus(obstacle);
-            else if (obstacle.type === 'bug') drawBug(obstacle);
-            else if (obstacle.type === 'lock') drawLock(obstacle);
-            else if (obstacle.type === 'bird') drawBird(obstacle);
-            else if (obstacle.type === 'duplicate') drawDuplicate(obstacle);
-        }
-    }
-
-    function drawNullCactus(obstacle) {
-        const x = obstacle.x;
-        const y = obstacle.y;
+    function drawSpinach(item, float) {
         ctx.save();
-        ctx.fillStyle = '#15803d';
+        ctx.translate(item.x, item.y + float);
         ctx.strokeStyle = '#14532d';
         ctx.lineWidth = 2;
-        roundedRect(x + 9, y, 18, obstacle.h, 8);
+        ctx.fillStyle = '#22c55e';
+        for (let index = 0; index < 3; index += 1) {
+            ctx.beginPath();
+            ctx.ellipse(12 + index * 7, 18 + (index % 2) * 5, 13, 7, -0.45 + index * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+        ctx.fillStyle = '#166534';
+        roundedRect(14, 23, 5, 14, 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '800 7px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('ESPINACA', 20, 47);
+        ctx.restore();
+    }
+
+    function drawVocho(item, float) {
+        ctx.save();
+        ctx.translate(item.x, item.y + float);
+        ctx.fillStyle = '#dc2626';
+        ctx.strokeStyle = '#7f1d1d';
+        ctx.lineWidth = 2;
+        roundedRect(4, 12, 56, 25, 12);
         ctx.fill();
         ctx.stroke();
-        roundedRect(x, y + 18, 13, 8, 4);
+        ctx.fillStyle = '#fca5a5';
+        roundedRect(14, 4, 36, 18, 9);
         ctx.fill();
         ctx.stroke();
-        roundedRect(x + 23, y + 26, 13, 8, 4);
+        ctx.fillStyle = '#bae6fd';
+        roundedRect(18, 7, 12, 9, 3);
         ctx.fill();
+        roundedRect(34, 7, 12, 9, 3);
+        ctx.fill();
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(8, 24, 4, 0, Math.PI * 2);
+        ctx.arc(56, 24, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(16, 39, 6, 0, Math.PI * 2);
+        ctx.arc(48, 39, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '800 7px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('VOCHO', 32, 58);
+        ctx.restore();
+    }
+
+    function drawAlly(item, float) {
+        const ally = ALLIES[item.ally];
+        ctx.save();
+        ctx.translate(item.x, item.y + float);
+        ctx.shadowColor = ally.color;
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = ally.color;
+        roundedRect(0, 0, item.w, item.h, 10);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        roundedRect(3, 3, item.w - 6, item.h - 6, 7);
         ctx.stroke();
-        ctx.strokeStyle = '#86efac';
+        drawAllyIcon(item.ally, item.w / 2, 17);
+        ctx.fillStyle = '#fff';
+        ctx.font = '800 7px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ally.label, item.w / 2, 37);
+        ctx.restore();
+    }
+
+    function drawAllyIcon(type, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = '#fff';
+        ctx.fillStyle = '#fff';
+        ctx.lineWidth = 2;
+        if (type === 'python') {
+            ctx.beginPath();
+            ctx.moveTo(-10, 7);
+            ctx.quadraticCurveTo(-2, -8, 7, 2);
+            ctx.quadraticCurveTo(12, 8, 13, 0);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(13, -1, 3, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'git') {
+            ctx.beginPath();
+            ctx.arc(0, 1, 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(-8, -4);
+            ctx.lineTo(-10, -12);
+            ctx.lineTo(-3, -7);
+            ctx.moveTo(8, -4);
+            ctx.lineTo(10, -12);
+            ctx.lineTo(3, -7);
+            ctx.fill();
+            ctx.fillStyle = '#ea580c';
+            ctx.beginPath();
+            ctx.arc(-3, 0, 1.5, 0, Math.PI * 2);
+            ctx.arc(3, 0, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'docker') {
+            ctx.beginPath();
+            ctx.ellipse(0, 2, 12, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(10, 0);
+            ctx.lineTo(18, -6);
+            ctx.lineTo(16, 7);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath();
+            ctx.arc(-5, -2, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'go') {
+            ctx.beginPath();
+            ctx.arc(0, 1, 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(-4, -13, 2, 0, Math.PI * 2);
+            ctx.arc(4, -13, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#0ea5e9';
+            ctx.beginPath();
+            ctx.arc(-3, 0, 1.4, 0, Math.PI * 2);
+            ctx.arc(3, 0, 1.4, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (type === 'rust') {
+            ctx.beginPath();
+            ctx.ellipse(0, 1, 10, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(-9, -3);
+            ctx.lineTo(-17, -8);
+            ctx.lineTo(-12, 1);
+            ctx.moveTo(9, -3);
+            ctx.lineTo(17, -8);
+            ctx.lineTo(12, 1);
+            ctx.fill();
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.arc(-3, 0, 1.4, 0, Math.PI * 2);
+            ctx.arc(3, 0, 1.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    function drawInsects() {
+        for (const insect of game.obstacles) {
+            if (insect.dead) continue;
+            if (insect.variant === 'cockroach') drawCockroach(insect);
+            else if (insect.variant === 'cricket') drawCricket(insect);
+            else if (insect.variant === 'mantis') drawMantis(insect);
+            else if (insect.variant === 'fly') drawFly(insect);
+            else if (insect.variant === 'moth') drawMoth(insect);
+        }
+    }
+
+    function drawCockroach(insect) {
+        const x = insect.x;
+        const y = insect.y;
+        ctx.save();
+        ctx.strokeStyle = '#3f2412';
         ctx.lineWidth = 2;
         for (let index = 0; index < 3; index += 1) {
             ctx.beginPath();
-            ctx.moveTo(x + 12 + index * 5, y + 7);
-            ctx.lineTo(x + 9 + index * 5, y + 1);
+            ctx.moveTo(x + 13, y + 12 + index * 3);
+            ctx.lineTo(x + 4, y + 20 + index * 3);
+            ctx.moveTo(x + 25, y + 12 + index * 3);
+            ctx.lineTo(x + 34, y + 20 + index * 3);
             ctx.stroke();
         }
-        ctx.fillStyle = '#b91c1c';
-        roundedRect(x - 4, y + obstacle.h - 16, obstacle.w + 8, 15, 4);
+        ctx.fillStyle = '#8b5a2b';
+        ctx.strokeStyle = '#4a2c12';
+        ctx.beginPath();
+        ctx.ellipse(x + 19, y + 12, 15, 10, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = '800 9px "Courier New", monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('NULL', x + obstacle.w / 2, y + obstacle.h - 8);
+        ctx.stroke();
+        ctx.strokeStyle = '#5b3a1a';
+        ctx.beginPath();
+        ctx.moveTo(x + 10, y + 4);
+        ctx.lineTo(x + 3, y - 2);
+        ctx.moveTo(x + 28, y + 4);
+        ctx.lineTo(x + 35, y - 2);
+        ctx.stroke();
+        ctx.fillStyle = '#fef3c7';
+        ctx.beginPath();
+        ctx.arc(x + 14, y + 9, 2, 0, Math.PI * 2);
+        ctx.arc(x + 24, y + 9, 2, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 
-    function drawBug(obstacle) {
-        const x = obstacle.x;
-        const y = obstacle.y;
-        const centerX = x + obstacle.w / 2;
-        const centerY = y + obstacle.h / 2;
+    function drawCricket(insect) {
+        const x = insect.x;
+        const y = insect.y;
         ctx.save();
-        ctx.strokeStyle = '#581c87';
+        ctx.strokeStyle = '#365314';
         ctx.lineWidth = 2;
-        for (let index = 0; index < 3; index += 1) {
-            ctx.beginPath();
-            ctx.moveTo(centerX - 12, centerY + 2 + index * 4);
-            ctx.lineTo(centerX - 20, centerY + 8 + index * 5);
-            ctx.moveTo(centerX + 12, centerY + 2 + index * 4);
-            ctx.lineTo(centerX + 20, centerY + 8 + index * 5);
-            ctx.stroke();
-        }
-        ctx.fillStyle = '#a855f7';
-        ctx.strokeStyle = '#6b21a8';
-        ctx.lineWidth = 2;
+        ctx.fillStyle = '#65a30d';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY, 17, 11, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 21, y + 15, 14, 9, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x + 34, y + 10, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = '#365314';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 12, y + 20);
+        ctx.lineTo(x + 3, y + 30);
+        ctx.moveTo(x + 24, y + 20);
+        ctx.lineTo(x + 33, y + 30);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + 34, y + 5);
+        ctx.lineTo(x + 43, y - 3);
         ctx.stroke();
         ctx.fillStyle = '#fff';
         ctx.beginPath();
-        ctx.arc(centerX - 5, centerY - 3, 3, 0, Math.PI * 2);
-        ctx.arc(centerX + 5, centerY - 3, 3, 0, Math.PI * 2);
+        ctx.arc(x + 36, y + 8, 1.7, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#312e81';
-        ctx.beginPath();
-        ctx.arc(centerX - 5, centerY - 3, 1.2, 0, Math.PI * 2);
-        ctx.arc(centerX + 5, centerY - 3, 1.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#4c1d95';
-        ctx.font = '800 8px "Segoe UI", Arial, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('BUG', centerX, centerY + 8);
         ctx.restore();
     }
 
-    function drawLock(obstacle) {
-        const x = obstacle.x;
-        const y = obstacle.y;
+    function drawMantis(insect) {
+        const x = insect.x;
+        const y = insect.y;
         ctx.save();
-        ctx.fillStyle = '#475569';
-        ctx.strokeStyle = '#1e293b';
+        ctx.strokeStyle = '#14532d';
         ctx.lineWidth = 2;
-        roundedRect(x, y, obstacle.w, obstacle.h, 7);
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath();
+        ctx.ellipse(x + 22, y + 30, 10, 22, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = '#cbd5e1';
-        roundedRect(x + 10, y + 12, obstacle.w - 20, 6, 3);
+        ctx.beginPath();
+        ctx.arc(x + 27, y + 10, 8, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = '#166534';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 18, y + 24);
+        ctx.lineTo(x + 2, y + 10);
+        ctx.lineTo(x + 10, y + 4);
+        ctx.moveTo(x + 26, y + 24);
+        ctx.lineTo(x + 42, y + 10);
+        ctx.lineTo(x + 34, y + 4);
+        ctx.stroke();
         ctx.fillStyle = '#fff';
-        ctx.font = '800 8px "Courier New", monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('LOCK', x + obstacle.w / 2, y + 34);
+        ctx.beginPath();
+        ctx.arc(x + 24, y + 8, 2, 0, Math.PI * 2);
+        ctx.arc(x + 31, y + 8, 2, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 
-    function drawBird(obstacle) {
-        const x = obstacle.x;
-        const y = obstacle.y;
-        const wing = Math.sin(game.elapsed * 10 + obstacle.seed) * 6;
+    function drawFly(insect) {
+        const x = insect.x;
+        const y = insect.y;
         ctx.save();
-        ctx.fillStyle = '#eab308';
-        ctx.strokeStyle = '#713f12';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(x + 14, y + 8, 14, 7, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(x + 32, y + 8, 14, 7, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.ellipse(x + 23, y + 15, 9, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(x + 19, y + 12, 2.5, 0, Math.PI * 2);
+        ctx.arc(x + 27, y + 12, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawMoth(insect) {
+        const x = insect.x;
+        const y = insect.y;
+        ctx.save();
+        ctx.fillStyle = '#fef3c7';
+        ctx.strokeStyle = '#a16207';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(x + 28, y + 14, 18, 10, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 14, y + 12, 14, 10, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(x + 32, y + 12, 14, 10, 0.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x + 18, y + 12);
-        ctx.quadraticCurveTo(x + 5, y + 2 + wing, x - 2, y + 17);
-        ctx.quadraticCurveTo(x + 12, y + 19, x + 18, y + 12);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(x + 38, y + 11, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#713f12';
-        ctx.beginPath();
-        ctx.arc(x + 38, y + 11, 1.2, 0, Math.PI * 2);
-        ctx.fill();
         ctx.fillStyle = '#92400e';
-        ctx.font = '800 7px "Courier New", monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('SELECT', x + 27, y + 30);
+        ctx.beginPath();
+        ctx.ellipse(x + 23, y + 18, 5, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
 
-    function drawDuplicate(obstacle) {
-        const x = obstacle.x;
-        const y = obstacle.y;
-        ctx.save();
-        ctx.fillStyle = '#0f766e';
-        ctx.strokeStyle = '#134e4a';
-        ctx.lineWidth = 2;
-        roundedRect(x, y, obstacle.w, 18, 5);
-        ctx.fill();
-        ctx.stroke();
-        roundedRect(x + 6, y + 22, obstacle.w, 18, 5);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#fff';
-        ctx.font = '800 8px "Courier New", monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('x2', x + obstacle.w / 2, y + 12);
-        ctx.fillText('x2', x + obstacle.w / 2 + 6, y + 34);
-        ctx.restore();
-    }
-
-    function drawElephant() {
+    function drawMammoth() {
         const feet = game.playerY;
-        const height = game.ducking ? 29 : 50;
-        const bodyY = feet - height * 0.5;
-        const headY = feet - height * 0.78;
-        const headX = PLAYER_X + 21;
-        const bob = game.onGround ? (reduceMotion ? 0 : Math.sin(game.elapsed * 13) * 1.3) : 0;
+        const height = game.ducking ? 31 : 56;
+        const bodyY = feet - height * 0.62;
+        const headY = feet - height * 0.86;
+        const headX = PLAYER_X + 25;
+        const color = game.spinachTimer > 0 ? '#4d7c0f' : '#557a94';
+        const dark = game.spinachTimer > 0 ? '#365314' : '#1f3a4d';
+        const light = game.spinachTimer > 0 ? '#84cc16' : '#8fb3c9';
+        const eyeColor = game.spinachTimer > 0 ? '#dc2626' : '#fff';
+        const attack = game.attackTimer > 0 ? 1 - game.attackTimer / 0.28 : 0;
+        const bob = game.onGround ? (reduceMotion ? 0 : Math.sin(game.elapsed * 13) * 1.4) : 0;
         const legSwing = game.onGround && !reduceMotion ? Math.sin(game.elapsed * 16) * 5 : 0;
 
         ctx.save();
+        if (game.invincible > 0 && Math.floor(game.elapsed * 20) % 2 === 0) {
+            ctx.globalAlpha = 0.55;
+        }
         ctx.translate(0, bob);
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
+
+        ctx.fillStyle = 'rgba(31, 58, 77, 0.18)';
         ctx.beginPath();
-        ctx.ellipse(PLAYER_X, GROUND_Y + 5, 38, 7, 0, 0, Math.PI * 2);
+        ctx.ellipse(PLAYER_X, GROUND_Y + 5, 40, 7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = '#132a43';
-        ctx.lineWidth = 2;
-        ctx.fillStyle = '#2563eb';
-
         // Cola.
-        ctx.beginPath();
-        ctx.moveTo(PLAYER_X - 30, bodyY + 4);
-        ctx.quadraticCurveTo(PLAYER_X - 44, bodyY - 2, PLAYER_X - 42, bodyY + 12);
+        ctx.strokeStyle = dark;
         ctx.lineWidth = 4;
-        ctx.strokeStyle = '#1d4ed8';
+        ctx.beginPath();
+        ctx.moveTo(PLAYER_X - 29, bodyY + 7);
+        ctx.quadraticCurveTo(PLAYER_X - 45, bodyY, PLAYER_X - 42, bodyY + 17);
         ctx.stroke();
-        ctx.lineWidth = 2;
 
         // Patas.
-        drawElephantLeg(PLAYER_X - 17, feet, legSwing, game.onGround);
-        drawElephantLeg(PLAYER_X + 8, feet, -legSwing, game.onGround);
+        drawMammothLeg(PLAYER_X - 17, feet, legSwing, game.onGround, dark, color);
+        drawMammothLeg(PLAYER_X + 8, feet, -legSwing, game.onGround, dark, color);
 
         // Cuerpo.
-        ctx.fillStyle = '#2563eb';
-        ctx.strokeStyle = '#132a43';
+        ctx.fillStyle = color;
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.ellipse(PLAYER_X, bodyY, 33, height * 0.48, 0, 0, Math.PI * 2);
+        ctx.ellipse(PLAYER_X, bodyY, 31, height * 0.38, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
         // Panza.
-        ctx.fillStyle = '#60a5fa';
+        ctx.fillStyle = light;
         ctx.beginPath();
-        ctx.ellipse(PLAYER_X - 2, bodyY + 9, 20, 10, 0, 0, Math.PI * 2);
+        ctx.ellipse(PLAYER_X - 2, bodyY + 8, 18, 9, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Pelaje del lomo.
+        ctx.fillStyle = dark;
+        for (let index = 0; index < 5; index += 1) {
+            const x = PLAYER_X - 24 + index * 11;
+            const y = bodyY - height * 0.35;
+            ctx.beginPath();
+            ctx.moveTo(x, y + 5);
+            ctx.lineTo(x + 4, y - 6);
+            ctx.lineTo(x + 8, y + 5);
+            ctx.closePath();
+            ctx.fill();
+        }
 
         // Oreja.
-        ctx.fillStyle = '#1d4ed8';
-        ctx.strokeStyle = '#132a43';
+        ctx.fillStyle = dark;
         ctx.beginPath();
-        ctx.ellipse(headX - 10, headY, 14, 17, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(headX - 12, headY + 1, 13, 17, -0.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.stroke();
 
         // Cabeza.
-        ctx.fillStyle = '#2563eb';
+        ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(headX, headY, 17, 0, Math.PI * 2);
+        ctx.arc(headX, headY, 18, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // Ojo.
-        ctx.fillStyle = '#fff';
+        // Mechón.
+        ctx.fillStyle = dark;
         ctx.beginPath();
-        ctx.arc(headX + 7, headY - 5, 4.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#132a43';
-        ctx.beginPath();
-        ctx.arc(headX + 8.5, headY - 5, 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Colmillo.
-        ctx.fillStyle = '#f8fafc';
-        ctx.beginPath();
-        ctx.moveTo(headX + 9, headY + 9);
-        ctx.lineTo(headX + 16, headY + 12);
-        ctx.lineTo(headX + 10, headY + 14);
+        ctx.moveTo(headX - 5, headY - 17);
+        ctx.lineTo(headX + 1, headY - 27);
+        ctx.lineTo(headX + 7, headY - 16);
         ctx.closePath();
         ctx.fill();
+
+        // Ojos estilo dibujo animado.
+        ctx.fillStyle = eyeColor;
+        ctx.beginPath();
+        ctx.ellipse(headX + 6, headY - 5, 5.8, 6.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(headX + 16, headY - 5, 4.8, 5.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = game.spinachTimer > 0 ? '#450a0a' : '#132a43';
+        ctx.beginPath();
+        ctx.arc(headX + 8, headY - 5, 2.2, 0, Math.PI * 2);
+        ctx.arc(headX + 17, headY - 5, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Trompa. Se estira cuando ataca.
+        const trunkX = headX + 18 + attack * 42;
+        const trunkY = headY + 9 - attack * 28;
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.moveTo(headX + 14, headY + 7);
+        ctx.quadraticCurveTo(headX + 29, headY + 18, trunkX, trunkY);
+        ctx.stroke();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(headX + 14, headY + 7);
+        ctx.quadraticCurveTo(headX + 29, headY + 18, trunkX, trunkY);
         ctx.stroke();
 
-        // Trompa.
-        ctx.strokeStyle = '#132a43';
-        ctx.lineWidth = 9;
-        ctx.beginPath();
-        ctx.moveTo(headX + 13, headY + 5);
-        ctx.quadraticCurveTo(headX + 27, headY + 11, headX + 22, headY + 24);
-        ctx.stroke();
-        ctx.strokeStyle = '#2563eb';
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.moveTo(headX + 13, headY + 5);
-        ctx.quadraticCurveTo(headX + 27, headY + 11, headX + 22, headY + 24);
-        ctx.stroke();
+        // Colmillos, delante de la trompa para que se vean.
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 2;
+        for (const offset of [0, -6]) {
+            ctx.beginPath();
+            ctx.moveTo(headX + 7 + offset, headY + 10);
+            ctx.quadraticCurveTo(headX + 17 + offset, headY + 22, headX + 28 + offset, headY + 17);
+            ctx.quadraticCurveTo(headX + 18 + offset, headY + 16, headX + 9 + offset, headY + 13);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
 
-        // Etiqueta del personaje.
-        ctx.fillStyle = '#132a43';
-        ctx.font = '800 8px "Segoe UI", Arial, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('TROMPO', PLAYER_X, bodyY + 2);
+        if (attack > 0.15) {
+            ctx.strokeStyle = 'rgba(248, 250, 252, 0.85)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(trunkX + 9, trunkY - 4, 11 + attack * 9, -1.2, 0.5);
+            ctx.stroke();
+        }
+
         ctx.restore();
     }
 
-    function drawElephantLeg(x, feet, swing, grounded) {
+    function drawMammothLeg(x, feet, swing, grounded, dark, color) {
         ctx.save();
         ctx.translate(x, feet);
         ctx.rotate((grounded ? swing : -8) * Math.PI / 180);
-        ctx.fillStyle = '#1d4ed8';
-        ctx.strokeStyle = '#132a43';
+        ctx.fillStyle = color;
+        ctx.strokeStyle = dark;
         ctx.lineWidth = 2;
-        roundedRect(-6, -18, 12, 18, 5);
+        roundedRect(-5.5, -20, 11, 20, 4);
         ctx.fill();
         ctx.stroke();
+        ctx.fillStyle = dark;
+        roundedRect(-7, -7, 14, 7, 3);
+        ctx.fill();
         ctx.restore();
     }
 
@@ -1244,15 +1669,14 @@
     }
 
     function drawFlash() {
-        if (game.flash <= 0) return;
+        if (game.flash <= 0 || !game.flashText) return;
         ctx.save();
-        ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(0.35, game.flash)})`;
-        ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-        ctx.fillStyle = `rgba(19, 42, 67, ${Math.min(0.8, game.flash)})`;
-        ctx.font = '800 28px "Segoe UI", Arial, sans-serif';
+        ctx.globalAlpha = Math.min(0.9, game.flash + 0.2);
+        ctx.fillStyle = '#132a43';
+        ctx.font = '800 22px "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('ROLLBACK', VIEW_W / 2, 80);
+        ctx.fillText(game.flashText, VIEW_W / 2, 48);
         ctx.restore();
     }
 
@@ -1295,16 +1719,16 @@
             return;
         }
 
-        if (key === 'ArrowDown' || key === 's' || key === 'S') {
+        if (key === 'x' || key === 'X' || key === 'k' || key === 'K') {
             event.preventDefault();
-            keyDuckHeld = true;
-            smash(true);
+            if (mode === 'running') attack();
             return;
         }
 
-        if (key === 'r' || key === 'R') {
+        if (key === 'ArrowDown' || key === 's' || key === 'S') {
             event.preventDefault();
-            rollback();
+            keyDuckHeld = true;
+            stomp();
             return;
         }
 
@@ -1328,7 +1752,7 @@
     function handleKeyup(event) {
         if (event.key === 'ArrowDown' || event.key === 's' || event.key === 'S') {
             keyDuckHeld = false;
-            if (game && game.smashTimer <= 0) game.ducking = false;
+            if (game && game.stompTimer <= 0) game.ducking = false;
         }
     }
 
@@ -1336,8 +1760,8 @@
         if (overlay) overlay.addEventListener('click', handleOverlayClick);
 
         const jumpButton = document.getElementById('trompoJumpBtn');
-        const smashButton = document.getElementById('trompoSmashBtn');
-        const rollbackButton = document.getElementById('trompoRollbackBtn');
+        const trunkButton = document.getElementById('trompoTrunkBtn');
+        const stompButton = document.getElementById('trompoStompBtn');
 
         if (jumpButton) {
             jumpButton.addEventListener('click', event => {
@@ -1350,17 +1774,17 @@
             });
         }
 
-        if (smashButton) {
-            smashButton.addEventListener('pointerdown', event => {
+        if (trunkButton) {
+            trunkButton.addEventListener('click', event => {
                 event.preventDefault();
-                smash(false);
+                attack();
             });
         }
 
-        if (rollbackButton) {
-            rollbackButton.addEventListener('click', event => {
+        if (stompButton) {
+            stompButton.addEventListener('pointerdown', event => {
                 event.preventDefault();
-                rollback();
+                stomp();
             });
         }
 
@@ -1391,14 +1815,16 @@
         overlay = document.getElementById('trompoOverlay');
         els = {
             level: document.getElementById('trompoLevelLabel'),
-            rows: document.getElementById('trompoRowsLabel'),
+            healthBar: document.getElementById('trompoHealthBar'),
+            healthLabel: document.getElementById('trompoHealthLabel'),
+            shieldBar: document.getElementById('trompoShieldBar'),
+            shieldLabel: document.getElementById('trompoShieldLabel'),
             score: document.getElementById('trompoScoreLabel'),
-            lives: document.getElementById('trompoLivesLabel'),
             progressBar: document.getElementById('trompoProgressBar'),
             progressTrack: document.getElementById('trompoProgressTrack'),
+            effects: document.getElementById('trompoEffects'),
             pause: document.getElementById('trompoPauseBtn'),
             mute: document.getElementById('trompoMuteBtn'),
-            rollback: document.getElementById('trompoRollbackBtn'),
             gamepad: document.getElementById('trompoGamepadStatus')
         };
 
@@ -1438,11 +1864,8 @@
             trompoButton.setAttribute('aria-selected', String(isTrompo));
         }
 
-        if (isTrompo) {
-            show();
-        } else {
-            hide();
-        }
+        if (isTrompo) show();
+        else hide();
     }
 
     global.switchGameMode = switchGameMode;
@@ -1456,27 +1879,35 @@
         togglePause,
         resume,
         jump,
-        smash,
-        rollback,
+        attack,
+        stomp,
         toggleMute,
         getState: () => ({
             mode,
             levelIndex: game ? game.levelIndex : 0,
             rows: game ? game.rows : 0,
             score: game ? getRunScore() : 0,
-            lives: game ? game.lives : 0,
+            health: game ? game.health : 100,
+            shield: game ? game.shield : 0,
             onGround: game ? game.onGround : true,
             playerY: game ? game.playerY : GROUND_Y,
-            obstacles: game ? game.obstacles.length : 0,
-            rollbackAvailable: game ? game.rollbackAvailable : false
+            insects: game ? game.insects : 0,
+            spinachTimer: game ? game.spinachTimer : 0,
+            effects: game ? getEffects() : []
         })
     };
     global.TrompoInternals = {
         LEVELS,
+        ALLIES,
         ROW_PX,
         makeState,
         getProgress,
         getRunScore,
+        getEffects,
+        applySpinach,
+        applyVocho,
+        applyAlly,
+        applyDamageToState,
         formatNumber
     };
 
