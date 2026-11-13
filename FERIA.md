@@ -59,13 +59,14 @@ Mensaje: "No validamos texto: validamos el resultado real de la consulta."
 
 Mensaje: "La práctica también puede ser un juego."
 
-### 3:30 — Trompo
+### 3:30 — Monte Mamut
 
-1. Cambiar a la pestaña **Trompo**.
-2. Mostrar al elefante azul corriendo, saltando NULL y aplastando bugs.
-3. Señalar los cinco niveles y el uso de mando.
+1. Cambiar a la pestaña **Monte Mamut**.
+2. Mostrar a Trompo, el mamut azul, corriendo por montañas nevadas.
+3. Enseñar el ataque con la trompa, la espinaca, el escarabajo Vocho y los aliados tecnológicos.
+4. Señalar que es un juego de descanso, con tres niveles largos y soporte para mando.
 
-Mensaje: "Cada nivel tiene una dificultad distinta y una referencia a una cláusula SQL."
+Mensaje: "No todo es estudiar o programar. También hay tiempo para jugar."
 
 ### 3:55 — Analizar
 
@@ -191,7 +192,7 @@ Donaciones voluntarias y, más adelante, licencias comerciales, planes para aula
 - 4 cursos guiados y 15 lecciones teórico-prácticas con quiz.
 - Retos SQL, NoSQL y de depuración.
 - 6 pisos en Torre de Datos.
-- 5 niveles en Trompo.
+- 3 niveles en Monte Mamut.
 - 12 guías de instalación con rutas para Windows, macOS, Linux y Docker.
 - Más de 100 pruebas automatizadas.
 - PWA instalable.
