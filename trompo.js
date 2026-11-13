@@ -37,6 +37,15 @@
             speed: 330,
             spawn: 0.86,
             accent: '#7c5cbf'
+        },
+        {
+            id: 'beach',
+            name: 'Playa',
+            rows: 3000,
+            speed: 350,
+            spawn: 0.82,
+            accent: '#0ea5e9',
+            theme: 'beach'
         }
     ];
 
@@ -380,9 +389,9 @@
             ? `<p class="trompo-overlay-note">Mejor puntaje: <strong>${formatNumber(best.score)}</strong></p>`
             : '';
         setOverlayContent(`
-            <span class="trompo-overlay-kicker">3 niveles · modo descanso</span>
+            <span class="trompo-overlay-kicker">4 niveles · modo descanso</span>
             <h3>Monte Mamut</h3>
-            <p>Acompaña a Trompo por la montaña nevada. Salta, usa la trompa y aplasta insectos.</p>
+            <p>Acompaña a Trompo por montañas nevadas y una playa llena de criaturas. Salta, usa la trompa y aplasta insectos.</p>
             <p class="trompo-relax-phrase">“No todo es estudiar o programar. También hay tiempo para jugar.”</p>
             <div class="trompo-level-list">
                 ${LEVELS.map((level, index) => `
@@ -427,7 +436,7 @@
                 : `La montaña puede esperar. Descansa un momento y vuelve a intentar <strong>${game.level.name}</strong>.`}</p>
             <div class="trompo-summary">
                 <div><span>Puntos</span><strong>${formatNumber(getRunScore())}</strong></div>
-                <div><span>Insectos</span><strong>${formatNumber(game.insects)}</strong></div>
+                <div><span>Criaturas</span><strong>${formatNumber(game.insects)}</strong></div>
                 <div><span>Vida</span><strong>${Math.round(game.health)}</strong></div>
                 <div><span>Combo</span><strong>x${game.maxCombo}</strong></div>
             </div>
@@ -454,13 +463,13 @@
 
     function showVictoryOverlay() {
         setOverlayContent(`
-            <span class="trompo-overlay-kicker">Cumbre alcanzada</span>
-            <h3>¡Trompo llegó a la cima!</h3>
-            <p>Terminaste los tres niveles. La montaña puede esperar; tú también puedes descansar.</p>
+            <span class="trompo-overlay-kicker">Aventura completada</span>
+            <h3>¡Trompo llegó a la playa!</h3>
+            <p>Terminaste los cuatro niveles. La montaña y el mar pueden esperar; tú también puedes descansar.</p>
             <p class="trompo-relax-phrase">“No todo es estudiar o programar. También hay tiempo para jugar.”</p>
             <div class="trompo-summary">
                 <div><span>Puntos</span><strong>${formatNumber(getRunScore())}</strong></div>
-                <div><span>Insectos</span><strong>${formatNumber(game.insects)}</strong></div>
+                <div><span>Criaturas</span><strong>${formatNumber(game.insects)}</strong></div>
                 <div><span>Nivel</span><strong>${LEVELS.length} / ${LEVELS.length}</strong></div>
             </div>
             <div class="trompo-overlay-actions">
@@ -758,7 +767,7 @@
 
         game.spawnTimer -= dt;
         if (game.spawnTimer <= 0) {
-            spawnInsect();
+            spawnEnemy();
             game.spawnTimer = Math.max(0.62, game.level.spawn - game.levelIndex * 0.06) + Math.random() * 0.5;
         }
 
@@ -788,9 +797,11 @@
 
     function moveEntities(speed, dt) {
         for (const insect of game.obstacles) {
-            insect.x -= speed * dt;
+            insect.x -= speed * (insect.speedFactor || 1) * dt;
             if (insect.variant === 'cricket') {
                 insect.y = insect.baseY - Math.abs(Math.sin(game.elapsed * 5 + insect.seed)) * 22;
+            } else if (insect.sea) {
+                insect.y = insect.baseY + Math.sin(game.elapsed * 2.8 + insect.seed) * 8;
             } else if (insect.flying) {
                 insect.y = insect.baseY + Math.sin(game.elapsed * 3.2 + insect.seed) * 18;
             }
@@ -807,7 +818,12 @@
         game.powerups = game.powerups.filter(item => !item.dead);
     }
 
-    function spawnInsect() {
+    function spawnEnemy() {
+        if (game.level.theme === 'beach') {
+            spawnSeaEnemy();
+            return;
+        }
+
         const pool = ['cockroach', 'cricket'];
         if (game.levelIndex >= 1) pool.push('mantis', 'fly');
         if (game.levelIndex >= 2) pool.push('moth', 'fly', 'cockroach');
@@ -821,32 +837,75 @@
             baseY: GROUND_Y,
             seed: Math.random() * Math.PI * 2,
             flying: false,
+            hp: 1,
+            speedFactor: 1,
             dead: false
         };
 
         if (variant === 'cockroach') {
-            insect.w = 38;
-            insect.h = 24;
-        } else if (variant === 'cricket') {
             insect.w = 42;
-            insect.h = 30;
+            insect.h = 25;
+        } else if (variant === 'cricket') {
+            insect.w = 46;
+            insect.h = 34;
         } else if (variant === 'mantis') {
-            insect.w = 46;
-            insect.h = 56;
+            insect.w = 48;
+            insect.h = 58;
         } else if (variant === 'fly') {
-            insect.w = 46;
-            insect.h = 28;
+            insect.w = 48;
+            insect.h = 30;
             insect.flying = true;
-            insect.baseY = GROUND_Y - 96;
+            insect.baseY = GROUND_Y - 98;
         } else if (variant === 'moth') {
-            insect.w = 46;
-            insect.h = 32;
+            insect.w = 50;
+            insect.h = 34;
             insect.flying = true;
-            insect.baseY = GROUND_Y - 122;
+            insect.baseY = GROUND_Y - 124;
         }
 
         insect.y = insect.baseY - insect.h;
         game.obstacles.push(insect);
+    }
+
+    function spawnSeaEnemy() {
+        const roll = Math.random();
+        const variant = roll < 0.62 ? 'dolphin' : roll < 0.9 ? 'orca' : 'whale';
+        const enemy = {
+            variant,
+            x: VIEW_W + 60,
+            y: GROUND_Y,
+            w: 72,
+            h: 38,
+            baseY: GROUND_Y - 18,
+            seed: Math.random() * Math.PI * 2,
+            flying: false,
+            sea: true,
+            hp: 1,
+            speedFactor: 1,
+            dead: false
+        };
+
+        if (variant === 'dolphin') {
+            enemy.w = 76;
+            enemy.h = 38;
+            enemy.baseY = GROUND_Y - 24;
+            enemy.speedFactor = 1.12;
+        } else if (variant === 'orca') {
+            enemy.w = 98;
+            enemy.h = 50;
+            enemy.baseY = GROUND_Y - 28;
+            enemy.hp = 2;
+            enemy.speedFactor = 0.92;
+        } else if (variant === 'whale') {
+            enemy.w = 150;
+            enemy.h = 64;
+            enemy.baseY = GROUND_Y - 30;
+            enemy.hp = 3;
+            enemy.speedFactor = 0.76;
+        }
+
+        enemy.y = enemy.baseY - enemy.h;
+        game.obstacles.push(enemy);
     }
 
     function spawnSpinach() {
@@ -922,24 +981,24 @@
             if (insect.dead) continue;
 
             if (trunk && overlaps(trunk, insect)) {
-                squashInsect(insect, true);
+                hitEnemy(insect, true);
                 continue;
             }
 
             if (!overlaps(player, insect)) continue;
 
             if (game.spinachTimer > 0) {
-                squashInsect(insect, false);
+                hitEnemy(insect, false);
                 continue;
             }
 
             if (game.stompTimer > 0 && !insect.flying) {
-                squashInsect(insect, false);
+                hitEnemy(insect, false);
                 continue;
             }
 
             insect.dead = true;
-            damage(insect.flying ? 18 : 22);
+            damage(insect.variant === 'orca' || insect.variant === 'whale' ? 28 : insect.flying ? 18 : 22);
         }
 
         for (const item of game.powerups) {
@@ -949,14 +1008,23 @@
         }
     }
 
-    function squashInsect(insect, fromTrunk) {
-        insect.dead = true;
+    function hitEnemy(enemy, fromTrunk) {
+        enemy.hp = (enemy.hp || 1) - 1;
+        if (enemy.hp > 0) {
+            game.score += fromTrunk ? 12 : 6;
+            game.shake = 0.18;
+            burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#94a3b8', 6);
+            playSound('trunk');
+            return;
+        }
+
+        enemy.dead = true;
         game.insects += 1;
         game.combo += 1;
         game.maxCombo = Math.max(game.maxCombo, game.combo);
         game.score += (fromTrunk ? 35 : 25) * clamp(game.combo, 1, 5);
         game.shake = 0.2;
-        burst(insect.x + insect.w / 2, insect.y + insect.h / 2, '#8b5a2b', 10);
+        burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#8b5a2b', 10);
         playSound(fromTrunk ? 'trunk' : 'squash');
     }
 
@@ -1068,6 +1136,11 @@
     }
 
     function drawBackground() {
+        if (game.level.theme === 'beach') {
+            drawBeachBackground();
+            return;
+        }
+
         ctx.fillStyle = '#cfe8f5';
         ctx.fillRect(0, 0, VIEW_W, VIEW_H);
 
@@ -1096,6 +1169,78 @@
         ctx.font = '800 42px "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'right';
         ctx.fillText(game.level.name.toUpperCase(), VIEW_W - 24, 66);
+        ctx.font = '600 11px "Segoe UI", Arial, sans-serif';
+        ctx.fillText('MONTE MAMUT', VIEW_W - 24, 84);
+        ctx.restore();
+    }
+
+    function drawBeachBackground() {
+        ctx.fillStyle = '#bfe9ff';
+        ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.arc(850, 72, 34, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.beginPath();
+        ctx.ellipse(760, 86, 54, 15, 0, 0, Math.PI * 2);
+        ctx.ellipse(815, 80, 37, 12, 0, 0, Math.PI * 2);
+        ctx.ellipse(185, 74, 42, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#7dd3fc';
+        ctx.fillRect(0, 165, VIEW_W, GROUND_Y - 165);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(0, 190, VIEW_W, GROUND_Y - 190);
+
+        const islandOffset = -(game.distance * 0.05) % 420;
+        ctx.fillStyle = '#fcd34d';
+        ctx.beginPath();
+        ctx.ellipse(islandOffset + 250, 188, 95, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f766e';
+        ctx.fillRect(islandOffset + 238, 148, 6, 42);
+        ctx.beginPath();
+        ctx.ellipse(islandOffset + 241, 145, 28, 8, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(islandOffset + 229, 151, 22, 7, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 3;
+        const waveOffset = -(game.distance * 0.25) % 120;
+        for (let x = waveOffset - 120; x < VIEW_W + 120; x += 120) {
+            ctx.beginPath();
+            ctx.arc(x + 30, 225, 34, 0.15, Math.PI - 0.15);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x + 92, 252, 42, 0.1, Math.PI - 0.1);
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2;
+        for (let x = 80; x < VIEW_W; x += 260) {
+            ctx.beginPath();
+            ctx.moveTo(x, 78);
+            ctx.quadraticCurveTo(x + 7, 70, x + 14, 78);
+            ctx.stroke();
+        }
+
+        for (const flake of game.snow) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            ctx.beginPath();
+            ctx.arc(flake.x, flake.y * 0.8 + 100, flake.size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = game.level.accent;
+        ctx.font = '800 42px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('PLAYA', VIEW_W - 24, 66);
         ctx.font = '600 11px "Segoe UI", Arial, sans-serif';
         ctx.fillText('MONTE MAMUT', VIEW_W - 24, 84);
         ctx.restore();
@@ -1153,6 +1298,11 @@
     }
 
     function drawGround() {
+        if (game.level.theme === 'beach') {
+            drawBeachGround();
+            return;
+        }
+
         ctx.fillStyle = '#eaf4fb';
         ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
         ctx.fillStyle = '#c7dbe8';
@@ -1170,6 +1320,27 @@
         for (let x = 50; x < VIEW_W; x += 160) {
             ctx.beginPath();
             ctx.ellipse(x, GROUND_Y + 18, 35, 7, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawBeachGround() {
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(0, GROUND_Y, VIEW_W, 7);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 3;
+        const offset = -(game.distance * 1.1) % 90;
+        for (let x = offset; x < VIEW_W + 90; x += 90) {
+            ctx.beginPath();
+            ctx.arc(x, GROUND_Y + 12, 38, 0.1, Math.PI - 0.1);
+            ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        for (let x = 28; x < VIEW_W; x += 150) {
+            ctx.beginPath();
+            ctx.ellipse(x, GROUND_Y + 22, 31, 5, 0, 0, Math.PI * 2);
             ctx.fill();
         }
     }
@@ -1351,45 +1522,65 @@
             else if (insect.variant === 'mantis') drawMantis(insect);
             else if (insect.variant === 'fly') drawFly(insect);
             else if (insect.variant === 'moth') drawMoth(insect);
+            else if (insect.variant === 'dolphin') drawDolphin(insect);
+            else if (insect.variant === 'orca') drawOrca(insect);
+            else if (insect.variant === 'whale') drawWhale(insect);
         }
     }
 
-    function drawCockroach(insect) {
+function drawCockroach(insect) {
         const x = insect.x;
         const y = insect.y;
         ctx.save();
         ctx.strokeStyle = '#3f2412';
         ctx.lineWidth = 2;
         for (let index = 0; index < 3; index += 1) {
+            const legY = y + 10 + index * 5;
             ctx.beginPath();
-            ctx.moveTo(x + 13, y + 12 + index * 3);
-            ctx.lineTo(x + 4, y + 20 + index * 3);
-            ctx.moveTo(x + 25, y + 12 + index * 3);
-            ctx.lineTo(x + 34, y + 20 + index * 3);
+            ctx.moveTo(x + 17, legY);
+            ctx.lineTo(x + 8, legY + 8);
+            ctx.lineTo(x + 2, legY + 4);
+            ctx.moveTo(x + 25, legY);
+            ctx.lineTo(x + 35, legY + 8);
+            ctx.lineTo(x + 41, legY + 4);
             ctx.stroke();
         }
-        ctx.fillStyle = '#8b5a2b';
+        ctx.strokeStyle = '#2f1a0b';
+        ctx.beginPath();
+        ctx.moveTo(x + 9, y + 7);
+        ctx.quadraticCurveTo(x - 2, y - 4, x - 7, y + 3);
+        ctx.moveTo(x + 13, y + 5);
+        ctx.quadraticCurveTo(x + 4, y - 8, x - 2, y - 3);
+        ctx.stroke();
+        ctx.fillStyle = '#9a6234';
         ctx.strokeStyle = '#4a2c12';
         ctx.beginPath();
-        ctx.ellipse(x + 19, y + 12, 15, 10, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 23, y + 14, 16, 9, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.strokeStyle = '#5b3a1a';
+        ctx.fillStyle = '#6b3f1d';
         ctx.beginPath();
-        ctx.moveTo(x + 10, y + 4);
-        ctx.lineTo(x + 3, y - 2);
-        ctx.moveTo(x + 28, y + 4);
-        ctx.lineTo(x + 35, y - 2);
+        ctx.ellipse(x + 12, y + 12, 7, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#4a2c12';
+        ctx.beginPath();
+        ctx.arc(x + 7, y + 11, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = '#d6a46a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x + 13, y + 7);
+        ctx.lineTo(x + 33, y + 12);
         ctx.stroke();
         ctx.fillStyle = '#fef3c7';
         ctx.beginPath();
-        ctx.arc(x + 14, y + 9, 2, 0, Math.PI * 2);
-        ctx.arc(x + 24, y + 9, 2, 0, Math.PI * 2);
+        ctx.arc(x + 5, y + 9, 1.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
-
-    function drawCricket(insect) {
+function drawCricket(insect) {
         const x = insect.x;
         const y = insect.y;
         ctx.save();
@@ -1397,33 +1588,49 @@
         ctx.lineWidth = 2;
         ctx.fillStyle = '#65a30d';
         ctx.beginPath();
-        ctx.ellipse(x + 21, y + 15, 14, 9, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 24, y + 18, 15, 9, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        ctx.fillStyle = '#4d7c0f';
         ctx.beginPath();
-        ctx.arc(x + 34, y + 10, 7, 0, Math.PI * 2);
+        ctx.ellipse(x + 13, y + 16, 8, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#3f6212';
+        ctx.beginPath();
+        ctx.arc(x + 6, y + 14, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         ctx.strokeStyle = '#365314';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(x + 12, y + 20);
-        ctx.lineTo(x + 3, y + 30);
-        ctx.moveTo(x + 24, y + 20);
-        ctx.lineTo(x + 33, y + 30);
+        ctx.moveTo(x + 20, y + 23);
+        ctx.lineTo(x + 8, y + 34);
+        ctx.lineTo(x + 3, y + 29);
+        ctx.moveTo(x + 32, y + 22);
+        ctx.lineTo(x + 44, y + 32);
+        ctx.lineTo(x + 40, y + 37);
         ctx.stroke();
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x + 34, y + 5);
-        ctx.lineTo(x + 43, y - 3);
+        ctx.moveTo(x + 4, y + 10);
+        ctx.quadraticCurveTo(x - 6, y - 2, x - 12, y + 5);
+        ctx.moveTo(x + 8, y + 8);
+        ctx.quadraticCurveTo(x + 2, y - 5, x - 5, y - 2);
         ctx.stroke();
-        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#a3e635';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(x + 36, y + 8, 1.7, 0, Math.PI * 2);
+        ctx.moveTo(x + 10, y + 12);
+        ctx.lineTo(x + 31, y + 18);
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x + 5, y + 12, 1.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
-
-    function drawMantis(insect) {
+function drawMantis(insect) {
         const x = insect.x;
         const y = insect.y;
         ctx.save();
@@ -1431,59 +1638,99 @@
         ctx.lineWidth = 2;
         ctx.fillStyle = '#22c55e';
         ctx.beginPath();
-        ctx.ellipse(x + 22, y + 30, 10, 22, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 24, y + 34, 10, 23, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        ctx.fillStyle = '#15803d';
         ctx.beginPath();
-        ctx.arc(x + 27, y + 10, 8, 0, Math.PI * 2);
+        ctx.moveTo(x + 24, y + 8);
+        ctx.lineTo(x + 34, y + 16);
+        ctx.lineTo(x + 24, y + 22);
+        ctx.lineTo(x + 14, y + 16);
+        ctx.closePath();
         ctx.fill();
         ctx.stroke();
         ctx.strokeStyle = '#166534';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(x + 18, y + 24);
-        ctx.lineTo(x + 2, y + 10);
-        ctx.lineTo(x + 10, y + 4);
-        ctx.moveTo(x + 26, y + 24);
-        ctx.lineTo(x + 42, y + 10);
-        ctx.lineTo(x + 34, y + 4);
+        ctx.moveTo(x + 15, y + 25);
+        ctx.lineTo(x + 4, y + 12);
+        ctx.lineTo(x + 12, y + 2);
+        ctx.moveTo(x + 33, y + 25);
+        ctx.lineTo(x + 44, y + 12);
+        ctx.lineTo(x + 36, y + 2);
         ctx.stroke();
-        ctx.fillStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        for (let index = 0; index < 3; index += 1) {
+            ctx.beginPath();
+            ctx.moveTo(x + 8 + index * 3, y + 10 - index * 2);
+            ctx.lineTo(x + 4 + index * 3, y + 6 - index * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + 40 - index * 3, y + 10 - index * 2);
+            ctx.lineTo(x + 44 - index * 3, y + 6 - index * 2);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = '#15803d';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(x + 24, y + 8, 2, 0, Math.PI * 2);
-        ctx.arc(x + 31, y + 8, 2, 0, Math.PI * 2);
+        ctx.moveTo(x + 18, y + 10);
+        ctx.quadraticCurveTo(x + 10, y - 4, x + 4, y + 2);
+        ctx.moveTo(x + 30, y + 10);
+        ctx.quadraticCurveTo(x + 38, y - 4, x + 44, y + 2);
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x + 20, y + 14, 2.4, 0, Math.PI * 2);
+        ctx.arc(x + 28, y + 14, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#052e16';
+        ctx.beginPath();
+        ctx.arc(x + 21, y + 14, 1, 0, Math.PI * 2);
+        ctx.arc(x + 29, y + 14, 1, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
-
-    function drawFly(insect) {
+function drawFly(insect) {
         const x = insect.x;
         const y = insect.y;
         ctx.save();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
         ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
+        for (let index = 0; index < 3; index += 1) {
+            ctx.beginPath();
+            ctx.moveTo(x + 20, y + 17 + index * 4);
+            ctx.lineTo(x + 10, y + 25 + index * 4);
+            ctx.moveTo(x + 30, y + 17 + index * 4);
+            ctx.lineTo(x + 40, y + 25 + index * 4);
+            ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.beginPath();
-        ctx.ellipse(x + 14, y + 8, 14, 7, -0.4, 0, Math.PI * 2);
+        ctx.ellipse(x + 14, y + 9, 14, 7, -0.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         ctx.beginPath();
-        ctx.ellipse(x + 32, y + 8, 14, 7, 0.4, 0, Math.PI * 2);
+        ctx.ellipse(x + 34, y + 9, 14, 7, 0.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = '#334155';
         ctx.beginPath();
-        ctx.ellipse(x + 23, y + 15, 9, 7, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 24, y + 17, 10, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.ellipse(x + 16, y + 14, 6, 5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#ef4444';
         ctx.beginPath();
+        ctx.arc(x + 14, y + 12, 2.5, 0, Math.PI * 2);
         ctx.arc(x + 19, y + 12, 2.5, 0, Math.PI * 2);
-        ctx.arc(x + 27, y + 12, 2.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
-
-    function drawMoth(insect) {
+function drawMoth(insect) {
         const x = insect.x;
         const y = insect.y;
         ctx.save();
@@ -1491,13 +1738,201 @@
         ctx.strokeStyle = '#a16207';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(x + 14, y + 12, 14, 10, -0.3, 0, Math.PI * 2);
-        ctx.ellipse(x + 32, y + 12, 14, 10, 0.3, 0, Math.PI * 2);
+        ctx.ellipse(x + 14, y + 13, 15, 11, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(x + 34, y + 13, 15, 11, 0.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(x + 14, y + 13, 3, 0, Math.PI * 2);
+        ctx.arc(x + 34, y + 13, 3, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#92400e';
         ctx.beginPath();
-        ctx.ellipse(x + 23, y + 18, 5, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 24, y + 19, 5, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 21, y + 10);
+        ctx.quadraticCurveTo(x + 12, y - 2, x + 8, y + 3);
+        ctx.moveTo(x + 27, y + 10);
+        ctx.quadraticCurveTo(x + 36, y - 2, x + 40, y + 3);
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x + 22, y + 14, 1.5, 0, Math.PI * 2);
+        ctx.arc(x + 26, y + 14, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    function drawDolphin(enemy) {
+        const x = enemy.x;
+        const y = enemy.y;
+        ctx.save();
+        ctx.fillStyle = '#94a3b8';
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x + 36, y + 20, 27, 13, -0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.ellipse(x + 37, y + 25, 20, 6, -0.05, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.moveTo(x + 35, y + 7);
+        ctx.lineTo(x + 41, y - 5);
+        ctx.lineTo(x + 48, y + 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + 10, y + 17);
+        ctx.lineTo(x - 2, y + 7);
+        ctx.lineTo(x + 2, y + 25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.moveTo(x + 62, y + 16);
+        ctx.lineTo(x + 75, y + 20);
+        ctx.lineTo(x + 63, y + 24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(x + 54, y + 15, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#e0f2fe';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + 34, y + 27, 17, 0.4, Math.PI - 0.4);
+        ctx.stroke();
+        drawEnemyHp(enemy, x + enemy.w / 2, y - 12);
+        ctx.restore();
+    }
+
+    function drawOrca(enemy) {
+        const x = enemy.x;
+        const y = enemy.y;
+        ctx.save();
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x + 47, y + 27, 37, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.ellipse(x + 48, y + 36, 28, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.moveTo(x + 46, y + 8);
+        ctx.lineTo(x + 53, y - 10);
+        ctx.lineTo(x + 62, y + 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + 13, y + 23);
+        ctx.lineTo(x - 3, y + 9);
+        ctx.lineTo(x + 4, y + 34);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.ellipse(x + 75, y + 18, 7, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(x + 77, y + 18, 2, 0, Math.PI * 2);
+        ctx.fill();
+        drawEnemyHp(enemy, x + enemy.w / 2, y - 14);
+        ctx.restore();
+    }
+
+    function drawWhale(enemy) {
+        const x = enemy.x;
+        const y = enemy.y;
+        ctx.save();
+        ctx.fillStyle = '#3b82f6';
+        ctx.strokeStyle = '#1e3a8a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x + 72, y + 34, 62, 26, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#bfdbfe';
+        ctx.beginPath();
+        ctx.ellipse(x + 72, y + 46, 48, 11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#3b82f6';
+        ctx.beginPath();
+        ctx.moveTo(x + 20, y + 29);
+        ctx.lineTo(x - 12, y + 10);
+        ctx.lineTo(x + 2, y + 48);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#93c5fd';
+        ctx.beginPath();
+        ctx.moveTo(x + 63, y + 13);
+        ctx.quadraticCurveTo(x + 67, y - 8, x + 73, y + 11);
+        ctx.quadraticCurveTo(x + 69, y - 2, x + 63, y + 13);
+        ctx.fill();
+        ctx.strokeStyle = '#93c5fd';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x + 68, y + 12);
+        ctx.lineTo(x + 68, y - 6);
+        ctx.stroke();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(x + 113, y + 34, 3, 0, Math.PI * 2);
+        ctx.fill();
+        drawEnemyHp(enemy, x + enemy.w / 2, y - 16);
+        ctx.restore();
+    }
+
+    function drawEnemyHp(enemy, x, y) {
+        if (!enemy.hp || enemy.hp <= 1) return;
+        for (let index = 0; index < enemy.hp; index += 1) {
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(x - (enemy.hp - 1) * 5 + index * 10, y, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawSurfboard(feet) {
+        ctx.save();
+        ctx.translate(PLAYER_X, feet + 2);
+        ctx.rotate(reduceMotion ? 0 : Math.sin(game.elapsed * 4) * 0.035);
+        ctx.fillStyle = '#f59e0b';
+        ctx.strokeStyle = '#92400e';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 55, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = '#fef3c7';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-38, 0);
+        ctx.lineTo(38, 0);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.beginPath();
+        ctx.ellipse(-48, 3, 11, 4, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(48, 3, 11, 4, 0.2, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
     }
@@ -1526,6 +1961,10 @@
         ctx.beginPath();
         ctx.ellipse(PLAYER_X, GROUND_Y + 5, 40, 7, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        if (game.level.theme === 'beach') {
+            drawSurfboard(feet);
+        }
 
         // Cola.
         ctx.strokeStyle = dark;

@@ -36,11 +36,12 @@ const { window } = dom;
 
 window.eval(fs.readFileSync(new URL('../trompo.js', import.meta.url), 'utf8'));
 
-test('Monte Mamut define tres niveles largos', () => {
+test('Monte Mamut define cuatro niveles largos', () => {
     const levels = window.TrompoInternals.LEVELS;
-    assert.equal(levels.length, 3);
-    assert.deepEqual([...levels].map(level => level.name), ['Base del cerro', 'Bosque nevado', 'Cumbre']);
+    assert.equal(levels.length, 4);
+    assert.deepEqual([...levels].map(level => level.name), ['Base del cerro', 'Bosque nevado', 'Cumbre', 'Playa']);
     assert.ok(levels.every(level => level.rows >= 2400 && level.speed > 0));
+    assert.equal(levels[3].theme, 'beach');
 });
 
 test('el estado inicial tiene vida y escudo, no vidas sueltas', () => {

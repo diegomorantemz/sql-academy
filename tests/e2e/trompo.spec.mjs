@@ -58,7 +58,7 @@ test('Monte Mamut completa un nivel y avanza al siguiente', async ({ page }, tes
     await page.locator('[data-trompo-action="start"]').click();
     await expect(page.locator('#trompoOverlay')).toContainText('Nivel superado', { timeout: 5000 });
     await page.locator('[data-trompo-action="next"]').click();
-    await expect(page.locator('#trompoLevelLabel')).toHaveText('2 / 3');
+    await expect(page.locator('#trompoLevelLabel')).toHaveText('2 / 4');
     await expect(page.locator('#trompoOverlay')).toBeHidden();
 });
 

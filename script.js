@@ -7137,7 +7137,7 @@ const DEMO_TOUR_STEPS = [
     },
     {
         title: 'Corre con Monte Mamut',
-        description: 'Un runner de tres niveles por montañas nevadas: salta insectos, usa la trompa, come espinaca y encuentra aliados tecnológicos. También se juega con mando.',
+        description: 'Un runner de cuatro niveles: montañas nevadas y una playa con delfines, orcas y ballenas. Salta, usa la trompa, come espinaca y encuentra aliados tecnológicos. También se juega con mando.',
         section: 'game',
         gameMode: 'trompo',
         target: 'trompoCanvas'
