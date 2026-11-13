@@ -64,6 +64,15 @@ test('el estado inicial tiene vida y escudo, no vidas sueltas', () => {
     assert.equal(getRunScore(state), 750);
 });
 
+test('la espinaca recupera vida y activa el modo relax', () => {
+    const { makeState, applySpinach } = window.TrompoInternals;
+    const state = makeState(0);
+    state.health = 40;
+    applySpinach(state);
+    assert.equal(state.health, 75);
+    assert.equal(state.spinachTimer, 8);
+});
+
 test('la bebida energética activa el vuelo durante ocho segundos', () => {
     const { makeState, applyEnergy } = window.TrompoInternals;
     const state = makeState(0);
@@ -71,6 +80,16 @@ test('la bebida energética activa el vuelo durante ocho segundos', () => {
     applyEnergy(state);
     assert.equal(state.health, 40);
     assert.equal(state.flightTimer, 8);
+});
+
+test('los potenciadores cambian según el nivel', () => {
+    const { LEVELS, getPowerupType, getSpecialType } = window.TrompoInternals;
+    assert.equal(getPowerupType(LEVELS[0]), 'spinach');
+    assert.equal(getPowerupType(LEVELS[3]), 'spinach');
+    assert.equal(getPowerupType(LEVELS[4]), 'energy');
+    assert.equal(getSpecialType(LEVELS[0]), 'vocho');
+    assert.equal(getSpecialType(LEVELS[3]), 'penguin');
+    assert.equal(getSpecialType(LEVELS[4]), 'vocho');
 });
 
 test('el escarabajo Vocho recupera vida y llena el escudo', () => {

@@ -7137,7 +7137,7 @@ const DEMO_TOUR_STEPS = [
     },
     {
         title: 'Corre con Monte Mamut',
-        description: 'Un runner de cinco niveles: montañas nevadas, playa con criaturas marinas y Ciudad Gótica en patineta. Salta, usa la trompa, bebe energía para volar y encuentra aliados tecnológicos. Puedes empezar por cualquier nivel y también se juega con mando.',
+        description: 'Un runner de cinco niveles: montañas nevadas, playa con criaturas marinas y Ciudad Gótica en patineta. Salta, usa la trompa, come espinaca en la montaña, bebe energía para volar en la ciudad y encuentra aliados tecnológicos. Puedes empezar por cualquier nivel y también se juega con mando.',
         section: 'game',
         gameMode: 'trompo',
         target: 'trompoCanvas'

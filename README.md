@@ -29,7 +29,7 @@ La base SQL funciona con SQLite dentro del navegador y el laboratorio NoSQL tien
 - Guías de instalación paso a paso para doce gestores SQL y NoSQL, con rutas para Windows, macOS, Linux y Docker, comandos copiables y enlaces oficiales.
 - Panel **Mi progreso** con avance por curso, dominio por concepto SQL, progreso por dataset, actividad reciente y recomendaciones.
 - **Torre de Datos:** minijuego deckbuilder con 6 pisos, cartas SQL, recompensas y soporte para teclado, ratón y mando.
-- **Monte Mamut:** runner de cinco niveles con Trompo, un mamut azul, insectos, criaturas marinas, bebida energética, escudo, pingüino de Linux y aliados tecnológicos.
+- **Monte Mamut:** runner de cinco niveles con Trompo, un mamut azul, insectos, criaturas marinas, espinaca, bebida energética, escudo, pingüino de Linux y aliados tecnológicos.
 - Autocompletado contextual de tablas, columnas, palabras clave, colecciones, métodos y campos en los editores SQL y NoSQL.
 - Laboratorio NoSQL documental con consola tipo MongoDB, CRUD, agregaciones, ejemplos y retos por dataset.
 - Asistente IA con modos de error, explicación, pista, revisión, generación de ejercicios y ayuda para comandos NoSQL.

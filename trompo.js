@@ -162,6 +162,7 @@
             maxCombo: 0,
             insects: 0,
             flightTimer: 0,
+            spinachTimer: 0,
             invincible: 0,
             boost: 0,
             armorTimer: 0,
@@ -286,6 +287,8 @@
             playTone({ frequency: 125, endFrequency: 55, duration: 0.13, type: 'square', gain: 0.045 });
         } else if (name === 'hit') {
             playTone({ frequency: 180, endFrequency: 65, duration: 0.28, type: 'sawtooth', gain: 0.045 });
+        } else if (name === 'spinach') {
+            playTone({ frequency: 520, endFrequency: 780, duration: 0.14, type: 'triangle', gain: 0.04 });
         } else if (name === 'energy') {
             playTone({ frequency: 600, endFrequency: 920, duration: 0.15, type: 'triangle', gain: 0.04 });
         } else if (name === 'vocho') {
@@ -327,6 +330,7 @@
 
     function getEffects(state = game) {
         const effects = [];
+        if (state.spinachTimer > 0) effects.push({ label: 'ESPINACA', time: Math.ceil(state.spinachTimer), tone: 'green' });
         if (state.flightTimer > 0) effects.push({ label: 'ENERGÍA', time: Math.ceil(state.flightTimer), tone: 'orange' });
         if (state.extraJumpTimer > 0) effects.push({ label: 'PYTHON', time: Math.ceil(state.extraJumpTimer), tone: 'green' });
         if (state.checkpointActive) effects.push({ label: 'GIT', time: Math.ceil(state.checkpointTimer), tone: 'orange' });
@@ -418,7 +422,7 @@
                     <i class="fas fa-arrow-left"></i> Volver a la pausa
                 </button>` : ''}
             </div>
-            <p class="trompo-overlay-note">Puedes empezar por cualquier nivel. Bebe energía para volar; el Vocho o el pingüino recuperan vida y escudo.</p>
+            <p class="trompo-overlay-note">Puedes empezar por cualquier nivel. En Ciudad Gótica bebe energía para volar; en el resto come espinaca. El Vocho o el pingüino recuperan vida y escudo.</p>
             <p class="trompo-overlay-note">Espacio salta · X usa la trompa · ↓ o S aplasta · P pausa.</p>
         `);
     }
@@ -627,6 +631,12 @@
         return state;
     }
 
+    function applySpinach(state = game) {
+        state.health = Math.min(state.maxHealth, state.health + 35);
+        state.spinachTimer = 8;
+        return state;
+    }
+
     function applyVocho(state = game) {
         state.health = state.maxHealth;
         state.shield = state.maxShield;
@@ -740,8 +750,9 @@
 
     function getSpeed() {
         const base = game.level.speed * (1 + 0.2 * getProgress());
+        const spinach = game.spinachTimer > 0 ? 0.72 : 1;
         const boost = game.boost > 0 ? 1.22 : 1;
-        return base * boost;
+        return base * spinach * boost;
     }
 
     function update(dt) {
@@ -761,6 +772,7 @@
         }
 
         if (game.flightTimer > 0) game.flightTimer = Math.max(0, game.flightTimer - dt);
+        if (game.spinachTimer > 0) game.spinachTimer = Math.max(0, game.spinachTimer - dt);
         if (game.invincible > 0) game.invincible = Math.max(0, game.invincible - dt);
         if (game.boost > 0) game.boost = Math.max(0, game.boost - dt);
         if (game.armorTimer > 0) game.armorTimer = Math.max(0, game.armorTimer - dt);
@@ -801,7 +813,7 @@
 
         game.powerTimer -= dt;
         if (game.powerTimer <= 0) {
-            spawnEnergy();
+            spawnPowerup();
             game.powerTimer = 12 + Math.random() * 5;
         }
 
@@ -853,9 +865,9 @@
         }
 
         const pool = ['cockroach', 'cricket'];
-        if (game.levelIndex >= 1) pool.push('mantis', 'fly');
-        if (game.levelIndex >= 2) pool.push('moth', 'fly', 'cockroach');
-        if (game.level.theme === 'city') pool.push('bat', 'bat', 'fly');
+        if (game.levelIndex >= 1) pool.push('mantis', 'fly', 'beetle');
+        if (game.levelIndex >= 2) pool.push('moth', 'fly', 'cockroach', 'tarantula');
+        if (game.level.theme === 'city') pool.push('bat', 'bat', 'beetle', 'tarantula');
         const variant = pool[Math.floor(Math.random() * pool.length)];
         const insect = {
             variant,
@@ -895,6 +907,13 @@
             insect.h = 34;
             insect.flying = true;
             insect.baseY = GROUND_Y - 112;
+        } else if (variant === 'beetle') {
+            insect.w = 50;
+            insect.h = 32;
+        } else if (variant === 'tarantula') {
+            insect.w = 68;
+            insect.h = 42;
+            insect.speedFactor = 0.86;
         }
 
         insect.y = insect.baseY - insect.h;
@@ -942,9 +961,18 @@
         game.obstacles.push(enemy);
     }
 
-    function spawnEnergy() {
+    function getPowerupType(level = game.level) {
+        return level.theme === 'city' ? 'energy' : 'spinach';
+    }
+
+    function getSpecialType(level = game.level) {
+        return level.theme === 'beach' ? 'penguin' : 'vocho';
+    }
+
+    function spawnPowerup() {
+        const type = getPowerupType();
         game.powerups.push({
-            type: 'energy',
+            type,
             x: VIEW_W + 30,
             y: GROUND_Y - 86,
             w: 40,
@@ -955,7 +983,7 @@
     }
 
     function spawnVocho() {
-        const type = game.level.theme === 'beach' ? 'penguin' : 'vocho';
+        const type = getSpecialType();
         game.powerups.push({
             type,
             x: VIEW_W + 30,
@@ -1022,7 +1050,7 @@
 
             if (!overlaps(player, insect)) continue;
 
-            if (game.flightTimer > 0) {
+            if (game.spinachTimer > 0) {
                 hitEnemy(insect, false);
                 continue;
             }
@@ -1064,7 +1092,12 @@
     }
 
     function collectPowerup(item) {
-        if (item.type === 'energy') {
+        if (item.type === 'spinach') {
+            applySpinach();
+            game.flashText = 'ESPINACA';
+            game.flash = 0.55;
+            playSound('spinach');
+        } else if (item.type === 'energy') {
             applyEnergy();
             game.flashText = 'ENERGÍA';
             game.flash = 0.55;
@@ -1488,11 +1521,34 @@
         for (const item of game.powerups) {
             if (item.dead) continue;
             const float = Math.sin(game.elapsed * 5 + item.seed) * 5;
-            if (item.type === 'energy') drawEnergy(item, float);
+            if (item.type === 'spinach') drawSpinach(item, float);
+            else if (item.type === 'energy') drawEnergy(item, float);
             else if (item.type === 'vocho') drawVocho(item, float);
             else if (item.type === 'penguin') drawPenguin(item, float);
             else if (item.type === 'ally') drawAlly(item, float);
         }
+    }
+
+    function drawSpinach(item, float) {
+        ctx.save();
+        ctx.translate(item.x, item.y + float);
+        ctx.strokeStyle = '#14532d';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = '#22c55e';
+        for (let index = 0; index < 3; index += 1) {
+            ctx.beginPath();
+            ctx.ellipse(12 + index * 7, 18 + (index % 2) * 5, 13, 7, -0.45 + index * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+        ctx.fillStyle = '#166534';
+        roundedRect(14, 23, 5, 14, 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '800 7px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('ESPINACA', 20, 47);
+        ctx.restore();
     }
 
     function drawEnergy(item, float) {
@@ -1715,6 +1771,8 @@
             else if (insect.variant === 'fly') drawFly(insect);
             else if (insect.variant === 'moth') drawMoth(insect);
             else if (insect.variant === 'bat') drawBat(insect);
+            else if (insect.variant === 'beetle') drawBeetle(insect);
+            else if (insect.variant === 'tarantula') drawTarantula(insect);
             else if (insect.variant === 'dolphin') drawDolphin(insect);
             else if (insect.variant === 'orca') drawOrca(insect);
             else if (insect.variant === 'whale') drawWhale(insect);
@@ -1959,6 +2017,112 @@ function drawMoth(insect) {
         ctx.fill();
         ctx.restore();
     }
+    function drawBeetle(insect) {
+        const x = insect.x;
+        const y = insect.y;
+        ctx.save();
+        ctx.strokeStyle = '#0b1220';
+        ctx.lineWidth = 2;
+        for (let index = 0; index < 3; index += 1) {
+            ctx.beginPath();
+            ctx.moveTo(x + 15, y + 18 + index * 3);
+            ctx.lineTo(x + 5, y + 27 + index * 3);
+            ctx.moveTo(x + 35, y + 18 + index * 3);
+            ctx.lineTo(x + 46, y + 27 + index * 3);
+            ctx.stroke();
+        }
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#020617';
+        ctx.beginPath();
+        ctx.ellipse(x + 25, y + 17, 17, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.ellipse(x + 22, y + 14, 11, 7, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(x + 10, y + 15, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + 10, y + 8);
+        ctx.quadraticCurveTo(x + 4, y - 9, x + 15, y - 2);
+        ctx.quadraticCurveTo(x + 18, y + 3, x + 12, y + 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x + 8, y + 12, 2.5, 0, Math.PI * 2);
+        ctx.arc(x + 14, y + 12, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#020617';
+        ctx.beginPath();
+        ctx.arc(x + 8, y + 12, 1, 0, Math.PI * 2);
+        ctx.arc(x + 14, y + 12, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawTarantula(insect) {
+        const x = insect.x;
+        const y = insect.y;
+        ctx.save();
+        ctx.strokeStyle = '#3f2412';
+        ctx.lineWidth = 4;
+        for (let index = 0; index < 4; index += 1) {
+            const legY = y + 18 + index * 4;
+            ctx.beginPath();
+            ctx.moveTo(x + 25, legY);
+            ctx.lineTo(x + 10 - index * 3, legY + 12);
+            ctx.lineTo(x + 2 - index * 2, legY + 20);
+            ctx.moveTo(x + 43, legY);
+            ctx.lineTo(x + 58 + index * 3, legY + 12);
+            ctx.lineTo(x + 66 + index * 2, legY + 20);
+            ctx.stroke();
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + 15 - index * 2, legY + 8);
+            ctx.lineTo(x + 19 - index * 2, legY + 10);
+            ctx.moveTo(x + 53 + index * 2, legY + 8);
+            ctx.lineTo(x + 49 + index * 2, legY + 10);
+            ctx.stroke();
+            ctx.strokeStyle = '#3f2412';
+            ctx.lineWidth = 4;
+        }
+        ctx.fillStyle = '#3b2a1d';
+        ctx.strokeStyle = '#1f140c';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(x + 34, y + 24, 22, 17, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#1f140c';
+        ctx.beginPath();
+        ctx.arc(x + 22, y + 19, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x + 19, y + 17, 3.2, 0, Math.PI * 2);
+        ctx.arc(x + 26, y + 17, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#020617';
+        ctx.beginPath();
+        ctx.arc(x + 19, y + 17, 1.3, 0, Math.PI * 2);
+        ctx.arc(x + 26, y + 17, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ea580c';
+        for (let index = 0; index < 4; index += 1) {
+            ctx.beginPath();
+            ctx.arc(x + 32 + index * 4, y + 9, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
     function drawBat(enemy) {
         const x = enemy.x;
         const y = enemy.y;
@@ -2038,9 +2202,13 @@ function drawMoth(insect) {
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x + 54, y + 15, 4.2, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
-        ctx.arc(x + 54, y + 15, 2.2, 0, Math.PI * 2);
+        ctx.arc(x + 55, y + 15, 2, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#e0f2fe';
         ctx.lineWidth = 2;
@@ -2083,11 +2251,11 @@ function drawMoth(insect) {
         ctx.stroke();
         ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
-        ctx.ellipse(x + 75, y + 18, 7, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 75, y + 18, 9, 7, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
-        ctx.arc(x + 77, y + 18, 2, 0, Math.PI * 2);
+        ctx.arc(x + 77, y + 17, 2.4, 0, Math.PI * 2);
         ctx.fill();
         drawEnemyHp(enemy, x + enemy.w / 2, y - 14);
         ctx.restore();
@@ -2128,9 +2296,13 @@ function drawMoth(insect) {
         ctx.moveTo(x + 68, y + 12);
         ctx.lineTo(x + 68, y - 6);
         ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(x + 113, y + 34, 5, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
-        ctx.arc(x + 113, y + 34, 3, 0, Math.PI * 2);
+        ctx.arc(x + 114, y + 34, 2.2, 0, Math.PI * 2);
         ctx.fill();
         drawEnemyHp(enemy, x + enemy.w / 2, y - 16);
         ctx.restore();
@@ -2150,14 +2322,14 @@ function drawMoth(insect) {
         ctx.save();
         ctx.translate(PLAYER_X, feet + 2);
         ctx.rotate(reduceMotion ? 0 : Math.sin(game.elapsed * 4) * 0.035);
-        ctx.fillStyle = '#f59e0b';
-        ctx.strokeStyle = '#92400e';
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#0ea5e9';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.ellipse(0, 0, 55, 7, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.strokeStyle = '#fef3c7';
+        ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(-38, 0);
@@ -2175,21 +2347,21 @@ function drawMoth(insect) {
         ctx.save();
         ctx.translate(PLAYER_X, feet + 3);
         ctx.rotate(reduceMotion ? 0 : Math.sin(game.elapsed * 5) * 0.025);
-        ctx.fillStyle = '#7c3aed';
-        ctx.strokeStyle = '#3b0764';
+        ctx.fillStyle = '#1f2937';
+        ctx.strokeStyle = '#020617';
         ctx.lineWidth = 2;
         roundedRect(-52, -2, 104, 8, 4);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = '#facc15';
+        ctx.fillStyle = '#f97316';
         roundedRect(-32, 0, 64, 3, 1.5);
         ctx.fill();
-        ctx.fillStyle = '#1e293b';
+        ctx.fillStyle = '#dc2626';
         ctx.beginPath();
         ctx.arc(-32, 8, 5, 0, Math.PI * 2);
         ctx.arc(32, 8, 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#94a3b8';
+        ctx.strokeStyle = '#fca5a5';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(-32, 8, 2, 0, Math.PI * 2);
@@ -2235,10 +2407,11 @@ function drawMoth(insect) {
         const bodyY = feet - height * 0.62;
         const headY = feet - height * 0.86;
         const headX = PLAYER_X + 25;
-        const color = '#557a94';
-        const dark = '#1f3a4d';
-        const light = '#8fb3c9';
-        const eyeColor = '#fff';
+        const spinach = game.spinachTimer > 0;
+        const color = spinach ? '#4d7c0f' : '#4f6480';
+        const dark = spinach ? '#365314' : '#1b2838';
+        const light = spinach ? '#84cc16' : '#8095ad';
+        const eyeColor = spinach ? '#dc2626' : '#fff';
         const flying = game.flightTimer > 0;
         const attack = game.attackTimer > 0 ? 1 - game.attackTimer / 0.28 : 0;
         const bob = game.onGround ? (reduceMotion ? 0 : Math.sin(game.elapsed * 13) * 1.4) : 0;
@@ -2333,7 +2506,7 @@ function drawMoth(insect) {
         ctx.ellipse(headX + 6, headY - 5, 5.8, 6.4, 0, 0, Math.PI * 2);
         ctx.ellipse(headX + 16, headY - 5, 4.8, 5.7, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#132a43';
+        ctx.fillStyle = spinach ? '#450a0a' : '#132a43';
         ctx.beginPath();
         ctx.arc(headX + 8, headY - 5, 2.2, 0, Math.PI * 2);
         ctx.arc(headX + 17, headY - 5, 1.8, 0, Math.PI * 2);
@@ -2359,11 +2532,11 @@ function drawMoth(insect) {
         ctx.fillStyle = '#f8fafc';
         ctx.strokeStyle = dark;
         ctx.lineWidth = 2;
-        for (const offset of [0, -6]) {
+        for (const offset of [0, -7]) {
             ctx.beginPath();
-            ctx.moveTo(headX + 7 + offset, headY + 10);
-            ctx.quadraticCurveTo(headX + 17 + offset, headY + 22, headX + 28 + offset, headY + 17);
-            ctx.quadraticCurveTo(headX + 18 + offset, headY + 16, headX + 9 + offset, headY + 13);
+            ctx.moveTo(headX + 6 + offset, headY + 10);
+            ctx.quadraticCurveTo(headX + 19 + offset, headY + 27, headX + 32 + offset, headY + 19);
+            ctx.quadraticCurveTo(headX + 20 + offset, headY + 17, headX + 9 + offset, headY + 13);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
@@ -2634,6 +2807,7 @@ function drawMoth(insect) {
             playerY: game ? game.playerY : GROUND_Y,
             insects: game ? game.insects : 0,
             flightTimer: game ? game.flightTimer : 0,
+            spinachTimer: game ? game.spinachTimer : 0,
             effects: game ? getEffects() : []
         })
     };
@@ -2645,7 +2819,10 @@ function drawMoth(insect) {
         getProgress,
         getRunScore,
         getEffects,
+        getPowerupType,
+        getSpecialType,
         applyEnergy,
+        applySpinach,
         applyVocho,
         applyAlly,
         applyDamageToState,

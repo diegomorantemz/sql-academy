@@ -63,7 +63,7 @@ Mensaje: "La práctica también puede ser un juego."
 
 1. Cambiar a la pestaña **Monte Mamut**.
 2. Mostrar a Trompo, el mamut azul, corriendo por montañas nevadas y por la playa.
-3. Enseñar el ataque con la trompa, la bebida energética, el escarabajo Vocho y los aliados tecnológicos. En la playa aparecen delfines, orcas, ballenas y el pingüino de Linux.
+3. Enseñar el ataque con la trompa, la espinaca de montaña y playa, la bebida energética de Ciudad Gótica, el escarabajo Vocho y los aliados tecnológicos. En la playa aparecen delfines, orcas, ballenas y el pingüino de Linux.
 4. Mostrar Ciudad Gótica, el nivel de patineta, y señalar que se puede empezar por cualquier nivel.
 
 Mensaje: "No todo es estudiar o programar. También hay tiempo para jugar."
