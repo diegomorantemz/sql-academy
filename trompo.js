@@ -118,6 +118,70 @@
     let reduceMotion = false;
     let best = { score: 0, level: 0, completed: false };
 
+    const SPRITE_PATHS = {
+        'mammoth-run': 'assets/game/mammoth-run.png',
+        'mammoth-green': 'assets/game/mammoth-green.png',
+        'mammoth-skate': 'assets/game/mammoth-skate.png',
+        'mammoth-surf': 'assets/game/mammoth-surf.png',
+        dolphin: 'assets/game/dolphin.png',
+        orca: 'assets/game/orca.png',
+        whale: 'assets/game/whale.png',
+        cockroach: 'assets/game/cockroach.png',
+        mantis: 'assets/game/mantis.png',
+        cricket: 'assets/game/cricket.png',
+        tarantula: 'assets/game/tarantula.png',
+        beetle: 'assets/game/beetle.png'
+    };
+    const sprites = {};
+
+    function loadSprites() {
+        if (typeof global.Image !== 'function') return;
+        Object.entries(SPRITE_PATHS).forEach(([name, src]) => {
+            const image = new global.Image();
+            image.onload = () => { sprites[name] = image; };
+            image.src = src;
+        });
+    }
+
+    function getSprite(name) {
+        const image = sprites[name];
+        return image && image.complete && image.naturalWidth ? image : null;
+    }
+
+    function drawSpriteBottom(name, centerX, bottomY, width, flip = false) {
+        const image = getSprite(name);
+        if (!image) return false;
+        const height = width * (image.naturalHeight / image.naturalWidth);
+        const x = centerX - width / 2;
+        const y = bottomY - height;
+        ctx.save();
+        if (flip) {
+            ctx.translate(centerX, 0);
+            ctx.scale(-1, 1);
+            ctx.translate(-centerX, 0);
+        }
+        ctx.drawImage(image, x, y, width, height);
+        ctx.restore();
+        return true;
+    }
+
+    function drawSpriteByHeight(name, centerX, bottomY, height, flip = false) {
+        const image = getSprite(name);
+        if (!image) return false;
+        const width = height * (image.naturalWidth / image.naturalHeight);
+        const x = centerX - width / 2;
+        const y = bottomY - height;
+        ctx.save();
+        if (flip) {
+            ctx.translate(centerX, 0);
+            ctx.scale(-1, 1);
+            ctx.translate(-centerX, 0);
+        }
+        ctx.drawImage(image, x, y, width, height);
+        ctx.restore();
+        return true;
+    }
+
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
     }
@@ -1762,9 +1826,32 @@
         ctx.restore();
     }
 
+    function drawInsectSprite(insect) {
+        const sizes = {
+            cockroach: 54,
+            mantis: 62,
+            cricket: 54,
+            tarantula: 82,
+            beetle: 58,
+            dolphin: 84,
+            orca: 112,
+            whale: 170
+        };
+        const width = sizes[insect.variant];
+        if (!width) return false;
+        return drawSpriteBottom(
+            insect.variant,
+            insect.x + insect.w / 2,
+            insect.y + insect.h,
+            width,
+            true
+        );
+    }
+
     function drawInsects() {
         for (const insect of game.obstacles) {
             if (insect.dead) continue;
+            if (drawInsectSprite(insect)) continue;
             if (insect.variant === 'cockroach') drawCockroach(insect);
             else if (insect.variant === 'cricket') drawCricket(insect);
             else if (insect.variant === 'mantis') drawMantis(insect);
@@ -2401,7 +2488,61 @@ function drawMoth(insect) {
         ctx.restore();
     }
 
+    function drawMammothSprite() {
+        const theme = game.level.theme;
+        const spinach = game.spinachTimer > 0;
+        let name = theme === 'beach'
+            ? 'mammoth-surf'
+            : theme === 'city'
+                ? 'mammoth-skate'
+                : (spinach ? 'mammoth-green' : 'mammoth-run');
+        let height = theme === 'beach' ? 110 : theme === 'city' ? 120 : 100;
+
+        if (theme === 'beach' && spinach) {
+            name = 'mammoth-green';
+        }
+        if (!getSprite(name)) return false;
+
+        const bottom = game.playerY + (theme === 'beach' || theme === 'city' ? 4 : 2);
+        const attack = game.attackTimer > 0 ? 1 - game.attackTimer / 0.28 : 0;
+        const bob = game.onGround ? (reduceMotion ? 0 : Math.sin(game.elapsed * 13) * 1.2) : 0;
+
+        ctx.save();
+        if (game.invincible > 0 && Math.floor(game.elapsed * 20) % 2 === 0) {
+            ctx.globalAlpha = 0.55;
+        }
+
+        ctx.fillStyle = 'rgba(31, 58, 77, 0.18)';
+        ctx.beginPath();
+        ctx.ellipse(PLAYER_X, GROUND_Y + 5, 42, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (theme === 'beach' && spinach) {
+            drawSurfboard(game.playerY);
+        }
+
+        ctx.translate(0, bob);
+        if (game.ducking) {
+            ctx.translate(PLAYER_X, bottom);
+            ctx.scale(1, 0.74);
+            ctx.translate(-PLAYER_X, -bottom);
+        }
+        drawSpriteByHeight(name, PLAYER_X + attack * 12, bottom, height);
+
+        if (attack > 0.15) {
+            ctx.strokeStyle = 'rgba(248, 250, 252, 0.9)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(PLAYER_X + 58 + attack * 18, game.playerY - 54, 12 + attack * 12, -1.1, 0.6);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+        return true;
+    }
+
     function drawMammoth() {
+        if (drawMammothSprite()) return;
         const feet = game.playerY;
         const height = game.ducking ? 31 : 56;
         const bodyY = feet - height * 0.62;
@@ -2743,6 +2884,7 @@ function drawMoth(insect) {
 
         muted = readStored(MUTE_KEY, false) === true;
         best = loadBest();
+        loadSprites();
         reduceMotion = typeof global.matchMedia === 'function'
             && global.matchMedia('(prefers-reduced-motion: reduce)').matches;
         game = makeState(0);

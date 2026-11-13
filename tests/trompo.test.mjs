@@ -36,6 +36,17 @@ const { window } = dom;
 
 window.eval(fs.readFileSync(new URL('../trompo.js', import.meta.url), 'utf8'));
 
+test('los sprites de los personajes están disponibles', () => {
+    const sprites = [
+        'mammoth-run.png', 'mammoth-green.png', 'mammoth-skate.png', 'mammoth-surf.png',
+        'dolphin.png', 'orca.png', 'whale.png', 'cockroach.png', 'mantis.png',
+        'cricket.png', 'tarantula.png', 'beetle.png'
+    ];
+    for (const sprite of sprites) {
+        assert.ok(fs.existsSync(new URL(`../assets/game/${sprite}`, import.meta.url)), `Falta ${sprite}`);
+    }
+});
+
 test('Monte Mamut define cinco niveles largos', () => {
     const levels = window.TrompoInternals.LEVELS;
     assert.equal(levels.length, 5);
