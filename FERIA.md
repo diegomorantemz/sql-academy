@@ -59,12 +59,12 @@ Mensaje: "No validamos texto: validamos el resultado real de la consulta."
 
 Mensaje: "La práctica también puede ser un juego."
 
-### 3:30 — Monte Mamut
+### 3:30 — Monte Mamut y sus niveles
 
 1. Cambiar a la pestaña **Monte Mamut**.
 2. Mostrar a Trompo, el mamut azul, corriendo por montañas nevadas y por la playa.
-3. Enseñar el ataque con la trompa, la espinaca, el escarabajo Vocho y los aliados tecnológicos. En la playa aparecen delfines, orcas y ballenas.
-4. Señalar que es un juego de descanso, con cuatro niveles largos y soporte para mando.
+3. Enseñar el ataque con la trompa, la bebida energética, el escarabajo Vocho y los aliados tecnológicos. En la playa aparecen delfines, orcas, ballenas y el pingüino de Linux.
+4. Mostrar Ciudad Gótica, el nivel de patineta, y señalar que se puede empezar por cualquier nivel.
 
 Mensaje: "No todo es estudiar o programar. También hay tiempo para jugar."
 
@@ -192,7 +192,7 @@ Donaciones voluntarias y, más adelante, licencias comerciales, planes para aula
 - 4 cursos guiados y 15 lecciones teórico-prácticas con quiz.
 - Retos SQL, NoSQL y de depuración.
 - 6 pisos en Torre de Datos.
-- 4 niveles en Monte Mamut.
+- 5 niveles en Monte Mamut.
 - 12 guías de instalación con rutas para Windows, macOS, Linux y Docker.
 - Más de 100 pruebas automatizadas.
 - PWA instalable.
