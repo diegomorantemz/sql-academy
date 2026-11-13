@@ -12338,3 +12338,52 @@ button,
         aspect-ratio: auto;
     }
 }
+
+.trompo-level-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 999px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.trompo-level-choice:hover {
+    border-color: var(--postgres-blue);
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.trompo-level-choice.is-next {
+    border-color: var(--postgres-blue);
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.trompo-level-choice b {
+    color: var(--text-strong);
+    font-size: 10px;
+}
+
+[data-theme="dark"] .trompo-level-choice {
+    background: #0f172a;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .trompo-level-choice:hover,
+[data-theme="dark"] .trompo-level-choice.is-next {
+    background: #172554;
+    border-color: #3b82f6;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .trompo-level-choice b {
+    color: #e2e8f0;
+}

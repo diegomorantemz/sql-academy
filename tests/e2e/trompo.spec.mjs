@@ -58,7 +58,18 @@ test('Monte Mamut completa un nivel y avanza al siguiente', async ({ page }, tes
     await page.locator('[data-trompo-action="start"]').click();
     await expect(page.locator('#trompoOverlay')).toContainText('Nivel superado', { timeout: 5000 });
     await page.locator('[data-trompo-action="next"]').click();
-    await expect(page.locator('#trompoLevelLabel')).toHaveText('2 / 4');
+    await expect(page.locator('#trompoLevelLabel')).toHaveText('2 / 5');
+    await expect(page.locator('#trompoOverlay')).toBeHidden();
+});
+
+test('Monte Mamut permite empezar en cualquier nivel', async ({ page }, testInfo) => {
+    test.skip(!['mobile-390', 'desktop-1280'].includes(testInfo.project.name), 'Prueba en móvil y escritorio');
+
+    await openGame(page);
+    await page.locator('#gameModeTrompoBtn').click();
+    await expect(page.locator('.trompo-level-choice')).toHaveCount(5);
+    await page.locator('[data-trompo-action="level"][data-level="4"]').click();
+    await expect(page.locator('#trompoLevelLabel')).toHaveText('5 / 5');
     await expect(page.locator('#trompoOverlay')).toBeHidden();
 });
 

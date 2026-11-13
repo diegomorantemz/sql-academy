@@ -36,12 +36,13 @@ const { window } = dom;
 
 window.eval(fs.readFileSync(new URL('../trompo.js', import.meta.url), 'utf8'));
 
-test('Monte Mamut define cuatro niveles largos', () => {
+test('Monte Mamut define cinco niveles largos', () => {
     const levels = window.TrompoInternals.LEVELS;
-    assert.equal(levels.length, 4);
-    assert.deepEqual([...levels].map(level => level.name), ['Base del cerro', 'Bosque nevado', 'Cumbre', 'Playa']);
-    assert.ok(levels.every(level => level.rows >= 2400 && level.speed > 0));
+    assert.equal(levels.length, 5);
+    assert.deepEqual([...levels].map(level => level.name), ['Base del cerro', 'Bosque nevado', 'Cumbre', 'Playa', 'Ciudad Gótica']);
+    assert.deepEqual([...levels].map(level => level.rows), [1680, 1960, 2240, 2100, 2200]);
     assert.equal(levels[3].theme, 'beach');
+    assert.equal(levels[4].theme, 'city');
 });
 
 test('el estado inicial tiene vida y escudo, no vidas sueltas', () => {
@@ -63,13 +64,13 @@ test('el estado inicial tiene vida y escudo, no vidas sueltas', () => {
     assert.equal(getRunScore(state), 750);
 });
 
-test('la espinaca recupera vida y activa el modo relax', () => {
-    const { makeState, applySpinach } = window.TrompoInternals;
+test('la bebida energética activa el vuelo durante ocho segundos', () => {
+    const { makeState, applyEnergy } = window.TrompoInternals;
     const state = makeState(0);
     state.health = 40;
-    applySpinach(state);
-    assert.equal(state.health, 75);
-    assert.equal(state.spinachTimer, 8);
+    applyEnergy(state);
+    assert.equal(state.health, 40);
+    assert.equal(state.flightTimer, 8);
 });
 
 test('el escarabajo Vocho recupera vida y llena el escudo', () => {
@@ -123,4 +124,5 @@ test('Trompo expone las acciones actuales', () => {
     assert.equal(state.levelIndex, 0);
     assert.equal(state.health, 100);
     assert.equal(state.shield, 0);
+    assert.equal(state.flightTimer, 0);
 });

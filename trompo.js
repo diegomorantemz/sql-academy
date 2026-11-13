@@ -17,7 +17,7 @@
         {
             id: 'base',
             name: 'Base del cerro',
-            rows: 2400,
+            rows: 1680,
             speed: 270,
             spawn: 1.15,
             accent: '#5b8db8'
@@ -25,7 +25,7 @@
         {
             id: 'forest',
             name: 'Bosque nevado',
-            rows: 2800,
+            rows: 1960,
             speed: 300,
             spawn: 1.0,
             accent: '#3f7f6a'
@@ -33,7 +33,7 @@
         {
             id: 'summit',
             name: 'Cumbre',
-            rows: 3200,
+            rows: 2240,
             speed: 330,
             spawn: 0.86,
             accent: '#7c5cbf'
@@ -41,11 +41,20 @@
         {
             id: 'beach',
             name: 'Playa',
-            rows: 3000,
+            rows: 2100,
             speed: 350,
             spawn: 0.82,
             accent: '#0ea5e9',
             theme: 'beach'
+        },
+        {
+            id: 'gotham',
+            name: 'Ciudad Gótica',
+            rows: 2200,
+            speed: 370,
+            spawn: 0.8,
+            accent: '#7c3aed',
+            theme: 'city'
         }
     ];
 
@@ -152,7 +161,7 @@
             combo: 0,
             maxCombo: 0,
             insects: 0,
-            spinachTimer: 0,
+            flightTimer: 0,
             invincible: 0,
             boost: 0,
             armorTimer: 0,
@@ -277,7 +286,7 @@
             playTone({ frequency: 125, endFrequency: 55, duration: 0.13, type: 'square', gain: 0.045 });
         } else if (name === 'hit') {
             playTone({ frequency: 180, endFrequency: 65, duration: 0.28, type: 'sawtooth', gain: 0.045 });
-        } else if (name === 'spinach') {
+        } else if (name === 'energy') {
             playTone({ frequency: 600, endFrequency: 920, duration: 0.15, type: 'triangle', gain: 0.04 });
         } else if (name === 'vocho') {
             playTone({ frequency: 280, endFrequency: 560, duration: 0.18, type: 'triangle', gain: 0.05 });
@@ -318,7 +327,7 @@
 
     function getEffects(state = game) {
         const effects = [];
-        if (state.spinachTimer > 0) effects.push({ label: 'ESPINACA', time: Math.ceil(state.spinachTimer), tone: 'green' });
+        if (state.flightTimer > 0) effects.push({ label: 'ENERGÍA', time: Math.ceil(state.flightTimer), tone: 'orange' });
         if (state.extraJumpTimer > 0) effects.push({ label: 'PYTHON', time: Math.ceil(state.extraJumpTimer), tone: 'green' });
         if (state.checkpointActive) effects.push({ label: 'GIT', time: Math.ceil(state.checkpointTimer), tone: 'orange' });
         if (state.dockerTimer > 0) effects.push({ label: 'DOCKER', time: Math.ceil(state.dockerTimer), tone: 'blue' });
@@ -389,15 +398,15 @@
             ? `<p class="trompo-overlay-note">Mejor puntaje: <strong>${formatNumber(best.score)}</strong></p>`
             : '';
         setOverlayContent(`
-            <span class="trompo-overlay-kicker">4 niveles · modo descanso</span>
+            <span class="trompo-overlay-kicker">5 niveles · modo descanso</span>
             <h3>Monte Mamut</h3>
-            <p>Acompaña a Trompo por montañas nevadas y una playa llena de criaturas. Salta, usa la trompa y aplasta insectos.</p>
+            <p>Acompaña a Trompo por montañas nevadas, una playa y una ciudad gótica. Salta, usa la trompa y aplasta criaturas.</p>
             <p class="trompo-relax-phrase">“No todo es estudiar o programar. También hay tiempo para jugar.”</p>
             <div class="trompo-level-list">
                 ${LEVELS.map((level, index) => `
-                    <span class="${index === 0 ? 'is-next' : ''}">
+                    <button type="button" class="trompo-level-choice${index === 0 ? ' is-next' : ''}" data-trompo-action="level" data-level="${index}">
                         <b>${index + 1}</b> ${level.name}
-                    </span>
+                    </button>
                 `).join('')}
             </div>
             ${bestText}
@@ -405,22 +414,29 @@
                 <button type="button" class="btn-primary" data-trompo-action="start">
                     <i class="fas fa-play"></i> Comenzar en la base
                 </button>
+                ${mode === 'paused' ? `<button type="button" class="btn-secondary" data-trompo-action="resume">
+                    <i class="fas fa-arrow-left"></i> Volver a la pausa
+                </button>` : ''}
             </div>
-            <p class="trompo-overlay-note">Espacio salta · X usa la trompa · ↓ o S aplasta · P pausa. También funciona con mando.</p>
+            <p class="trompo-overlay-note">Puedes empezar por cualquier nivel. Bebe energía para volar; el Vocho o el pingüino recuperan vida y escudo.</p>
+            <p class="trompo-overlay-note">Espacio salta · X usa la trompa · ↓ o S aplasta · P pausa.</p>
         `);
     }
 
     function showPauseOverlay() {
         setOverlayContent(`
-            <span class="trompo-overlay-kicker">La montaña puede esperar</span>
+            <span class="trompo-overlay-kicker">La aventura puede esperar</span>
             <h3>Pausa</h3>
-            <p>El nivel ${game.level.name} está detenido. Puedes continuar o reiniciar este nivel.</p>
+            <p>El nivel ${game.level.name} está detenido. Puedes continuar, reiniciar o elegir otro nivel.</p>
             <div class="trompo-overlay-actions">
                 <button type="button" class="btn-primary" data-trompo-action="resume">
                     <i class="fas fa-play"></i> Continuar
                 </button>
                 <button type="button" class="btn-secondary" data-trompo-action="restart">
                     <i class="fas fa-rotate-left"></i> Reiniciar nivel
+                </button>
+                <button type="button" class="btn-secondary" data-trompo-action="levels">
+                    <i class="fas fa-list"></i> Elegir nivel
                 </button>
             </div>
         `);
@@ -432,7 +448,7 @@
             <span class="trompo-overlay-kicker">Nivel ${game.levelIndex + 1} de ${LEVELS.length}</span>
             <h3>${completed ? 'Nivel superado' : 'Trompo se quedó sin fuerza'}</h3>
             <p>${completed
-                ? `Llegaste al final de <strong>${game.level.name}</strong>. ${next ? `Ahora toca ${next.name}.` : 'Alcanzaste la cumbre.'}`
+                ? `Llegaste al final de <strong>${game.level.name}</strong>. ${next ? `Ahora toca ${next.name}.` : 'Terminaste la aventura.'}`
                 : `La montaña puede esperar. Descansa un momento y vuelve a intentar <strong>${game.level.name}</strong>.`}</p>
             <div class="trompo-summary">
                 <div><span>Puntos</span><strong>${formatNumber(getRunScore())}</strong></div>
@@ -457,6 +473,9 @@
                         Repetir nivel
                     </button>
                 ` : ''}
+                <button type="button" class="btn-secondary" data-trompo-action="levels">
+                    <i class="fas fa-list"></i> Elegir nivel
+                </button>
             </div>
         `);
     }
@@ -464,8 +483,8 @@
     function showVictoryOverlay() {
         setOverlayContent(`
             <span class="trompo-overlay-kicker">Aventura completada</span>
-            <h3>¡Trompo llegó a la playa!</h3>
-            <p>Terminaste los cuatro niveles. La montaña y el mar pueden esperar; tú también puedes descansar.</p>
+            <h3>¡Trompo llegó a Ciudad Gótica!</h3>
+            <p>Terminaste los cinco niveles. La montaña, el mar y la ciudad pueden esperar; tú también puedes descansar.</p>
             <p class="trompo-relax-phrase">“No todo es estudiar o programar. También hay tiempo para jugar.”</p>
             <div class="trompo-summary">
                 <div><span>Puntos</span><strong>${formatNumber(getRunScore())}</strong></div>
@@ -475,6 +494,9 @@
             <div class="trompo-overlay-actions">
                 <button type="button" class="btn-primary" data-trompo-action="restart-game">
                     <i class="fas fa-rotate-left"></i> Jugar de nuevo
+                </button>
+                <button type="button" class="btn-secondary" data-trompo-action="levels">
+                    <i class="fas fa-list"></i> Elegir nivel
                 </button>
             </div>
         `);
@@ -553,6 +575,14 @@
 
     function jump() {
         if (mode !== 'running') return;
+        if (game.flightTimer > 0) {
+            game.vy = -430;
+            game.onGround = false;
+            game.ducking = false;
+            game.stompTimer = 0;
+            playSound('jump');
+            return;
+        }
         if (game.onGround) {
             game.vy = -620;
             game.onGround = false;
@@ -592,9 +622,8 @@
         }
     }
 
-    function applySpinach(state = game) {
-        state.health = Math.min(state.maxHealth, state.health + 35);
-        state.spinachTimer = 8;
+    function applyEnergy(state = game) {
+        state.flightTimer = 8;
         return state;
     }
 
@@ -711,9 +740,8 @@
 
     function getSpeed() {
         const base = game.level.speed * (1 + 0.2 * getProgress());
-        const spinach = game.spinachTimer > 0 ? 0.72 : 1;
         const boost = game.boost > 0 ? 1.22 : 1;
-        return base * spinach * boost;
+        return base * boost;
     }
 
     function update(dt) {
@@ -732,7 +760,7 @@
             return;
         }
 
-        if (game.spinachTimer > 0) game.spinachTimer = Math.max(0, game.spinachTimer - dt);
+        if (game.flightTimer > 0) game.flightTimer = Math.max(0, game.flightTimer - dt);
         if (game.invincible > 0) game.invincible = Math.max(0, game.invincible - dt);
         if (game.boost > 0) game.boost = Math.max(0, game.boost - dt);
         if (game.armorTimer > 0) game.armorTimer = Math.max(0, game.armorTimer - dt);
@@ -755,7 +783,7 @@
         }
 
         if (!game.onGround) {
-            game.vy += 1650 * dt;
+            game.vy += (game.flightTimer > 0 ? 760 : 1650) * dt;
             game.playerY += game.vy * dt;
             if (game.playerY >= GROUND_Y) {
                 game.playerY = GROUND_Y;
@@ -773,7 +801,7 @@
 
         game.powerTimer -= dt;
         if (game.powerTimer <= 0) {
-            spawnSpinach();
+            spawnEnergy();
             game.powerTimer = 12 + Math.random() * 5;
         }
 
@@ -827,6 +855,7 @@
         const pool = ['cockroach', 'cricket'];
         if (game.levelIndex >= 1) pool.push('mantis', 'fly');
         if (game.levelIndex >= 2) pool.push('moth', 'fly', 'cockroach');
+        if (game.level.theme === 'city') pool.push('bat', 'bat', 'fly');
         const variant = pool[Math.floor(Math.random() * pool.length)];
         const insect = {
             variant,
@@ -861,6 +890,11 @@
             insect.h = 34;
             insect.flying = true;
             insect.baseY = GROUND_Y - 124;
+        } else if (variant === 'bat') {
+            insect.w = 56;
+            insect.h = 34;
+            insect.flying = true;
+            insect.baseY = GROUND_Y - 112;
         }
 
         insect.y = insect.baseY - insect.h;
@@ -894,13 +928,13 @@
             enemy.w = 98;
             enemy.h = 50;
             enemy.baseY = GROUND_Y - 28;
-            enemy.hp = 2;
+            enemy.hp = 1;
             enemy.speedFactor = 0.92;
         } else if (variant === 'whale') {
             enemy.w = 150;
             enemy.h = 64;
             enemy.baseY = GROUND_Y - 30;
-            enemy.hp = 3;
+            enemy.hp = 1;
             enemy.speedFactor = 0.76;
         }
 
@@ -908,9 +942,9 @@
         game.obstacles.push(enemy);
     }
 
-    function spawnSpinach() {
+    function spawnEnergy() {
         game.powerups.push({
-            type: 'spinach',
+            type: 'energy',
             x: VIEW_W + 30,
             y: GROUND_Y - 86,
             w: 40,
@@ -921,8 +955,9 @@
     }
 
     function spawnVocho() {
+        const type = game.level.theme === 'beach' ? 'penguin' : 'vocho';
         game.powerups.push({
-            type: 'vocho',
+            type,
             x: VIEW_W + 30,
             y: GROUND_Y - 76,
             w: 64,
@@ -987,7 +1022,7 @@
 
             if (!overlaps(player, insect)) continue;
 
-            if (game.spinachTimer > 0) {
+            if (game.flightTimer > 0) {
                 hitEnemy(insect, false);
                 continue;
             }
@@ -1029,14 +1064,14 @@
     }
 
     function collectPowerup(item) {
-        if (item.type === 'spinach') {
-            applySpinach();
-            game.flashText = 'ESPINACA';
+        if (item.type === 'energy') {
+            applyEnergy();
+            game.flashText = 'ENERGÍA';
             game.flash = 0.55;
-            playSound('spinach');
-        } else if (item.type === 'vocho') {
+            playSound('energy');
+        } else if (item.type === 'vocho' || item.type === 'penguin') {
             applyVocho();
-            game.flashText = 'VOCHO';
+            game.flashText = item.type === 'penguin' ? 'LINUX' : 'VOCHO';
             game.flash = 0.85;
             playSound('vocho');
         } else if (item.type === 'ally') {
@@ -1140,6 +1175,10 @@
             drawBeachBackground();
             return;
         }
+        if (game.level.theme === 'city') {
+            drawCityBackground();
+            return;
+        }
 
         ctx.fillStyle = '#cfe8f5';
         ctx.fillRect(0, 0, VIEW_W, VIEW_H);
@@ -1172,6 +1211,84 @@
         ctx.font = '600 11px "Segoe UI", Arial, sans-serif';
         ctx.fillText('MONTE MAMUT', VIEW_W - 24, 84);
         ctx.restore();
+    }
+
+    function drawCityBackground() {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(850, 68, 30, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        for (let index = 0; index < 50; index += 1) {
+            const x = (index * 191 + 37) % VIEW_W;
+            const y = (index * 83 + 19) % 190;
+            ctx.beginPath();
+            ctx.arc(x, y, 1 + (index % 2), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        drawBuildingLayer(0.04, '#1e293b', '#facc15', GROUND_Y - 15, 150, 155);
+        drawBuildingLayer(0.09, '#273449', '#93c5fd', GROUND_Y - 5, 110, 120);
+
+        ctx.save();
+        ctx.globalAlpha = 0.13;
+        ctx.fillStyle = '#e0f2fe';
+        ctx.beginPath();
+        ctx.moveTo(730, 0);
+        ctx.lineTo(930, 0);
+        ctx.lineTo(760, 230);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(160, 0);
+        ctx.lineTo(260, 0);
+        ctx.lineTo(390, 230);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.6)';
+        ctx.lineWidth = 1.5;
+        for (const flake of game.snow) {
+            const x = flake.x - 4;
+            const y = (flake.y * 1.2) % VIEW_H;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 3, y + 11);
+            ctx.stroke();
+        }
+
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = game.level.accent;
+        ctx.font = '800 42px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('CIUDAD GÓTICA', VIEW_W - 24, 66);
+        ctx.font = '600 11px "Segoe UI", Arial, sans-serif';
+        ctx.fillText('MONTE MAMUT', VIEW_W - 24, 84);
+        ctx.restore();
+    }
+
+    function drawBuildingLayer(parallax, color, windowColor, baseY, height, spacing) {
+        const offset = -(game.distance * parallax) % spacing;
+        for (let x = offset - spacing; x < VIEW_W + spacing; x += spacing) {
+            const buildingHeight = height * (0.55 + ((Math.floor((x + 1000) / spacing) * 37) % 10) / 18);
+            ctx.fillStyle = color;
+            ctx.strokeStyle = '#020617';
+            ctx.lineWidth = 2;
+            ctx.fillRect(x + 8, baseY - buildingHeight, spacing - 18, buildingHeight);
+            ctx.strokeRect(x + 8, baseY - buildingHeight, spacing - 18, buildingHeight);
+            ctx.fillStyle = windowColor;
+            const rows = Math.max(2, Math.floor(buildingHeight / 24));
+            for (let row = 0; row < rows; row += 1) {
+                for (let column = 0; column < 3; column += 1) {
+                    if ((row + column + Math.floor(x)) % 4 === 0) continue;
+                    ctx.fillRect(x + 17 + column * 30, baseY - buildingHeight + 14 + row * 22, 10, 8);
+                }
+            }
+        }
     }
 
     function drawBeachBackground() {
@@ -1302,6 +1419,10 @@
             drawBeachGround();
             return;
         }
+        if (game.level.theme === 'city') {
+            drawCityGround();
+            return;
+        }
 
         ctx.fillStyle = '#eaf4fb';
         ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
@@ -1345,35 +1466,64 @@
         }
     }
 
+    function drawCityGround() {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(0, GROUND_Y, VIEW_W, 5);
+        ctx.fillStyle = '#facc15';
+        const offset = -(game.distance * 0.9) % 130;
+        for (let x = offset; x < VIEW_W + 130; x += 130) {
+            ctx.fillRect(x, GROUND_Y + 38, 58, 4);
+        }
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
+        for (let x = 40; x < VIEW_W; x += 190) {
+            ctx.beginPath();
+            ctx.ellipse(x, GROUND_Y + 14, 30, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     function drawPowerups() {
         for (const item of game.powerups) {
             if (item.dead) continue;
             const float = Math.sin(game.elapsed * 5 + item.seed) * 5;
-            if (item.type === 'spinach') drawSpinach(item, float);
+            if (item.type === 'energy') drawEnergy(item, float);
             else if (item.type === 'vocho') drawVocho(item, float);
+            else if (item.type === 'penguin') drawPenguin(item, float);
             else if (item.type === 'ally') drawAlly(item, float);
         }
     }
 
-    function drawSpinach(item, float) {
+    function drawEnergy(item, float) {
         ctx.save();
         ctx.translate(item.x, item.y + float);
-        ctx.strokeStyle = '#14532d';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.strokeStyle = '#475569';
         ctx.lineWidth = 2;
-        ctx.fillStyle = '#22c55e';
-        for (let index = 0; index < 3; index += 1) {
-            ctx.beginPath();
-            ctx.ellipse(12 + index * 7, 18 + (index % 2) * 5, 13, 7, -0.45 + index * 0.4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-        }
-        ctx.fillStyle = '#166534';
-        roundedRect(14, 23, 5, 14, 2);
+        roundedRect(8, 2, 24, 36, 5);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#1d4ed8';
+        roundedRect(8, 9, 24, 12, 2);
+        ctx.fill();
+        ctx.fillStyle = '#f8fafc';
+        roundedRect(10, 3, 20, 5, 2);
+        ctx.fill();
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.moveTo(20, 10);
+        ctx.lineTo(14, 21);
+        ctx.lineTo(20, 20);
+        ctx.lineTo(17, 30);
+        ctx.lineTo(27, 17);
+        ctx.lineTo(21, 18);
+        ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.font = '800 7px "Segoe UI", Arial, sans-serif';
+        ctx.font = '800 6px "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('ESPINACA', 20, 47);
+        ctx.fillText('ENERGÍA', 20, 47);
         ctx.restore();
     }
 
@@ -1409,6 +1559,48 @@
         ctx.font = '800 7px "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('VOCHO', 32, 58);
+        ctx.restore();
+    }
+
+    function drawPenguin(item, float) {
+        ctx.save();
+        ctx.translate(item.x, item.y + float);
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(32, 28, 22, 26, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.ellipse(32, 31, 13, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.moveTo(28, 18);
+        ctx.lineTo(36, 18);
+        ctx.lineTo(32, 25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(22, 51, 8, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(42, 51, 8, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(26, 16, 3, 0, Math.PI * 2);
+        ctx.arc(38, 16, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(27, 16, 1.2, 0, Math.PI * 2);
+        ctx.arc(37, 16, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '800 7px "Segoe UI", Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('LINUX', 32, 62);
         ctx.restore();
     }
 
@@ -1522,6 +1714,7 @@
             else if (insect.variant === 'mantis') drawMantis(insect);
             else if (insect.variant === 'fly') drawFly(insect);
             else if (insect.variant === 'moth') drawMoth(insect);
+            else if (insect.variant === 'bat') drawBat(insect);
             else if (insect.variant === 'dolphin') drawDolphin(insect);
             else if (insect.variant === 'orca') drawOrca(insect);
             else if (insect.variant === 'whale') drawWhale(insect);
@@ -1766,6 +1959,47 @@ function drawMoth(insect) {
         ctx.fill();
         ctx.restore();
     }
+    function drawBat(enemy) {
+        const x = enemy.x;
+        const y = enemy.y;
+        const flap = Math.sin(game.elapsed * 12 + enemy.seed) * 8;
+        ctx.save();
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 28, y + 17);
+        ctx.quadraticCurveTo(x + 8, y - 4 + flap, x - 2, y + 16);
+        ctx.quadraticCurveTo(x + 12, y + 14, x + 20, y + 23);
+        ctx.quadraticCurveTo(x + 8, y + 27 + flap, x + 2, y + 31);
+        ctx.quadraticCurveTo(x + 18, y + 31, x + 28, y + 23);
+        ctx.quadraticCurveTo(x + 38, y + 31, x + 54, y + 31);
+        ctx.quadraticCurveTo(x + 48, y + 25 + flap, x + 36, y + 23);
+        ctx.quadraticCurveTo(x + 44, y + 14, x + 58, y + 16);
+        ctx.quadraticCurveTo(x + 48, y - 4 + flap, x + 28, y + 17);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.ellipse(x + 28, y + 20, 8, 11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(x + 25, y + 17, 2, 0, Math.PI * 2);
+        ctx.arc(x + 31, y + 17, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.moveTo(x + 24, y + 24);
+        ctx.lineTo(x + 27, y + 28);
+        ctx.lineTo(x + 30, y + 24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
     function drawDolphin(enemy) {
         const x = enemy.x;
         const y = enemy.y;
@@ -1937,16 +2171,75 @@ function drawMoth(insect) {
         ctx.restore();
     }
 
+    function drawSkateboard(feet) {
+        ctx.save();
+        ctx.translate(PLAYER_X, feet + 3);
+        ctx.rotate(reduceMotion ? 0 : Math.sin(game.elapsed * 5) * 0.025);
+        ctx.fillStyle = '#7c3aed';
+        ctx.strokeStyle = '#3b0764';
+        ctx.lineWidth = 2;
+        roundedRect(-52, -2, 104, 8, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#facc15';
+        roundedRect(-32, 0, 64, 3, 1.5);
+        ctx.fill();
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(-32, 8, 5, 0, Math.PI * 2);
+        ctx.arc(32, 8, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(-32, 8, 2, 0, Math.PI * 2);
+        ctx.arc(32, 8, 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawWings(bodyY, dark, color) {
+        const flap = reduceMotion ? 0 : Math.sin(game.elapsed * 14) * 0.12;
+        ctx.save();
+        ctx.translate(PLAYER_X, bodyY);
+        ctx.fillStyle = '#e0f2fe';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        for (const side of [-1, 1]) {
+            ctx.save();
+            ctx.scale(side, 1);
+            ctx.rotate(-0.18 + flap);
+            ctx.beginPath();
+            ctx.moveTo(-8, 2);
+            ctx.quadraticCurveTo(-36, -26, -51, -4);
+            ctx.quadraticCurveTo(-38, 7, -8, 8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(-12, 3);
+            ctx.lineTo(-37, -8);
+            ctx.moveTo(-12, 5);
+            ctx.lineTo(-40, 0);
+            ctx.stroke();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.restore();
+        }
+        ctx.restore();
+    }
+
     function drawMammoth() {
         const feet = game.playerY;
         const height = game.ducking ? 31 : 56;
         const bodyY = feet - height * 0.62;
         const headY = feet - height * 0.86;
         const headX = PLAYER_X + 25;
-        const color = game.spinachTimer > 0 ? '#4d7c0f' : '#557a94';
-        const dark = game.spinachTimer > 0 ? '#365314' : '#1f3a4d';
-        const light = game.spinachTimer > 0 ? '#84cc16' : '#8fb3c9';
-        const eyeColor = game.spinachTimer > 0 ? '#dc2626' : '#fff';
+        const color = '#557a94';
+        const dark = '#1f3a4d';
+        const light = '#8fb3c9';
+        const eyeColor = '#fff';
+        const flying = game.flightTimer > 0;
         const attack = game.attackTimer > 0 ? 1 - game.attackTimer / 0.28 : 0;
         const bob = game.onGround ? (reduceMotion ? 0 : Math.sin(game.elapsed * 13) * 1.4) : 0;
         const legSwing = game.onGround && !reduceMotion ? Math.sin(game.elapsed * 16) * 5 : 0;
@@ -1964,6 +2257,12 @@ function drawMoth(insect) {
 
         if (game.level.theme === 'beach') {
             drawSurfboard(feet);
+        } else if (game.level.theme === 'city') {
+            drawSkateboard(feet);
+        }
+
+        if (flying) {
+            drawWings(bodyY, dark, color);
         }
 
         // Cola.
@@ -2034,7 +2333,7 @@ function drawMoth(insect) {
         ctx.ellipse(headX + 6, headY - 5, 5.8, 6.4, 0, 0, Math.PI * 2);
         ctx.ellipse(headX + 16, headY - 5, 4.8, 5.7, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = game.spinachTimer > 0 ? '#450a0a' : '#132a43';
+        ctx.fillStyle = '#132a43';
         ctx.beginPath();
         ctx.arc(headX + 8, headY - 5, 2.2, 0, Math.PI * 2);
         ctx.arc(headX + 17, headY - 5, 1.8, 0, Math.PI * 2);
@@ -2142,6 +2441,8 @@ function drawMoth(insect) {
         else if (action === 'resume') resume();
         else if (action === 'next') nextLevel();
         else if (action === 'restart') restartLevel();
+        else if (action === 'levels') showStartOverlay();
+        else if (action === 'level') startLevel(Number(button.dataset.level) || 0, 0);
     }
 
     function handleKeydown(event) {
@@ -2313,6 +2614,7 @@ function drawMoth(insect) {
         show,
         hide,
         startGame,
+        startLevel,
         restartLevel,
         nextLevel,
         togglePause,
@@ -2331,7 +2633,7 @@ function drawMoth(insect) {
             onGround: game ? game.onGround : true,
             playerY: game ? game.playerY : GROUND_Y,
             insects: game ? game.insects : 0,
-            spinachTimer: game ? game.spinachTimer : 0,
+            flightTimer: game ? game.flightTimer : 0,
             effects: game ? getEffects() : []
         })
     };
@@ -2343,7 +2645,7 @@ function drawMoth(insect) {
         getProgress,
         getRunScore,
         getEffects,
-        applySpinach,
+        applyEnergy,
         applyVocho,
         applyAlly,
         applyDamageToState,
