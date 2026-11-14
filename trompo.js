@@ -669,8 +669,8 @@
 
     function attack() {
         if (mode !== 'running' || game.attackCooldown > 0) return;
-        game.attackTimer = 0.28;
-        game.attackCooldown = 0.42;
+        game.attackTimer = 0.34;
+        game.attackCooldown = 0.46;
         game.ducking = false;
         playSound('trunk');
     }
@@ -2488,6 +2488,55 @@ function drawMoth(insect) {
         ctx.restore();
     }
 
+    function drawTrunkAttack(attack, bottom, height, color, dark) {
+        if (attack <= 0) return;
+        const swing = Math.sin(attack * Math.PI);
+        const reach = swing * 56;
+        const lift = swing * 30;
+        const baseX = PLAYER_X + 42;
+        const baseY = bottom - height * 0.58;
+        const tipX = baseX + 34 + reach;
+        const tipY = baseY + 10 - lift;
+        const controlX = baseX + 28 + reach * 0.35;
+        const controlY = baseY + 26 - lift * 0.3;
+
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 2;
+        for (let index = 1; index <= 3; index += 1) {
+            ctx.beginPath();
+            ctx.moveTo(baseX - 10 - index * 8, baseY + index * 5);
+            ctx.lineTo(baseX - 24 - index * 12, baseY + index * 7);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = dark;
+        ctx.lineWidth = 13;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.quadraticCurveTo(controlX, controlY, tipX, tipY);
+        ctx.stroke();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY);
+        ctx.quadraticCurveTo(controlX, controlY, tipX, tipY);
+        ctx.stroke();
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(tipX - 4, tipY, 11 + swing * 5, -1.4, 0.6);
+        ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(tipX + 2, tipY - 7);
+        ctx.lineTo(tipX + 14, tipY - 13);
+        ctx.stroke();
+        ctx.restore();
+    }
+
     function drawMammothSprite() {
         const theme = game.level.theme;
         const spinach = game.spinachTimer > 0;
@@ -2504,7 +2553,7 @@ function drawMoth(insect) {
         if (!getSprite(name)) return false;
 
         const bottom = game.playerY + (theme === 'beach' || theme === 'city' ? 4 : 2);
-        const attack = game.attackTimer > 0 ? 1 - game.attackTimer / 0.28 : 0;
+        const attack = game.attackTimer > 0 ? 1 - game.attackTimer / 0.34 : 0;
         const bob = game.onGround ? (reduceMotion ? 0 : Math.sin(game.elapsed * 13) * 1.2) : 0;
 
         ctx.save();
@@ -2527,15 +2576,9 @@ function drawMoth(insect) {
             ctx.scale(1, 0.74);
             ctx.translate(-PLAYER_X, -bottom);
         }
-        drawSpriteByHeight(name, PLAYER_X + attack * 12, bottom, height);
-
-        if (attack > 0.15) {
-            ctx.strokeStyle = 'rgba(248, 250, 252, 0.9)';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(PLAYER_X + 58 + attack * 18, game.playerY - 54, 12 + attack * 12, -1.1, 0.6);
-            ctx.stroke();
-        }
+        const lunge = Math.sin(attack * Math.PI) * 16;
+        drawSpriteByHeight(name, PLAYER_X + lunge, bottom, height);
+        drawTrunkAttack(attack, bottom, height, spinach ? '#4d7c0f' : '#557a94', spinach ? '#365314' : '#1b2838');
 
         ctx.restore();
         return true;
