@@ -1,0 +1,665 @@
+/* ===== TROMPO (RUNNER) ===== */
+.game-mode-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 0 18px;
+    padding: 5px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 12px;
+    background: var(--surface-muted);
+}
+
+.game-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.game-mode-btn:hover {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.game-mode-btn.active {
+    border-color: var(--postgres-blue);
+    background: var(--postgres-blue);
+    color: #fff;
+}
+
+.game-mode-panel[hidden] {
+    display: none;
+}
+
+.trompo-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.trompo-topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.trompo-hud {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(84px, 1fr));
+    gap: 8px;
+    flex: 1 1 440px;
+    min-width: 0;
+}
+
+.trompo-hud-item {
+    min-width: 0;
+    padding: 10px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 9px;
+    background: var(--surface);
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.trompo-hud-item span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.trompo-hud-item strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-size: 1.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.trompo-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.trompo-actions .btn-sm {
+    min-height: 38px;
+    padding: 7px 10px;
+    font-size: 11px;
+}
+
+.trompo-stage {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--postgres-border);
+    border-radius: 16px;
+    background: #dbeafe;
+    box-shadow: var(--shadow-md);
+}
+
+#trompoCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1000 / 360;
+    background: #dbeafe;
+    touch-action: manipulation;
+    outline: none;
+}
+
+#trompoCanvas:focus-visible {
+    outline: 3px solid rgba(47, 111, 159, 0.45);
+    outline-offset: -3px;
+}
+
+.trompo-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(9, 25, 45, 0.66);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.trompo-overlay[hidden] {
+    display: none;
+}
+
+.trompo-overlay-card {
+    width: min(560px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    padding: 22px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 16px;
+    background: var(--surface);
+    color: var(--text-strong);
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(2, 6, 23, 0.28);
+}
+
+.trompo-overlay-kicker {
+    display: inline-block;
+    margin-bottom: 6px;
+    color: var(--postgres-blue);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.trompo-overlay-card h3 {
+    margin: 0 0 8px;
+    color: var(--text-strong);
+    font-size: 1.55em;
+    line-height: 1.15;
+}
+
+.trompo-overlay-card p {
+    margin: 0 auto 12px;
+    max-width: 46ch;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.trompo-overlay-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.trompo-overlay-note {
+    margin: 12px auto 0 !important;
+    color: var(--text-muted);
+    font-size: 10.5px !important;
+}
+
+.trompo-level-list {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin: 12px 0 0;
+}
+
+.trompo-level-list span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 999px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.trompo-level-list span.is-next {
+    border-color: var(--postgres-blue);
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.trompo-level-list b {
+    color: var(--text-strong);
+    font-size: 10px;
+}
+
+.trompo-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    margin: 12px 0 0;
+}
+
+.trompo-summary div {
+    padding: 8px 5px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 7px;
+    background: var(--surface-muted);
+}
+
+.trompo-summary span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.trompo-summary strong {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-strong);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.trompo-progress {
+    height: 10px;
+    overflow: hidden;
+    border: 1px solid var(--postgres-border);
+    border-radius: 999px;
+    background: var(--surface-muted);
+}
+
+.trompo-progress span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #1d4ed8, #38bdf8);
+    transition: width 0.12s linear;
+}
+
+.trompo-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.trompo-controls button {
+    flex: 1 1 150px;
+    justify-content: center;
+    min-height: 44px;
+}
+
+.trompo-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.trompo-help {
+    display: grid;
+    gap: 3px;
+    padding: 12px 14px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.trompo-help p {
+    margin: 0;
+}
+
+.trompo-help strong {
+    color: var(--text-strong);
+}
+
+.trompo-gamepad-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-start;
+    padding: 7px 11px;
+    border: 1px solid rgba(22, 163, 74, 0.3);
+    border-radius: 999px;
+    background: rgba(22, 163, 74, 0.09);
+    color: #15803d;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.trompo-gamepad-status[hidden] {
+    display: none;
+}
+
+[data-theme="dark"] .game-mode-bar,
+[data-theme="dark"] .trompo-help {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .game-mode-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .game-mode-btn.active {
+    background: var(--postgres-blue);
+    color: #fff;
+}
+
+[data-theme="dark"] .trompo-hud-item,
+[data-theme="dark"] .trompo-overlay-card,
+[data-theme="dark"] .trompo-summary div {
+    background: #111827;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .trompo-overlay-card h3,
+[data-theme="dark"] .trompo-hud-item strong,
+[data-theme="dark"] .trompo-summary strong,
+[data-theme="dark"] .trompo-help strong {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .trompo-overlay-card p,
+[data-theme="dark"] .trompo-help,
+[data-theme="dark"] .trompo-hud-item span,
+[data-theme="dark"] .trompo-summary span {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .trompo-level-list span {
+    background: #0f172a;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .trompo-level-list span.is-next {
+    background: #172554;
+    border-color: #3b82f6;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .trompo-level-list b {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .trompo-gamepad-status {
+    background: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.35);
+}
+
+@media (max-width: 900px) {
+    .trompo-topbar {
+        flex-direction: column;
+    }
+
+    .trompo-hud {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        flex-basis: auto;
+    }
+
+    .trompo-actions {
+        width: 100%;
+    }
+
+    .trompo-actions button {
+        flex: 1 1 auto;
+    }
+}
+
+@media (max-width: 600px) {
+    .game-mode-bar {
+        width: 100%;
+    }
+
+    .game-mode-btn {
+        flex: 1;
+    }
+
+    .trompo-overlay {
+        padding: 9px;
+    }
+
+    .trompo-overlay-card {
+        padding: 16px 13px;
+        border-radius: 12px;
+    }
+
+    .trompo-overlay-card h3 {
+        font-size: 1.3em;
+    }
+
+    .trompo-overlay-card p {
+        font-size: 11.5px;
+    }
+
+    .trompo-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .trompo-controls button {
+        flex: 1 1 30%;
+        padding-left: 6px;
+        padding-right: 6px;
+        font-size: 10.5px;
+    }
+
+    .trompo-help {
+        font-size: 10.5px;
+    }
+}
+
+@media (max-width: 768px) {
+    .trompo-stage {
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    #trompoCanvas {
+        border: 1px solid var(--postgres-border);
+        border-radius: 14px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .trompo-overlay {
+        position: static;
+        padding: 0;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .trompo-overlay-card {
+        width: 100%;
+        max-height: none;
+        margin-top: 10px;
+    }
+}
+
+[data-theme="dark"] .trompo-overlay-kicker {
+    color: #93c5fd;
+}
+
+/* HUD de vida, escudo y efectos de Monte Mamut */
+.trompo-hud-item.trompo-hud-meter {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.trompo-meter {
+    width: 100%;
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.trompo-meter span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #16a34a, #4ade80);
+    transition: width 0.15s linear;
+}
+
+.trompo-meter-shield span {
+    background: linear-gradient(90deg, #0284c7, #38bdf8);
+}
+
+.trompo-effects {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.trompo-effects:empty {
+    display: none;
+}
+
+.trompo-effect {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.trompo-effect b {
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+.trompo-effect-green {
+    background: rgba(22, 163, 74, 0.13);
+    color: #15803d;
+}
+
+.trompo-effect-orange {
+    background: rgba(234, 88, 12, 0.13);
+    color: #c2410c;
+}
+
+.trompo-effect-blue {
+    background: rgba(2, 132, 199, 0.13);
+    color: #0369a1;
+}
+
+.trompo-effect-red {
+    background: rgba(220, 38, 38, 0.12);
+    color: #b91c1c;
+}
+
+.trompo-relax-phrase {
+    padding: 8px 10px;
+    border-left: 3px solid #16a34a;
+    border-radius: 6px;
+    background: rgba(22, 163, 74, 0.08);
+    color: #166534 !important;
+    font-style: italic;
+    font-size: 11.5px !important;
+}
+
+[data-theme="dark"] .trompo-meter {
+    background: #334155;
+}
+
+[data-theme="dark"] .trompo-effect-green {
+    background: rgba(34, 197, 94, 0.16);
+    color: #86efac;
+}
+
+[data-theme="dark"] .trompo-effect-orange {
+    background: rgba(249, 115, 22, 0.16);
+    color: #fdba74;
+}
+
+[data-theme="dark"] .trompo-effect-blue {
+    background: rgba(56, 189, 248, 0.16);
+    color: #7dd3fc;
+}
+
+[data-theme="dark"] .trompo-effect-red {
+    background: rgba(248, 113, 113, 0.16);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .trompo-relax-phrase {
+    background: rgba(34, 197, 94, 0.12);
+    color: #bbf7d0 !important;
+    border-left-color: #4ade80;
+}
+
+@media (max-width: 900px) {
+    .trompo-hud-item.trompo-hud-meter {
+        min-height: 62px;
+    }
+}
+
+@media (max-width: 600px) {
+    #trompoCanvas {
+        height: 190px;
+        aspect-ratio: auto;
+    }
+}
+
+.trompo-level-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 999px;
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.trompo-level-choice:hover {
+    border-color: var(--postgres-blue);
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.trompo-level-choice.is-next {
+    border-color: var(--postgres-blue);
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.trompo-level-choice b {
+    color: var(--text-strong);
+    font-size: 10px;
+}
+
+[data-theme="dark"] .trompo-level-choice {
+    background: #0f172a;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .trompo-level-choice:hover,
+[data-theme="dark"] .trompo-level-choice.is-next {
+    background: #172554;
+    border-color: #3b82f6;
+    color: #bfdbfe;
+}
+
+[data-theme="dark"] .trompo-level-choice b {
+    color: #e2e8f0;
+}

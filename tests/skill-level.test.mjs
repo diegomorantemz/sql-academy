@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAppDom, readProjectFile } from './helpers/app.mjs';
+import { createAppDom, readProjectFile, readStyles } from './helpers/app.mjs';
 
 const dom = createAppDom({
     html: `<!doctype html><html><body>
@@ -288,7 +288,7 @@ test('el perfil de nivel aparece en el dashboard con refuerzos', () => {
 
 test('los controles nuevos incluyen etiquetas y estilos de accesibilidad', () => {
     const html = readProjectFile('index.html');
-    const css = readProjectFile('styles/app.css');
+    const css = readStyles();
 
     assert.match(html, /role="region" aria-label="Nivel SQL"/);
     assert.match(html, /role="region" aria-label="Nivel NoSQL"/);

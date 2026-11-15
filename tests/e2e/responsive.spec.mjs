@@ -63,7 +63,7 @@ test('la app prefiere la red antes que un CSS viejo en caché', async ({ page },
         if (!cacheKey) throw new Error('No se encontró la caché de la app');
 
         const cache = await caches.open(cacheKey);
-        const cssUrl = new URL('./styles/app.css', window.location.href).href;
+        const cssUrl = new URL('./styles/base.css', window.location.href).href;
         await cache.put(cssUrl, new Response(
             '@media (max-width: 768px) { .main-nav { display: flex !important; } }',
             { headers: { 'Content-Type': 'text/css' } }

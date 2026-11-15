@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync } from 'node:fs';
-import { APP_SCRIPTS, projectFile, readProjectFile } from './helpers/app.mjs';
+import { APP_SCRIPTS, STYLE_FILES, projectFile, readProjectFile } from './helpers/app.mjs';
 
 function localScripts(html) {
     return [...html.matchAll(/<script\s+[^>]*src="([^"]+)"/g)]
@@ -26,6 +26,11 @@ function readAppShell() {
 test('APP_SCRIPTS coincide con el orden de los scripts de index.html', () => {
     const html = readProjectFile('index.html');
     assert.deepEqual(localScripts(html), APP_SCRIPTS);
+});
+
+test('STYLE_FILES coincide con el orden de los estilos de index.html', () => {
+    const html = readProjectFile('index.html');
+    assert.deepEqual(localStyles(html), STYLE_FILES);
 });
 
 test('todos los scripts y estilos locales existen y están en el app shell', () => {

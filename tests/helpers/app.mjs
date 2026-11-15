@@ -49,6 +49,25 @@ export const APP_SCRIPTS = [
     'js/global-exports.js'
 ];
 
+export const STYLE_FILES = [
+    'styles/base.css',
+    'styles/learning.css',
+    'styles/editor.css',
+    'styles/challenges.css',
+    'styles/components.css',
+    'styles/layout.css',
+    'styles/themes.css',
+    'styles/nosql.css',
+    'styles/learning-path.css',
+    'styles/games.css',
+    'styles/library.css',
+    'styles/install-guides.css',
+    'styles/courses.css',
+    'styles/lessons.css',
+    'styles/mobile.css',
+    'styles/trompo.css'
+];
+
 export const APP_DATA_SCRIPTS = [
     'js/data/datasets.js',
     'js/data/nosql-datasets.js',
@@ -64,6 +83,10 @@ export function projectFile(relativePath) {
 
 export function readProjectFile(relativePath) {
     return fs.readFileSync(projectFile(relativePath), 'utf8');
+}
+
+export function readStyles() {
+    return STYLE_FILES.map(readProjectFile).join('\n');
 }
 
 export function createDom(html = DEFAULT_HTML, options = {}) {
