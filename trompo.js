@@ -13,6 +13,8 @@
     const ROW_PX = 12;
     const PLAYER_X = 140;
     const FLIGHT_CEILING = 128;
+    const ATTACK_DURATION = 0.38;
+    const ATTACK_COOLDOWN = 0.5;
 
     const LEVELS = [
         {
@@ -243,6 +245,11 @@
             stompTimer: 0,
             attackTimer: 0,
             attackCooldown: 0,
+            impactTimer: 0,
+            impactX: 0,
+            impactY: 0,
+            impactPower: 0,
+            impactText: '',
             playerY: GROUND_Y,
             vy: 0,
             onGround: true,
@@ -352,6 +359,9 @@
             playTone({ frequency: 350, endFrequency: 620, duration: 0.13, type: 'sine', gain: 0.04 });
         } else if (name === 'trunk') {
             playTone({ frequency: 190, endFrequency: 95, duration: 0.12, type: 'square', gain: 0.04 });
+        } else if (name === 'impact') {
+            playTone({ frequency: 880, endFrequency: 1320, duration: 0.09, type: 'triangle', gain: 0.04 });
+            playTone({ frequency: 150, endFrequency: 70, duration: 0.14, type: 'square', gain: 0.035 });
         } else if (name === 'squash') {
             playTone({ frequency: 125, endFrequency: 55, duration: 0.13, type: 'square', gain: 0.045 });
         } else if (name === 'hit') {
@@ -678,8 +688,8 @@
 
     function attack() {
         if (mode !== 'running' || game.attackCooldown > 0) return;
-        game.attackTimer = 0.34;
-        game.attackCooldown = 0.46;
+        game.attackTimer = ATTACK_DURATION;
+        game.attackCooldown = ATTACK_COOLDOWN;
         game.ducking = false;
         playSound('trunk');
     }
@@ -857,6 +867,7 @@
         }
         if (game.attackTimer > 0) game.attackTimer = Math.max(0, game.attackTimer - dt);
         if (game.attackCooldown > 0) game.attackCooldown = Math.max(0, game.attackCooldown - dt);
+        if (game.impactTimer > 0) game.impactTimer = Math.max(0, game.impactTimer - dt);
         if (game.stompTimer > 0) {
             game.stompTimer = Math.max(0, game.stompTimer - dt);
             if (game.stompTimer === 0 && !keyDuckHeld) game.ducking = false;
@@ -1144,13 +1155,28 @@
         }
     }
 
+    function setImpact(enemy, fromTrunk, points, text) {
+        game.impactTimer = 0.28;
+        game.impactX = enemy.x + enemy.w / 2;
+        game.impactY = enemy.y + enemy.h / 2;
+        game.impactPower = fromTrunk ? 1 : 0.62;
+        game.impactText = text;
+        game.shake = Math.max(game.shake, fromTrunk ? 0.48 : 0.2);
+        if (fromTrunk) {
+            burst(game.impactX, game.impactY, '#fde68a', 8);
+            burst(game.impactX, game.impactY, '#f8fafc', 5);
+            playSound('impact');
+        }
+    }
+
     function hitEnemy(enemy, fromTrunk) {
         enemy.hp = (enemy.hp || 1) - 1;
         if (enemy.hp > 0) {
-            game.score += fromTrunk ? 12 : 6;
-            game.shake = 0.18;
+            const points = fromTrunk ? 12 : 6;
+            game.score += points;
             burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#94a3b8', 6);
-            playSound('trunk');
+            setImpact(enemy, fromTrunk, points, fromTrunk ? `+${points}` : '');
+            if (!fromTrunk) playSound('squash');
             return;
         }
 
@@ -1158,10 +1184,11 @@
         game.insects += 1;
         game.combo += 1;
         game.maxCombo = Math.max(game.maxCombo, game.combo);
-        game.score += (fromTrunk ? 35 : 25) * clamp(game.combo, 1, 5);
-        game.shake = 0.2;
+        const points = (fromTrunk ? 35 : 25) * clamp(game.combo, 1, 5);
+        game.score += points;
         burst(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#8b5a2b', 10);
-        playSound(fromTrunk ? 'trunk' : 'squash');
+        setImpact(enemy, fromTrunk, points, fromTrunk ? `+${points}` : '');
+        if (!fromTrunk) playSound('squash');
     }
 
     function collectPowerup(item) {
@@ -1272,6 +1299,7 @@
         drawInsects();
         drawMammoth();
         drawParticles();
+        drawImpact();
         drawFlash();
         ctx.restore();
     }
@@ -2497,52 +2525,115 @@ function drawMoth(insect) {
         ctx.restore();
     }
 
-    function drawTrunkAttack(attack, bottom, height, color, dark) {
+    function drawTrunkAttack(attack, bottom, height, color, dark, offsetX = 0) {
         if (attack <= 0) return;
-        const swing = Math.sin(attack * Math.PI);
-        const reach = swing * 56;
-        const lift = swing * 30;
-        const baseX = PLAYER_X + 42;
+        const phase = clamp(attack, 0, 1);
+        const swing = Math.sin(phase * Math.PI);
+        if (swing <= 0.01) return;
+
+        const reach = swing * 64;
+        const lift = swing * 34;
+        const baseX = PLAYER_X + 42 + offsetX;
         const baseY = bottom - height * 0.58;
         const tipX = baseX + 34 + reach;
         const tipY = baseY + 10 - lift;
-        const controlX = baseX + 28 + reach * 0.35;
-        const controlY = baseY + 26 - lift * 0.3;
+        const controlX = baseX + 26 + reach * 0.35;
+        const controlY = baseY + 26 - lift * 0.35;
+
+        const points = [];
+        for (let index = 0; index <= 12; index += 1) {
+            const t = index / 12;
+            const inv = 1 - t;
+            points.push({
+                x: inv * inv * baseX + 2 * inv * t * controlX + t * t * tipX,
+                y: inv * inv * baseY + 2 * inv * t * controlY + t * t * tipY,
+                width: 14 - t * 8
+            });
+        }
 
         ctx.save();
-        ctx.globalAlpha = 0.35;
-        ctx.strokeStyle = '#f8fafc';
-        ctx.lineWidth = 2;
-        for (let index = 1; index <= 3; index += 1) {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Estela del movimiento.
+        for (let trail = 1; trail <= 3; trail += 1) {
+            ctx.globalAlpha = 0.13;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.moveTo(baseX - 10 - index * 8, baseY + index * 5);
-            ctx.lineTo(baseX - 24 - index * 12, baseY + index * 7);
+            ctx.moveTo(baseX - trail * 10, baseY + trail * 5);
+            ctx.quadraticCurveTo(controlX - trail * 8, controlY + trail * 4, tipX - trail * 12, tipY + trail * 4);
             ctx.stroke();
         }
         ctx.globalAlpha = 1;
+
+        // Contorno.
+        for (let index = 0; index < points.length - 1; index += 1) {
+            const from = points[index];
+            const to = points[index + 1];
+            ctx.strokeStyle = dark;
+            ctx.lineWidth = (from.width + to.width) / 2 + 5;
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+        }
+
+        // Relleno.
+        for (let index = 0; index < points.length - 1; index += 1) {
+            const from = points[index];
+            const to = points[index + 1];
+            ctx.strokeStyle = color;
+            ctx.lineWidth = (from.width + to.width) / 2;
+            ctx.beginPath();
+            ctx.moveTo(from.x, from.y);
+            ctx.lineTo(to.x, to.y);
+            ctx.stroke();
+        }
+
+        // Punta y colmillo.
+        ctx.fillStyle = color;
         ctx.strokeStyle = dark;
-        ctx.lineWidth = 13;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(baseX, baseY);
-        ctx.quadraticCurveTo(controlX, controlY, tipX, tipY);
-        ctx.stroke();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 8;
-        ctx.beginPath();
-        ctx.moveTo(baseX, baseY);
-        ctx.quadraticCurveTo(controlX, controlY, tipX, tipY);
-        ctx.stroke();
-        ctx.strokeStyle = '#f8fafc';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(tipX - 4, tipY, 11 + swing * 5, -1.4, 0.6);
-        ctx.stroke();
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(tipX + 2, tipY - 7);
-        ctx.lineTo(tipX + 14, tipY - 13);
+        ctx.arc(tipX, tipY, 6, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
+
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, 12 + swing * 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(tipX - 4, tipY + 1, 14 + swing * 8, -1.45, 0.55);
+        ctx.stroke();
+        ctx.strokeStyle = '#fef3c7';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(tipX - 4, tipY + 1, 10 + swing * 6, -1.3, 0.35);
+        ctx.stroke();
+
+        // Destello del golpe.
+        if (swing > 0.45) {
+            const spark = (swing - 0.45) / 0.55;
+            ctx.globalAlpha = spark;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            for (let index = 0; index < 8; index += 1) {
+                const angle = (Math.PI * 2 * index) / 8;
+                const inner = 8 + swing * 5;
+                const outer = 17 + swing * 13;
+                ctx.beginPath();
+                ctx.moveTo(tipX + Math.cos(angle) * inner, tipY + Math.sin(angle) * inner);
+                ctx.lineTo(tipX + Math.cos(angle) * outer, tipY + Math.sin(angle) * outer);
+                ctx.stroke();
+            }
+        }
         ctx.restore();
     }
 
@@ -2562,7 +2653,7 @@ function drawMoth(insect) {
         if (!getSprite(name)) return false;
 
         const bottom = game.playerY + (theme === 'beach' || theme === 'city' ? 4 : 2);
-        const attack = game.attackTimer > 0 ? 1 - game.attackTimer / 0.34 : 0;
+        const attack = game.attackTimer > 0 ? 1 - game.attackTimer / ATTACK_DURATION : 0;
         const bob = game.onGround ? (reduceMotion ? 0 : Math.sin(game.elapsed * 13) * 1.2) : 0;
 
         ctx.save();
@@ -2580,14 +2671,20 @@ function drawMoth(insect) {
         }
 
         ctx.translate(0, bob);
+        const swing = Math.sin(attack * Math.PI);
+        if (attack > 0) {
+            ctx.translate(PLAYER_X, bottom);
+            ctx.rotate(-0.035 * swing);
+            ctx.translate(-PLAYER_X, -bottom);
+        }
         if (game.ducking) {
             ctx.translate(PLAYER_X, bottom);
             ctx.scale(1, 0.74);
             ctx.translate(-PLAYER_X, -bottom);
         }
-        const lunge = Math.sin(attack * Math.PI) * 16;
+        const lunge = swing * 18;
         drawSpriteByHeight(name, PLAYER_X + lunge, bottom, height);
-        drawTrunkAttack(attack, bottom, height, spinach ? '#4d7c0f' : '#557a94', spinach ? '#365314' : '#1b2838');
+        drawTrunkAttack(attack, bottom, height, spinach ? '#4d7c0f' : '#557a94', spinach ? '#365314' : '#1b2838', lunge);
 
         ctx.restore();
         return true;
@@ -2770,6 +2867,55 @@ function drawMoth(insect) {
             ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
             ctx.restore();
         }
+    }
+
+    function drawImpact() {
+        if (!game.impactTimer || game.impactTimer <= 0) return;
+        const duration = 0.28;
+        const progress = clamp(1 - game.impactTimer / duration, 0, 1);
+        const fade = 1 - progress;
+        const power = game.impactPower || 1;
+        const scale = 0.7 + progress * 1.1;
+
+        ctx.save();
+        ctx.translate(game.impactX, game.impactY);
+        ctx.scale(scale, scale);
+        ctx.globalAlpha = fade;
+
+        ctx.strokeStyle = '#fef3c7';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 13 + progress * 22, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 2.5;
+        for (let index = 0; index < 8; index += 1) {
+            const angle = (Math.PI * 2 * index) / 8;
+            const inner = 8 + progress * 8;
+            const outer = 22 + progress * 24;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+            ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, 5 + progress * 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (game.impactText) {
+            ctx.globalAlpha = fade;
+            ctx.font = '800 16px "Segoe UI", Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#132a43';
+            ctx.strokeText(game.impactText, 0, -28 - progress * 15);
+            ctx.fillStyle = power > 0.8 ? '#fef3c7' : '#e2e8f0';
+            ctx.fillText(game.impactText, 0, -28 - progress * 15);
+        }
+        ctx.restore();
     }
 
     function drawFlash() {
