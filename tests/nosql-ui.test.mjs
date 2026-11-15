@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAppDom } from './helpers/app.mjs';
+import { CORE_SCRIPTS, createAppDom } from './helpers/app.mjs';
 
 const dom = createAppDom({
     html: `<!doctype html><html><body>
@@ -22,7 +22,7 @@ const dom = createAppDom({
         <ul id="nosqlHistoryList"></ul>
         <div id="toastContainer"></div>
     </body></html>`,
-    scripts: ['js/data/nosql-datasets.js', 'js/features/nosql/engine.js', 'js/features/nosql/ui.js'],
+    scripts: [...CORE_SCRIPTS, 'js/data/nosql-datasets.js', 'js/features/nosql/engine.js', 'js/features/nosql/ui.js'],
     beforeLoad(window) {
         window.confirm = () => true;
     }

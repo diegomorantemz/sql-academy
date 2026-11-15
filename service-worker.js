@@ -1,8 +1,11 @@
-const CACHE_VERSION = 'sql-academy-v49';
+const CACHE_VERSION = 'sql-academy-v50';
 const APP_SHELL = [
     './',
     './index.html',
     './styles/app.css',
+    './js/core/storage.js',
+    './js/core/dom.js',
+    './js/core/format.js',
     './js/data/datasets.js',
     './js/data/nosql-datasets.js',
     './js/data/install-guides.js',

@@ -5,6 +5,10 @@
 (function (global) {
     'use strict';
 
+    const escapeHtml = global.escapeHtml;
+    const readStoredJSON = global.readStoredJSON;
+    const writeStoredJSON = global.writeStoredJSON;
+
     const STORAGE_KEY = 'sql-academy-deckbuilder-v1';
 
     const GAME_SQL = `
@@ -324,34 +328,6 @@
 
     function getElement(id) {
         return document.getElementById(id);
-    }
-
-    function escapeHtml(value) {
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    function readStoredJSON(key, fallback) {
-        try {
-            const raw = global.localStorage?.getItem(key);
-            if (!raw) return fallback;
-            const parsed = JSON.parse(raw);
-            return parsed && typeof parsed === 'object' ? parsed : fallback;
-        } catch (error) {
-            return fallback;
-        }
-    }
-
-    function writeStoredJSON(key, value) {
-        try {
-            global.localStorage?.setItem(key, JSON.stringify(value));
-        } catch (error) {
-            /* almacenamiento no disponible */
-        }
     }
 
     function loadGameState() {

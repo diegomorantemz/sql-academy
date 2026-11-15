@@ -5,7 +5,14 @@ import { JSDOM } from 'jsdom';
 const PROJECT_ROOT = new URL('../../', import.meta.url);
 const DEFAULT_HTML = '<!doctype html><html><body></body></html>';
 
+export const CORE_SCRIPTS = [
+    'js/core/storage.js',
+    'js/core/dom.js',
+    'js/core/format.js'
+];
+
 export const APP_SCRIPTS = [
+    ...CORE_SCRIPTS,
     'js/data/datasets.js',
     'js/data/nosql-datasets.js',
     'js/data/install-guides.js',
@@ -47,7 +54,11 @@ export function createDom(html = DEFAULT_HTML, options = {}) {
 }
 
 export function loadScripts(window, scripts = APP_SCRIPTS) {
-    for (const file of scripts) {
+    const files = [
+        ...CORE_SCRIPTS.filter(file => !scripts.includes(file)),
+        ...scripts
+    ];
+    for (const file of files) {
         const script = window.document.createElement('script');
         script.textContent = readProjectFile(file);
         window.document.body.appendChild(script);

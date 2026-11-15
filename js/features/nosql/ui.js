@@ -7,6 +7,13 @@
 (function (global) {
     'use strict';
 
+    const escapeHtml = global.escapeHtml;
+    const readJSON = global.readStoredJSON;
+    const writeJSON = global.writeStoredJSON;
+    const removeStored = global.removeStoredItem;
+    const showToast = global.showToast;
+    const formatDuration = value => global.formatDuration(Number(value) || 0);
+
     const STORAGE_KEYS = {
         history: 'sql-academy-nosql-history-v1',
         preferences: 'sql-academy-nosql-preferences-v1',
@@ -51,16 +58,6 @@
         }
     }
 
-    function escapeHtml(value) {
-        if (typeof global.escapeHtml === 'function') return global.escapeHtml(String(value));
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
     function getActiveExamples() {
         const examples = typeof global.getNoSQLExamplesForDataset === 'function'
             ? global.getNoSQLExamplesForDataset(datasetName)
@@ -79,38 +76,6 @@
         return Array.isArray(global.NOSQL_CHALLENGES)
             ? global.NOSQL_CHALLENGES.filter(challenge => challenge.dataset === datasetName)
             : [];
-    }
-
-    function readJSON(key, fallback) {
-        try {
-            const raw = global.localStorage.getItem(key);
-            if (!raw) return fallback;
-            return JSON.parse(raw);
-        } catch (error) {
-            return fallback;
-        }
-    }
-
-    function writeJSON(key, value) {
-        try {
-            global.localStorage.setItem(key, JSON.stringify(value));
-        } catch (error) {
-            // La app sigue funcionando aunque localStorage esté bloqueado.
-        }
-    }
-
-    function removeStored(key) {
-        try {
-            global.localStorage.removeItem(key);
-        } catch (error) {
-            // Ignorar.
-        }
-    }
-
-    function showToast(type, message) {
-        if (typeof global.showToast === 'function') {
-            global.showToast(type, message);
-        }
     }
 
     function setPersistenceState(mode, label) {
@@ -486,12 +451,6 @@
             if (result.operation === 'drop') return 'Colección eliminada';
         }
         return 'Comando ejecutado';
-    }
-
-    function formatDuration(value) {
-        const ms = Number(value) || 0;
-        if (ms < 10) return `${ms.toFixed(1)} ms`;
-        return `${Math.round(ms)} ms`;
     }
 
     function renderError(message, query) {
