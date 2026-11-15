@@ -12,6 +12,7 @@
     const GROUND_Y = 292;
     const ROW_PX = 12;
     const PLAYER_X = 140;
+    const FLIGHT_CEILING = 128;
 
     const LEVELS = [
         {
@@ -184,6 +185,10 @@
 
     function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    function clampFlightY(value) {
+        return Math.max(FLIGHT_CEILING, value);
     }
 
     function formatNumber(value) {
@@ -644,6 +649,10 @@
     function jump() {
         if (mode !== 'running') return;
         if (game.flightTimer > 0) {
+            if (game.playerY <= FLIGHT_CEILING) {
+                game.vy = 0;
+                return;
+            }
             game.vy = -430;
             game.onGround = false;
             game.ducking = false;
@@ -860,7 +869,7 @@
 
         if (!game.onGround) {
             game.vy += (game.flightTimer > 0 ? 760 : 1650) * dt;
-            game.playerY += game.vy * dt;
+            game.playerY = clampFlightY(game.playerY + game.vy * dt);
             if (game.playerY >= GROUND_Y) {
                 game.playerY = GROUND_Y;
                 game.vy = 0;
@@ -3000,6 +3009,8 @@ function drawMoth(insect) {
         LEVELS,
         ALLIES,
         ROW_PX,
+        FLIGHT_CEILING,
+        clampFlightY,
         makeState,
         getProgress,
         getRunScore,

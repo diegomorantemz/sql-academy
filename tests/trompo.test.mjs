@@ -47,6 +47,13 @@ test('los sprites de los personajes están disponibles', () => {
     }
 });
 
+test('el vuelo no permite salir por arriba de la pantalla', () => {
+    const { FLIGHT_CEILING, clampFlightY } = window.TrompoInternals;
+    assert.equal(clampFlightY(0), FLIGHT_CEILING);
+    assert.equal(clampFlightY(FLIGHT_CEILING - 50), FLIGHT_CEILING);
+    assert.equal(clampFlightY(250), 250);
+});
+
 test('Monte Mamut define cinco niveles largos', () => {
     const levels = window.TrompoInternals.LEVELS;
     assert.equal(levels.length, 5);

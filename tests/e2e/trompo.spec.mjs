@@ -73,6 +73,30 @@ test('Monte Mamut permite empezar en cualquier nivel', async ({ page }, testInfo
     await expect(page.locator('#trompoOverlay')).toBeHidden();
 });
 
+test('el vuelo de Ciudad Gótica no sale por arriba de la pantalla', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-1280', 'Prueba de vuelo en escritorio');
+
+    await openGame(page);
+    await page.locator('#gameModeTrompoBtn').click();
+    await page.evaluate(() => {
+        window.TrompoInternals.LEVELS[4].rows = 3000;
+        window.TrompoInternals.LEVELS[4].spawn = 999;
+    });
+    await page.locator('[data-trompo-action="level"][data-level="4"]').click();
+    await expect.poll(async () => page.evaluate(() => window.Trompo.getState().flightTimer), { timeout: 16000 }).toBeGreaterThan(0);
+
+    for (let index = 0; index < 40; index += 1) {
+        await page.keyboard.press('Space');
+        await page.waitForTimeout(35);
+    }
+
+    const state = await page.evaluate(() => ({
+        playerY: window.Trompo.getState().playerY,
+        ceiling: window.TrompoInternals.FLIGHT_CEILING
+    }));
+    expect(state.playerY).toBeGreaterThanOrEqual(state.ceiling);
+});
+
 test('Monte Mamut responde a un mando conectado', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-1280', 'Prueba de mando en escritorio');
 
