@@ -29,7 +29,7 @@ const html = `<!DOCTYPE html>
 
 const dom = createAppDom({
     html,
-    scripts: ['trompo.js']
+    scripts: ['js/games/trompo.js']
 });
 const { window } = dom;
 

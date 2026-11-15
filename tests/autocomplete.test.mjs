@@ -10,7 +10,7 @@ const dom = createAppDom({
         <textarea id="pathEditor"></textarea>
         <textarea id="nosqlEditor"></textarea>
     </body></html>`,
-    scripts: ['autocomplete.js']
+    scripts: ['js/features/autocomplete.js']
 });
 
 const { window } = dom;

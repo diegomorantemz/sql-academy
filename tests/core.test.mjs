@@ -22,7 +22,7 @@ const dom = createAppDom({
         <select id="categorySelector"></select>
         <span id="sqlExampleStatus"></span>
     </body></html>`,
-    scripts: ['datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    scripts: ['js/data/datasets.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js'],
     beforeLoad(window) {
         window.confirm = () => true;
     }
@@ -230,7 +230,7 @@ function createDebugDatabase(datasetName) {
 
     // Escuela se crea directamente en script.js. Extraemos sus sentencias
     // estáticas para probar los retos contra el esquema real.
-    const scriptSource = readProjectFile('script.js');
+    const scriptSource = readProjectFile('js/app.js');
     const statements = [...scriptSource.matchAll(/db\.run\(`([\s\S]*?)`\);/g)]
         .map(match => match[1])
         .filter(sql => !sql.includes('${') && /^\s*(CREATE TABLE|INSERT INTO)/i.test(sql));

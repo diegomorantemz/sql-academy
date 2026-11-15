@@ -61,7 +61,7 @@ const dom = createAppDom({
         <select id="datasetSelector"></select>
         <input id="safeModeToggle" type="checkbox">
     </body></html>`,
-    scripts: ['datasets.js', 'nosql-datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    scripts: ['js/data/datasets.js', 'js/data/nosql-datasets.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js'],
     beforeLoad(window) {
         window.confirm = () => true;
     }
@@ -234,7 +234,7 @@ test('el recorrido guiado avanza por los pasos y se puede cerrar', () => {
 });
 
 test('el recorrido de feria cubre las secciones principales', () => {
-    const source = readProjectFile('script.js');
+    const source = readProjectFile('js/app.js');
     for (const section of ['learn', 'practice', 'path', 'nosql', 'challenges', 'game', 'analyze']) {
         assert.match(source, new RegExp(`section: '${section}'`));
     }
@@ -288,7 +288,7 @@ test('el perfil de nivel aparece en el dashboard con refuerzos', () => {
 
 test('los controles nuevos incluyen etiquetas y estilos de accesibilidad', () => {
     const html = readProjectFile('index.html');
-    const css = readProjectFile('style.css');
+    const css = readProjectFile('styles/app.css');
 
     assert.match(html, /role="region" aria-label="Nivel SQL"/);
     assert.match(html, /role="region" aria-label="Nivel NoSQL"/);

@@ -56,7 +56,7 @@ const dom = createAppDom({
         <input id="safeModeToggle" type="checkbox">
         <select id="categorySelector"></select>
     </body></html>`,
-    scripts: ['datasets.js', 'nosql-datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    scripts: ['js/data/datasets.js', 'js/data/nosql-datasets.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js'],
     beforeLoad(window) {
         window.confirm = () => true;
     }

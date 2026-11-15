@@ -6,27 +6,27 @@ const PROJECT_ROOT = new URL('../../', import.meta.url);
 const DEFAULT_HTML = '<!doctype html><html><body></body></html>';
 
 export const APP_SCRIPTS = [
-    'datasets.js',
-    'nosql-datasets.js',
-    'install-guides.js',
-    'courses.js',
-    'course-content.js',
-    'checkpoint-content.js',
-    'nosql-engine.js',
-    'script.js',
-    'nosql.js',
-    'autocomplete.js',
-    'deckbuilder.js',
-    'trompo.js'
+    'js/data/datasets.js',
+    'js/data/nosql-datasets.js',
+    'js/data/install-guides.js',
+    'js/data/courses.js',
+    'js/data/course-content.js',
+    'js/data/checkpoint-content.js',
+    'js/features/nosql/engine.js',
+    'js/app.js',
+    'js/features/nosql/ui.js',
+    'js/features/autocomplete.js',
+    'js/games/deckbuilder.js',
+    'js/games/trompo.js'
 ];
 
 export const APP_DATA_SCRIPTS = [
-    'datasets.js',
-    'nosql-datasets.js',
-    'install-guides.js',
-    'courses.js',
-    'course-content.js',
-    'checkpoint-content.js'
+    'js/data/datasets.js',
+    'js/data/nosql-datasets.js',
+    'js/data/install-guides.js',
+    'js/data/courses.js',
+    'js/data/course-content.js',
+    'js/data/checkpoint-content.js'
 ];
 
 export function projectFile(relativePath) {

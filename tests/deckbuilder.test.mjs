@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { createAppDom } from './helpers/app.mjs';
 
-const pureDom = createAppDom({ scripts: ['deckbuilder.js'] });
+const pureDom = createAppDom({ scripts: ['js/games/deckbuilder.js'] });
 const internals = pureDom.window.DeckbuilderInternals;
 
 function normalizeSql(sql) {
@@ -88,7 +88,7 @@ test('el juego se renderiza y permite superar un piso con recompensa', async () 
                 <div id="gamepadStatus" hidden></div>
             </section>
         </body></html>`,
-        scripts: ['deckbuilder.js'],
+        scripts: ['js/games/deckbuilder.js'],
         beforeLoad(window) {
             window.confirm = () => true;
             window.requestAnimationFrame = () => 0;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readProjectFile } from './helpers/app.mjs';
 
 const html = readProjectFile('index.html');
-const script = readProjectFile('script.js');
+const script = readProjectFile('js/app.js');
 const readme = readProjectFile('README.md');
 
 test('la barra de Practicar agrupa las acciones secundarias', () => {

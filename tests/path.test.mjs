@@ -37,7 +37,7 @@ const dom = createAppDom({
         <section id="section-path" class="section"></section>
         <section id="section-challenges" class="section"></section>
     </body></html>`,
-    scripts: ['datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    scripts: ['js/data/datasets.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js'],
     beforeLoad(window) {
         window.confirm = () => true;
         window.localStorage.setItem(

@@ -22,7 +22,7 @@ const dom = createAppDom({
         <ul id="nosqlHistoryList"></ul>
         <div id="toastContainer"></div>
     </body></html>`,
-    scripts: ['nosql-datasets.js', 'nosql-engine.js', 'nosql.js'],
+    scripts: ['js/data/nosql-datasets.js', 'js/features/nosql/engine.js', 'js/features/nosql/ui.js'],
     beforeLoad(window) {
         window.confirm = () => true;
     }

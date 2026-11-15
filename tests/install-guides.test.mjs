@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createAppDom, projectFile } from './helpers/app.mjs';
 
-const dom = createAppDom({ scripts: ['install-guides.js'] });
+const dom = createAppDom({ scripts: ['js/data/install-guides.js'] });
 const { window } = dom;
 
 const guides = window.INSTALL_GUIDES;

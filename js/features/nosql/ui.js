@@ -2,7 +2,7 @@
  * Interfaz del laboratorio NoSQL.
  *
  * Mantiene el estado documental, la persistencia en IndexedDB, el historial,
- * los ejemplos y los retos. El motor puro vive en nosql-engine.js.
+ * los ejemplos y los retos. El motor puro vive en engine.js.
  */
 (function (global) {
     'use strict';

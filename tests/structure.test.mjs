@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { APP_SCRIPTS, projectFile, readProjectFile } from './helpers/app.mjs';
 
 function localScripts(html) {
@@ -49,4 +49,10 @@ test('el app shell no contiene rutas inexistentes', () => {
 test('no hay scripts duplicados en el arranque', () => {
     assert.equal(new Set(APP_SCRIPTS).size, APP_SCRIPTS.length);
     assert.equal(new Set(readAppShell()).size, readAppShell().length);
+});
+
+test('la raíz solo conserva el service worker como JavaScript', () => {
+    const rootFiles = readdirSync(projectFile('.'));
+    assert.deepEqual(rootFiles.filter(file => file.endsWith('.js')), ['service-worker.js']);
+    assert.deepEqual(rootFiles.filter(file => file.endsWith('.css')), []);
 });

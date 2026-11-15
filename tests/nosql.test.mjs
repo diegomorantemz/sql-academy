@@ -19,11 +19,11 @@ function createRuntime() {
     context.globalThis = context;
 
     vm.runInContext(
-        readProjectFile('nosql-datasets.js'),
+        readProjectFile('js/data/nosql-datasets.js'),
         context
     );
     vm.runInContext(
-        readProjectFile('nosql-engine.js'),
+        readProjectFile('js/features/nosql/engine.js'),
         context
     );
 
