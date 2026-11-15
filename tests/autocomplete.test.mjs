@@ -1,26 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { createAppDom } from './helpers/app.mjs';
 
-const dom = new JSDOM(
-    `<!doctype html><html><body>
+const dom = createAppDom({
+    html: `<!doctype html><html><body>
         <textarea id="sqlEditor"></textarea>
         <textarea id="challengeEditor"></textarea>
         <textarea id="debugEditor"></textarea>
         <textarea id="pathEditor"></textarea>
         <textarea id="nosqlEditor"></textarea>
     </body></html>`,
-    {
-        url: 'https://sql-academy.test/',
-        runScripts: 'outside-only',
-        pretendToBeVisual: true
-    }
-);
+    scripts: ['autocomplete.js']
+});
 
 const { window } = dom;
 const { document } = window;
-window.eval(fs.readFileSync(new URL('../autocomplete.js', import.meta.url), 'utf8'));
 
 const autocomplete = window.SQLAcademyAutocomplete;
 autocomplete.init();

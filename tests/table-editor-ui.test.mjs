@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { JSDOM } from 'jsdom';
+import { createAppDom, readProjectFile } from './helpers/app.mjs';
 
-const dom = new JSDOM(
-    `<!doctype html><html><body>
+const dom = createAppDom({
+    html: `<!doctype html><html><body>
         <div id="analyzeSummary"></div>
         <div class="analyze-mode-toggle">
             <button type="button" class="analyze-mode-btn active" data-analyze-mode="view" aria-pressed="true"></button>
@@ -40,20 +40,13 @@ const dom = new JSDOM(
         <select id="categorySelector"></select>
         <span id="sqlExampleStatus"></span>
     </body></html>`,
-    {
-        url: 'https://sql-academy.test/',
-        runScripts: 'outside-only',
-        pretendToBeVisual: true
+    scripts: ['datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
     }
-);
+});
 
 const { window } = dom;
-window.confirm = () => true;
-window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 const database = new DatabaseSync(':memory:');
 database.exec(`
@@ -170,7 +163,7 @@ test('el editor limita la carga a 100 filas y lo avisa', () => {
 });
 
 test('el editor de datos vive en Analizar y ya no ocupa Practicar', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
     const document = new JSDOM(html).window.document;
 
     assert.match(html, /data-analyze-mode="edit"/);

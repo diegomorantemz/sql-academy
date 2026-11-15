@@ -1,10 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { createAppDom, readProjectFile } from './helpers/app.mjs';
 
-const dom = new JSDOM(
-    `<!doctype html><html><body>
+const dom = createAppDom({
+    html: `<!doctype html><html><body>
         <div id="sqlLevelBar" class="level-bar is-onboarding">
             <strong id="sqlLevelLabel"></strong>
             <p id="sqlLevelDescription"></p>
@@ -62,21 +61,13 @@ const dom = new JSDOM(
         <select id="datasetSelector"></select>
         <input id="safeModeToggle" type="checkbox">
     </body></html>`,
-    {
-        url: 'https://sql-academy.test/',
-        runScripts: 'outside-only',
-        pretendToBeVisual: true
+    scripts: ['datasets.js', 'nosql-datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
     }
-);
+});
 
 const { window } = dom;
-window.confirm = () => true;
-window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../nosql-datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 function categoryKeys() {
     return Array.from(window.document.querySelectorAll('#categorySelector option'))
@@ -203,7 +194,7 @@ test('el banco de preguntas tiene las tres dificultades y respuestas válidas', 
 });
 
 test('la interfaz incluye las barras de nivel y el modal del test', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
 
     assert.match(html, /id="sqlLevelBar"/);
     assert.match(html, /id="nosqlLevelBar"/);
@@ -243,7 +234,7 @@ test('el recorrido guiado avanza por los pasos y se puede cerrar', () => {
 });
 
 test('el recorrido de feria cubre las secciones principales', () => {
-    const source = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
+    const source = readProjectFile('script.js');
     for (const section of ['learn', 'practice', 'path', 'nosql', 'challenges', 'game', 'analyze']) {
         assert.match(source, new RegExp(`section: '${section}'`));
     }
@@ -252,7 +243,7 @@ test('el recorrido de feria cubre las secciones principales', () => {
 });
 
 test('el HTML incluye el recorrido de feria', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
     assert.match(html, /Recorrido de 5 minutos/);
     assert.match(html, /onclick="startDemoTour\(\)"/);
     assert.match(html, /id="demoTourBar"/);
@@ -275,7 +266,7 @@ test('el reporte de progreso incluye niveles y nombre', () => {
 });
 
 test('la interfaz incluye el modal de reporte y el acceso desde progreso', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
     assert.match(html, /id="progressReportModal"/);
     assert.match(html, /id="progressReportBody"/);
     assert.match(html, /onclick="closeProgressReport\(\)"/);
@@ -296,8 +287,8 @@ test('el perfil de nivel aparece en el dashboard con refuerzos', () => {
 });
 
 test('los controles nuevos incluyen etiquetas y estilos de accesibilidad', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-    const css = fs.readFileSync(new URL('../style.css', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
+    const css = readProjectFile('style.css');
 
     assert.match(html, /role="region" aria-label="Nivel SQL"/);
     assert.match(html, /role="region" aria-label="Nivel NoSQL"/);

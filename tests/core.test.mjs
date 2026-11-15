@@ -1,11 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { JSDOM } from 'jsdom';
+import { createAppDom, readProjectFile } from './helpers/app.mjs';
 
-const dom = new JSDOM(
-    `<!doctype html><html><body>
+const dom = createAppDom({
+    html: `<!doctype html><html><body>
         <textarea id="sqlEditor"></textarea>
         <ul id="historyList"></ul>
         <div id="resultOutput"></div>
@@ -23,19 +22,13 @@ const dom = new JSDOM(
         <select id="categorySelector"></select>
         <span id="sqlExampleStatus"></span>
     </body></html>`,
-    {
-        url: 'https://sql-academy.test/',
-        runScripts: 'outside-only',
-        pretendToBeVisual: true
+    scripts: ['datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
     }
-);
+});
 
 const { window } = dom;
-window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 test('escapeHtml escapa caracteres peligrosos', () => {
     assert.equal(
@@ -237,7 +230,7 @@ function createDebugDatabase(datasetName) {
 
     // Escuela se crea directamente en script.js. Extraemos sus sentencias
     // estáticas para probar los retos contra el esquema real.
-    const scriptSource = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
+    const scriptSource = readProjectFile('script.js');
     const statements = [...scriptSource.matchAll(/db\.run\(`([\s\S]*?)`\);/g)]
         .map(match => match[1])
         .filter(sql => !sql.includes('${') && /^\s*(CREATE TABLE|INSERT INTO)/i.test(sql));
@@ -473,7 +466,7 @@ test('renderAnalyzePanel pinta resumen, explorador y calidad', () => {
 });
 
 test('la pestaña Analizar no depende de Chart.js', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
     assert.doesNotMatch(html, /chart\.js/i);
     assert.doesNotMatch(html, /chartCarreras|chartPromedios/);
     assert.match(html, /id="analyzeSummary"/);

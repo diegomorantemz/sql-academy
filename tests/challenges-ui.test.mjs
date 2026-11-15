@@ -1,10 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { createAppDom, readProjectFile } from './helpers/app.mjs';
 
-const dom = new JSDOM(
-    `<!doctype html><html><body>
+const dom = createAppDom({
+    html: `<!doctype html><html><body>
         <nav>
             <button class="nav-btn active" data-section="learn"></button>
             <button class="nav-btn" data-section="practice"></button>
@@ -57,21 +56,13 @@ const dom = new JSDOM(
         <input id="safeModeToggle" type="checkbox">
         <select id="categorySelector"></select>
     </body></html>`,
-    {
-        url: 'https://sql-academy.test/',
-        runScripts: 'outside-only',
-        pretendToBeVisual: true
+    scripts: ['datasets.js', 'nosql-datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
     }
-);
+});
 
 const { window } = dom;
-window.confirm = () => true;
-window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../nosql-datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 await new Promise(resolve => setTimeout(resolve, 20));
 
@@ -157,7 +148,7 @@ test('el reto NoSQL se resuelve en la pestaña Retos con editor propio', () => {
 });
 
 test('el laboratorio NoSQL ya no muestra el panel de reto activo', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
     assert.doesNotMatch(html, /Reto NoSQL activo/);
     assert.doesNotMatch(html, /id="nosqlChallengeDetail"/);
 });
@@ -235,7 +226,7 @@ test('el progreso de depuración se guarda y se reinicia sin tocar los retos SQL
 });
 
 test('index.html incluye la tercera pestaña y el panel de depuración', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
     assert.match(html, /data-challenge-tab="debug"/);
     assert.match(html, /id="debugChallengesPanel"/);
     assert.match(html, /id="debugChallengeList"/);

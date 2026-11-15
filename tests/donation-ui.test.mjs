@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { JSDOM } from 'jsdom';
+import { createAppDom, projectFile, readProjectFile } from './helpers/app.mjs';
 
-const dom = new JSDOM(
-    `<!doctype html><html><body>
+const dom = createAppDom({
+    html: `<!doctype html><html><body>
         <div id="donationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="donationModalTitle">
             <div class="modal-content donation-modal-content">
                 <div class="modal-header">
@@ -31,20 +32,13 @@ const dom = new JSDOM(
         <select id="categorySelector"></select>
         <span id="sqlExampleStatus"></span>
     </body></html>`,
-    {
-        url: 'https://sql-academy.test/',
-        runScripts: 'outside-only',
-        pretendToBeVisual: true
+    scripts: ['datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
     }
-);
+});
 
 const { window } = dom;
-window.confirm = () => true;
-window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 function modalBody() {
     return window.document.getElementById('donationModalBody');
@@ -102,7 +96,7 @@ test('el modal cambia a Plin y no expone números de teléfono', () => {
 });
 
 test('el footer y el título usan el enfoque voluntario acordado', () => {
-    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const html = readProjectFile('index.html');
     const document = new JSDOM(html).window.document;
 
     assert.equal(
@@ -115,6 +109,6 @@ test('el footer y el título usan el enfoque voluntario acordado', () => {
 });
 
 test('los QR de Yape y Plin existen en el proyecto', () => {
-    assert.equal(fs.existsSync(new URL('../assets/images/qr-yape.png', import.meta.url)), true);
-    assert.equal(fs.existsSync(new URL('../assets/images/qr-plin.png', import.meta.url)), true);
+    assert.equal(fs.existsSync(projectFile('assets/images/qr-yape.png')), true);
+    assert.equal(fs.existsSync(projectFile('assets/images/qr-plin.png')), true);
 });

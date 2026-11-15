@@ -1,32 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { createAppDom, readProjectFile } from './helpers/app.mjs';
 
-const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const dom = new JSDOM(html, {
-    url: 'https://sql-academy.test/',
-    runScripts: 'outside-only',
-    pretendToBeVisual: true
+const dom = createAppDom({
+    html: readProjectFile('index.html'),
+    scripts: ['datasets.js', 'nosql-datasets.js', 'install-guides.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'nosql-engine.js', 'script.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
+        window.requestAnimationFrame = () => 0;
+    }
 });
 
 const { window } = dom;
 const { document } = window;
-window.confirm = () => true;
-window.requestAnimationFrame = () => 0;
-
-for (const file of [
-    'datasets.js',
-    'nosql-datasets.js',
-    'install-guides.js',
-    'courses.js',
-    'course-content.js',
-    'checkpoint-content.js',
-    'nosql-engine.js',
-    'script.js'
-]) {
-    window.eval(fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'));
-}
 
 test('la navegación móvil sincroniza la sección activa', () => {
     window.activateSection('practice');

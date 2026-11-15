@@ -1,17 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { JSDOM } from 'jsdom';
+import { createAppDom } from './helpers/app.mjs';
 
-const deckbuilderSource = fs.readFileSync(new URL('../deckbuilder.js', import.meta.url), 'utf8');
-
-const pureDom = new JSDOM('<!doctype html><html><body></body></html>', {
-    url: 'https://sql-academy.test/',
-    runScripts: 'outside-only'
-});
-pureDom.window.eval(deckbuilderSource);
-
+const pureDom = createAppDom({ scripts: ['deckbuilder.js'] });
 const internals = pureDom.window.DeckbuilderInternals;
 
 function normalizeSql(sql) {
@@ -71,8 +63,8 @@ test('la torre tiene seis pisos y un pool de recompensas', () => {
 });
 
 test('el juego se renderiza y permite superar un piso con recompensa', async () => {
-    const dom = new JSDOM(
-        `<!doctype html><html><body>
+    const dom = createAppDom({
+        html: `<!doctype html><html><body>
             <section id="section-game" class="section active">
                 <strong id="gameFloorLabel"></strong>
                 <strong id="gameScoreLabel"></strong>
@@ -96,39 +88,35 @@ test('el juego se renderiza y permite superar un piso con recompensa', async () 
                 <div id="gamepadStatus" hidden></div>
             </section>
         </body></html>`,
-        {
-            url: 'https://sql-academy.test/',
-            runScripts: 'outside-only',
-            pretendToBeVisual: true
-        }
-    );
+        scripts: ['deckbuilder.js'],
+        beforeLoad(window) {
+            window.confirm = () => true;
+            window.requestAnimationFrame = () => 0;
+            window.getSQLModule = () => ({
+                Database: class {
+                    constructor() {
+                        this.database = new DatabaseSync(':memory:');
+                    }
 
-    const { window } = dom;
-    window.confirm = () => true;
-    window.requestAnimationFrame = () => 0;
-    window.getSQLModule = () => ({
-        Database: class {
-            constructor() {
-                this.database = new DatabaseSync(':memory:');
-            }
+                    run(sql) {
+                        this.database.exec(sql);
+                    }
 
-            run(sql) {
-                this.database.exec(sql);
-            }
-
-            exec(sql) {
-                const statement = this.database.prepare(sql);
-                const rows = statement.all();
-                const columns = statement.columns().map(column => column.name);
-                return [{
-                    columns,
-                    values: rows.map(row => columns.map(column => row[column]))
-                }];
-            }
+                    exec(sql) {
+                        const statement = this.database.prepare(sql);
+                        const rows = statement.all();
+                        const columns = statement.columns().map(column => column.name);
+                        return [{
+                            columns,
+                            values: rows.map(row => columns.map(column => row[column]))
+                        }];
+                    }
+                }
+            });
         }
     });
 
-    window.eval(deckbuilderSource);
+    const { window } = dom;
     window.Deckbuilder.init();
     await new Promise(resolve => setTimeout(resolve, 20));
 

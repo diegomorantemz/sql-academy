@@ -1,24 +1,18 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { createAppDom, projectFile, readProjectFile } from './helpers/app.mjs';
 
-const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const dom = new JSDOM(html, {
-    url: 'https://sql-academy.test/',
-    runScripts: 'outside-only',
-    pretendToBeVisual: true
+const dom = createAppDom({
+    html: readProjectFile('index.html'),
+    scripts: ['datasets.js', 'install-guides.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
+        window.requestAnimationFrame = () => 0;
+    }
 });
 
 const { window } = dom;
-window.confirm = () => true;
-window.requestAnimationFrame = () => 0;
-window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../install-guides.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 window.initLearnLibrary();
 
 await new Promise(resolve => setTimeout(resolve, 20));
@@ -221,8 +215,8 @@ test('MySQL y SQLite tienen variantes de logo para modo claro y oscuro', () => {
         assert.ok(card.querySelector('.db-logo-dark'));
     }
 
-    assert.ok(fs.existsSync(new URL('../assets/logos/mysql-dark.png', import.meta.url)));
-    assert.ok(fs.existsSync(new URL('../assets/logos/sqlite-dark.png', import.meta.url)));
+    assert.ok(fs.existsSync(projectFile('assets/logos/mysql-dark.png')));
+    assert.ok(fs.existsSync(projectFile('assets/logos/sqlite-dark.png')));
 
     window.openDBInfo('mysql');
     assert.ok(document.querySelector('#modalBody .db-logo-large.has-dark-logo'));

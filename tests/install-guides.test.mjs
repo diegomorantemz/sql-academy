@@ -1,18 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { createAppDom, projectFile } from './helpers/app.mjs';
 
-const dom = new JSDOM('<!doctype html><html><body></body></html>', {
-    url: 'https://sql-academy.test/',
-    runScripts: 'outside-only'
-});
+const dom = createAppDom({ scripts: ['install-guides.js'] });
 const { window } = dom;
-window.eval(fs.readFileSync(new URL('../install-guides.js', import.meta.url), 'utf8'));
 
 const guides = window.INSTALL_GUIDES;
 const expectedIds = ['sqlite', 'postgresql', 'mysql', 'sqlserver', 'mongodb', 'oracle', 'mariadb', 'redis', 'neo4j', 'cassandra', 'elasticsearch', 'firebase'];
-const exists = path => fs.existsSync(new URL(`../${path}`, import.meta.url));
+const exists = path => fs.existsSync(projectFile(path));
 
 test('el catálogo de instalación incluye los doce gestores', () => {
     assert.ok(guides);

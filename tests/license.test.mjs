@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { projectFile, readProjectFile } from './helpers/app.mjs';
 
-const readText = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const readText = path => readProjectFile(path);
 const readJson = path => JSON.parse(readText(path));
-const exists = path => fs.existsSync(new URL(`../${path}`, import.meta.url));
+const exists = path => fs.existsSync(projectFile(path));
 
 test('la licencia del proyecto es noncommercial', () => {
     const license = readText('LICENSE');

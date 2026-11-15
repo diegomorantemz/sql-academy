@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import vm from 'node:vm';
+import { readProjectFile } from './helpers/app.mjs';
 
 function createRuntime() {
     const context = vm.createContext({
@@ -19,11 +19,11 @@ function createRuntime() {
     context.globalThis = context;
 
     vm.runInContext(
-        fs.readFileSync(new URL('../nosql-datasets.js', import.meta.url), 'utf8'),
+        readProjectFile('nosql-datasets.js'),
         context
     );
     vm.runInContext(
-        fs.readFileSync(new URL('../nosql-engine.js', import.meta.url), 'utf8'),
+        readProjectFile('nosql-engine.js'),
         context
     );
 

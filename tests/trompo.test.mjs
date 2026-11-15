@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { createAppDom, projectFile } from './helpers/app.mjs';
 
 const html = `<!DOCTYPE html>
 <html lang="es">
@@ -27,14 +27,11 @@ const html = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const dom = new JSDOM(html, {
-    url: 'https://sql-academy.test/',
-    runScripts: 'outside-only',
-    pretendToBeVisual: true
+const dom = createAppDom({
+    html,
+    scripts: ['trompo.js']
 });
 const { window } = dom;
-
-window.eval(fs.readFileSync(new URL('../trompo.js', import.meta.url), 'utf8'));
 
 test('los sprites de los personajes están disponibles', () => {
     const sprites = [
@@ -43,7 +40,7 @@ test('los sprites de los personajes están disponibles', () => {
         'cricket.png', 'tarantula.png', 'beetle.png'
     ];
     for (const sprite of sprites) {
-        assert.ok(fs.existsSync(new URL(`../assets/game/${sprite}`, import.meta.url)), `Falta ${sprite}`);
+        assert.ok(fs.existsSync(projectFile(`assets/game/${sprite}`)), `Falta ${sprite}`);
     }
 });
 

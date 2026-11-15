@@ -1,11 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { JSDOM } from 'jsdom';
+import { createAppDom } from './helpers/app.mjs';
 
-const dom = new JSDOM(
-    `<!doctype html><html><body>
+const dom = createAppDom({
+    html: `<!doctype html><html><body>
         <textarea id="sqlEditor"></textarea>
         <ul id="historyList"></ul>
         <div id="resultOutput"></div>
@@ -38,25 +37,18 @@ const dom = new JSDOM(
         <section id="section-path" class="section"></section>
         <section id="section-challenges" class="section"></section>
     </body></html>`,
-    {
-        url: 'https://sql-academy.test/',
-        runScripts: 'outside-only',
-        pretendToBeVisual: true
+    scripts: ['datasets.js', 'courses.js', 'course-content.js', 'checkpoint-content.js', 'script.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
+        window.localStorage.setItem(
+            'sql-academy-preferences-v1',
+            JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
+        );
     }
-);
+});
 
 const { window } = dom;
 const { document } = window;
-window.confirm = () => true;
-window.localStorage.setItem(
-    'sql-academy-preferences-v1',
-    JSON.stringify({ dataset: 'tienda', theme: 'light', safeMode: true })
-);
-window.eval(fs.readFileSync(new URL('../datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../courses.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../course-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../checkpoint-content.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8'));
 
 await new Promise(resolve => setTimeout(resolve, 30));
 

@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import { readProjectFile } from './helpers/app.mjs';
 
-const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const script = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
-const readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+const html = readProjectFile('index.html');
+const script = readProjectFile('script.js');
+const readme = readProjectFile('README.md');
 
 test('la barra de Practicar agrupa las acciones secundarias', () => {
     assert.doesNotMatch(html, /importDatabase/);

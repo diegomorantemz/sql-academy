@@ -1,10 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { JSDOM } from 'jsdom';
+import { createAppDom } from './helpers/app.mjs';
 
-const dom = new JSDOM(
-    `<!doctype html><html><body>
+const dom = createAppDom({
+    html: `<!doctype html><html><body>
         <select id="nosqlDatasetSelector">
             <option value="escuela">Escuela</option>
             <option value="tienda">Tienda</option>
@@ -23,18 +22,13 @@ const dom = new JSDOM(
         <ul id="nosqlHistoryList"></ul>
         <div id="toastContainer"></div>
     </body></html>`,
-    {
-        url: 'https://sql-academy.test/',
-        runScripts: 'outside-only',
-        pretendToBeVisual: true
+    scripts: ['nosql-datasets.js', 'nosql-engine.js', 'nosql.js'],
+    beforeLoad(window) {
+        window.confirm = () => true;
     }
-);
+});
 
 const { window } = dom;
-window.confirm = () => true;
-window.eval(fs.readFileSync(new URL('../nosql-datasets.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../nosql-engine.js', import.meta.url), 'utf8'));
-window.eval(fs.readFileSync(new URL('../nosql.js', import.meta.url), 'utf8'));
 
 await new Promise(resolve => setTimeout(resolve, 50));
 
