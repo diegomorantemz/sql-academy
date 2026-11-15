@@ -1,0 +1,239 @@
+/* ===== TABLE EDITOR ===== */
+.table-editor {
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    margin-top: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.table-editor h4 {
+    color: var(--text-strong);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.table-editor h4 i {
+    color: var(--postgres-blue);
+    margin-right: 0;
+}
+
+.table-editor-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.table-editor select {
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#tableEditorContent {
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    padding: 10px;
+    max-height: 300px;
+    overflow: auto;
+}
+
+#tableEditorContent table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 500px;
+}
+
+#tableEditorContent th {
+    background: var(--postgres-blue);
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#tableEditorContent td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+#tableEditorContent td input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+#tableEditorContent td input:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 2px rgba(51, 103, 145, 0.15);
+}
+
+#tableEditorContent td input.pk-input {
+    background: var(--postgres-bg);
+    color: #555;
+    font-weight: 600;
+    cursor: not-allowed;
+}
+
+#tableEditorContent button {
+    padding: 2px 8px;
+    font-size: 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* ===== EXPLORADOR: VISTA Y EDICIÓN ===== */
+.analyze-mode-toggle {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+}
+
+.analyze-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.analyze-mode-btn:hover {
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+}
+
+.analyze-mode-btn.active {
+    background: var(--postgres-blue);
+    border-color: var(--postgres-blue);
+    color: white;
+}
+
+#analyzeTableDetail[hidden],
+#analyzeTableEditor[hidden] {
+    display: none;
+}
+
+.analyze-table-editor {
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.analyze-editor-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.analyze-editor-head h4 {
+    margin: 0;
+    color: var(--text-strong);
+}
+
+.analyze-editor-head h4 i {
+    color: var(--postgres-blue);
+}
+
+.analyze-editor-table {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.analyze-editor-table strong {
+    color: var(--postgres-blue);
+}
+
+.table-editor-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #fff5e5;
+    color: #9a6100;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.table-editor-status[hidden] {
+    display: none;
+}
+
+.table-editor-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 9px 11px;
+    border: 1px solid #f0dfb0;
+    border-left: 4px solid #e0a800;
+    border-radius: 8px;
+    background: #fff9e8;
+    color: #7a5a00;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.table-editor-warning i {
+    margin-top: 2px;
+    flex: 0 0 auto;
+}
+
+.table-editor-note {
+    min-height: 18px;
+    margin: 8px 0;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.analyze-table-editor #tableEditorContent {
+    max-height: 420px;
+}
+
+.analyze-restore-btn {
+    color: #b42318;
+    border-color: rgba(180, 35, 24, 0.35);
+}
+
+.analyze-restore-btn:hover {
+    background: #fff5f5;
+    border-color: #dc3545;
+    color: #8b1e1e;
+}
+

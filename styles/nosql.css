@@ -1,0 +1,674 @@
+/* ===== LABORATORIO NOSQL ===== */
+.nosql-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.nosql-sidebar,
+.nosql-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.nosql-collections-panel,
+.nosql-help-panel {
+    margin: 0;
+}
+
+.nosql-muted {
+    color: var(--text-muted);
+    font-size: 0.82em;
+    line-height: 1.45;
+}
+
+.nosql-collection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 0 12px;
+}
+
+.nosql-collection-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: var(--surface-muted);
+    color: var(--postgres-text);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.nosql-collection-btn:hover {
+    border-color: rgba(47, 111, 159, 0.45);
+    background: var(--accent-soft);
+    color: var(--postgres-blue);
+    transform: translateY(-1px);
+}
+
+.nosql-collection-btn small {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.nosql-sidebar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nosql-sidebar-actions select {
+    width: 100%;
+}
+
+.nosql-help-panel code {
+    display: block;
+    margin: 6px 0;
+    padding: 6px 8px;
+    border-radius: 5px;
+    background: #0f172a;
+    color: #dbeafe;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.nosql-help-panel .nosql-muted code {
+    display: inline;
+    padding: 1px 5px;
+    background: #eef2f7;
+    color: #334155;
+}
+
+#nosqlEditor {
+    width: 100%;
+    height: 180px;
+    padding: 13px 16px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 13.5px;
+    line-height: 1.65;
+    resize: vertical;
+    background: var(--surface-muted);
+    color: var(--postgres-text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+#nosqlEditor:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    background: var(--surface);
+    box-shadow: var(--focus-ring);
+}
+
+.nosql-toolbar {
+    align-items: center;
+}
+
+#nosqlHistoryList {
+    list-style: none;
+    padding: 0;
+    max-height: 140px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#nosqlHistoryList li {
+    padding: 8px 10px;
+    margin: 0;
+    background: var(--surface-muted);
+    border: 1px solid transparent;
+    border-left: 3px solid var(--postgres-blue);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 12px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+#nosqlHistoryList li:hover {
+    background: var(--accent-soft);
+}
+
+.nosql-history-query {
+    display: block;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--postgres-text);
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 400;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nosql-result-output {
+    background: var(--surface-muted);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    padding: 14px;
+    min-height: 110px;
+    max-height: 520px;
+    overflow: auto;
+    font-size: 14px;
+}
+
+.nosql-result-meta {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+}
+
+.nosql-json {
+    margin: 10px 0 0;
+    padding: 12px;
+    border-radius: 7px;
+    background: #0f172a;
+    color: #dbeafe;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow: auto;
+    white-space: pre;
+}
+
+.nosql-json-details {
+    margin-top: 10px;
+}
+
+.nosql-json-details summary {
+    cursor: pointer;
+    color: var(--postgres-blue);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.nosql-challenges-panel {
+    margin-top: 8px;
+    padding: 18px;
+    border: 1px solid var(--postgres-border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.nosql-challenges-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.nosql-challenges-head h3 {
+    color: var(--text-strong);
+    font-size: 1.05em;
+    margin-bottom: 3px;
+}
+
+.nosql-challenges-head h3 i {
+    color: var(--postgres-blue);
+    margin-right: 6px;
+}
+
+.nosql-challenges-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.15fr);
+    gap: 14px;
+}
+
+.nosql-challenge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nosql-challenge-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--postgres-border);
+    border-radius: 8px;
+    background: white;
+    color: #2c3e50;
+    text-align: left;
+    font-size: 12px;
+}
+
+.nosql-challenge-card:hover {
+    border-color: var(--postgres-blue);
+    transform: translateY(-1px);
+}
+
+.nosql-challenge-card.active {
+    border-color: var(--postgres-blue);
+    box-shadow: 0 0 0 2px rgba(51, 103, 145, 0.15);
+}
+
+.nosql-challenge-card.completed .nosql-challenge-title {
+    color: #1f7a42;
+}
+
+.nosql-challenge-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+}
+
+.nosql-challenge-title i {
+    color: var(--postgres-blue);
+}
+
+.nosql-challenge-detail {
+    min-height: 170px;
+    padding: 16px;
+    border-radius: 9px;
+    background: white;
+    border: 1px solid var(--postgres-border);
+}
+
+.nosql-challenge-detail .challenge-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.nosql-challenge-detail .challenge-description {
+    margin-bottom: 12px;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+.nosql-hint {
+    margin: 10px 0;
+    padding: 8px 10px;
+    border-left: 3px solid var(--postgres-blue);
+    background: #f7fafc;
+    border-radius: 0 6px 6px 0;
+}
+
+.nosql-hint summary {
+    cursor: pointer;
+    color: var(--postgres-blue);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.nosql-hint p {
+    margin: 6px 0 0;
+    color: #4b5563;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.nosql-challenge-detail .challenge-actions {
+    margin-top: 10px;
+}
+
+[data-theme="dark"] .nosql-muted,
+[data-theme="dark"] .nosql-collection-btn small,
+[data-theme="dark"] .nosql-challenge-detail .challenge-description,
+[data-theme="dark"] .nosql-hint p {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .nosql-collection-btn,
+[data-theme="dark"] .nosql-challenge-card,
+[data-theme="dark"] .nosql-challenge-detail,
+[data-theme="dark"] .nosql-result-output,
+[data-theme="dark"] #nosqlHistoryList li {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] #nosqlEditor {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .nosql-history-query {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] #nosqlHistoryList li:hover {
+    background: #293548;
+}
+
+[data-theme="dark"] .nosql-help-panel .nosql-muted code {
+    background: #0f172a;
+    color: #dbeafe;
+}
+
+[data-theme="dark"] .nosql-challenges-panel {
+    background: #111c2e;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .nosql-challenges-head h3 {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .nosql-hint {
+    background: #172236;
+    border-left-color: var(--postgres-blue);
+}
+
+[data-theme="dark"] .nosql-challenge-card.completed .nosql-challenge-title {
+    color: #a7f3d0;
+}
+
+@media (max-width: 900px) {
+    .nosql-layout,
+    .nosql-challenges-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .nosql-collection-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .nosql-sidebar-actions {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .nosql-sidebar-actions select {
+        flex: 1;
+    }
+
+    .nosql-hub-head {
+        flex-direction: column;
+    }
+
+    .nosql-hub-progress {
+        text-align: left;
+    }
+
+    .nosql-challenges-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+    .nosql-challenges-head {
+        flex-direction: column;
+    }
+
+    .nosql-collection-list {
+        grid-template-columns: 1fr;
+    }
+
+    .nosql-sidebar-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nosql-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .nosql-toolbar .example-selector {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
+/* ===== AJUSTES RESPONSIVE GLOBALES ===== */
+@media (max-width: 768px) {
+    .app-header {
+        padding: 0 16px;
+    }
+
+    .header-content {
+        height: auto;
+        min-height: 64px;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px 0;
+    }
+
+    .main-nav {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        justify-content: flex-start;
+    }
+
+    .main-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .section {
+        padding: 24px 18px 32px;
+    }
+
+    .example-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .example-bar-controls {
+        justify-content: flex-start;
+    }
+
+    .example-bar-controls select {
+        flex: 1 1 180px;
+        min-width: 0;
+    }
+
+    .editor-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toolbar-group {
+        width: 100%;
+    }
+
+    .toolbar-group-secondary {
+        justify-content: flex-start;
+    }
+
+    .toolbar-group-status {
+        margin-left: 0;
+    }
+
+    .panel-heading {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+    .section-header h2 {
+        font-size: 1.4em;
+    }
+
+    .example-bar-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .example-bar-controls select,
+    .example-bar-controls button {
+        width: 100%;
+    }
+
+    .toolbar-group-primary button,
+    .toolbar-group-secondary button {
+        flex: 1 1 auto;
+    }
+
+    .btn-shortcut {
+        display: none;
+    }
+
+    .panel-heading {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panel-hint {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .analyze-grid-data {
+        grid-template-columns: 1fr;
+    }
+
+    .table-explorer {
+        grid-template-columns: 1fr;
+    }
+
+    .table-explorer-list {
+        max-height: 220px;
+    }
+}
+
+@media (max-width: 600px) {
+    .analyze-summary {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .analyze-metric {
+        padding: 13px;
+    }
+
+    .analyze-metric-value {
+        font-size: 1.2em;
+    }
+
+    .table-detail-actions {
+        width: 100%;
+    }
+
+    .table-detail-actions .btn-secondary,
+    .table-detail-actions .btn-primary {
+        flex: 1 1 auto;
+    }
+}
+
+@media (max-width: 420px) {
+    .analyze-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== AUTOCOMPLETADO ===== */
+.autocomplete-popover {
+    position: fixed;
+    z-index: 4000;
+    width: min(330px, calc(100vw - 16px));
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 5px;
+    background: var(--surface);
+    border: 1px solid var(--postgres-border);
+    border-radius: 10px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18), 0 3px 10px rgba(15, 23, 42, 0.08);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+}
+
+.autocomplete-popover[hidden] {
+    display: none;
+}
+
+.autocomplete-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.autocomplete-option:hover,
+.autocomplete-option[aria-selected="true"] {
+    background: var(--accent-soft);
+}
+
+.autocomplete-option-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.autocomplete-option-main i {
+    width: 13px;
+    flex: 0 0 auto;
+    color: var(--postgres-blue);
+    font-size: 10px;
+    text-align: center;
+}
+
+.autocomplete-option-label {
+    overflow: hidden;
+    color: var(--text-strong);
+    font-size: 12.5px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.autocomplete-option-detail {
+    flex: 0 0 auto;
+    overflow: hidden;
+    max-width: 115px;
+    color: var(--text-muted);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .autocomplete-popover {
+    background: #111827;
+    border-color: #334155;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .autocomplete-option:hover,
+[data-theme="dark"] .autocomplete-option[aria-selected="true"] {
+    background: #172554;
+}
+
+[data-theme="dark"] .autocomplete-option-label {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .autocomplete-option-detail {
+    color: #94a3b8;
+}
+

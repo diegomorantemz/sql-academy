@@ -1,0 +1,380 @@
+/* ===== FOOTER ===== */
+.app-footer {
+    background: var(--postgres-dark);
+    color: rgba(255,255,255,0.7);
+    padding: 16px 30px;
+    margin-top: auto;
+    border-top: 3px solid #336791;
+}
+
+.footer-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.footer-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.footer-left .brand-name {
+    font-size: 1.1em;
+    font-weight: 700;
+    color: #a5b4fc;
+    letter-spacing: 1px;
+}
+
+.footer-left .brand-tagline {
+    font-size: 0.65em;
+    color: #94a3b8;
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin-top: 1px;
+}
+
+.footer-center {
+    flex: 1;
+    text-align: center;
+}
+
+.footer-center p {
+    margin: 0;
+    font-size: 0.8em;
+    color: rgba(255,255,255,0.5);
+}
+
+.footer-center i {
+    color: rgba(255,255,255,0.3);
+}
+
+.footer-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.footer-donation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.coffee-message {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85em;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.coffee-message i {
+    color: #f39c12;
+    font-size: 1.1em;
+}
+
+.btn-donation-sm {
+    padding: 5px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-donation-sm.support {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    box-shadow: 0 4px 12px rgba(243, 156, 18, 0.2);
+}
+
+.btn-donation-sm.support:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    transform: translateY(-2px);
+}
+
+#sqlLevelSelect:focus,
+#nosqlLevelSelect:focus,
+.skill-profile-select:focus,
+#reportStudentName:focus {
+    outline: none;
+    border-color: var(--postgres-blue);
+    box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ===== UTILITIES ===== */
+.text-success { color: #28a745; }
+.text-danger { color: #dc3545; }
+.text-warning { color: #ffc107; }
+.text-muted { color: var(--text-muted); }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--postgres-blue);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--postgres-light);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--postgres-blue) #f1f1f1;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .header-content {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 10px 0;
+        gap: 8px;
+    }
+
+    .main-nav {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .nav-btn {
+        padding: 6px 12px;
+        font-size: 0.8em;
+    }
+
+    .section {
+        padding: 16px;
+    }
+
+    .learn-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    .concepts-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .analyze-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .analyze-card.full-width {
+        grid-column: auto;
+    }
+
+    .modal-content {
+        width: 96%;
+    }
+
+    .ai-modal .modal-content.ai-panel {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .ai-panel-body {
+        padding: 16px;
+    }
+
+    .ai-panel-footer {
+        padding: 10px 16px 14px;
+    }
+
+    .modal-body .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .footer-left {
+        align-items: center;
+    }
+
+    .footer-right {
+        justify-content: center;
+    }
+
+    .footer-donation {
+        justify-content: center;
+    }
+
+    .editor-toolbar {
+        flex-direction: column;
+    }
+
+    .example-selector {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .example-selector select {
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .concepts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .learn-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .comparison-table {
+        font-size: 0.7em;
+        min-width: 500px;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+        padding: 4px 6px;
+    }
+
+    #sqlEditor {
+        height: 120px;
+        font-size: 13px;
+    }
+
+    .ai-panel-body {
+        padding: 14px;
+    }
+
+    .ai-panel-footer {
+        padding: 10px 14px 12px;
+    }
+
+    .ai-panel-actions button {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .header-actions {
+        display: flex;
+    }
+}
+
+/* ===== GRUPOS DE GESTORES ===== */
+.db-group {
+    margin-bottom: 20px;
+}
+
+.db-group-title {
+    font-size: 1.4em;
+    color: var(--postgres-dark);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.db-group-title i {
+    font-size: 1.2em;
+}
+
+.db-group-subtitle {
+    color: #666;
+    font-size: 0.95em;
+    margin-bottom: 15px;
+}
+
+.db-group:last-child {
+    margin-bottom: 0;
+}
+
+/* ===== ETIQUETAS SQL vs NoSQL ===== */
+.concept-tag {
+    display: inline-block;
+    padding: 2px 12px;
+    border-radius: 12px;
+    font-size: 0.65em;
+    font-weight: 600;
+    background: var(--postgres-bg);
+    color: var(--postgres-text);
+    margin: 2px 3px;
+}
+
+.sql-tag {
+    background: #336791 !important;
+    color: white !important;
+}
+
+.nosql-tag {
+    background: #f39c12 !important;
+    color: white !important;
+}
+
+/* ===== GUÍA SQL ===== */
+#sqlGuideBody code {
+    background: #f1f3f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #e74c3c;
+}
+
+#sqlGuideBody .btn-secondary {
+    background: white;
+    color: #336791;
+    border: 2px solid #336791;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+#sqlGuideBody .btn-secondary:hover {
+    background: #336791;
+    color: white;
+}
+
+/* ===== ICONOS DE CONCEPTOS ===== */
+.concept-card .fa-sitemap { color: #336791; }
+.concept-card .fa-layer-group { color: #2ecc71; }
+.concept-card .fa-key { color: #e74c3c; }
+.concept-card .fa-code { color: #9b59b6; }
+.concept-card .fa-shield-halved { color: #3498db; }
+.concept-card .fa-list { color: #1abc9c; }
+.concept-card .fa-database { color: #f39c12; }
+.concept-card .fa-file-lines { color: #e67e22; }
+.concept-card .fa-table-cells { color: #00b894; }
+.concept-card .fa-share-nodes { color: #6c5ce7; }
+.concept-card .fa-bolt { color: #fdcb6e; }
+
