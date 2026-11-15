@@ -2170,3 +2170,180 @@ button {
     color: #1a5276;
     text-decoration: underline;
 }
+
+/* ===== HISTORIAL DE DESPLIEGUES Y CONTROLES DE ROLLBACK (CD) ===== */
+.cd-history-section {
+    margin-top: 25px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.cd-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.cd-history-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cd-history-header h4 i {
+    color: #336791;
+}
+
+.cd-timeline {
+    position: relative;
+    padding-left: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.cd-timeline::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    left: 7px;
+    width: 2px;
+    background: var(--border);
+}
+
+.cd-timeline-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cd-timeline-item:hover {
+    border-color: #336791;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.cd-timeline-marker {
+    position: absolute;
+    left: -24px;
+    top: 14px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 3px solid #2ecc71;
+    box-sizing: border-box;
+}
+
+.cd-timeline-marker.rollback {
+    border-color: #e67e22;
+}
+
+.cd-timeline-marker.failed {
+    border-color: #e74c3c;
+}
+
+.cd-timeline-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.82rem;
+}
+
+.cd-timeline-version {
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cd-trigger-badge {
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-secondary, #666);
+    font-weight: 500;
+}
+
+.cd-timeline-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #a0aec0);
+}
+
+.cd-timeline-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #718096);
+    margin: 0;
+}
+
+.cd-actions-bar {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+}
+
+.btn-cd-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.btn-cd-action.promote {
+    background: rgba(46, 204, 113, 0.12);
+    color: #27ae60;
+    border-color: rgba(46, 204, 113, 0.3);
+}
+
+.btn-cd-action.promote:hover {
+    background: #27ae60;
+    color: #fff;
+}
+
+.btn-cd-action.rollback {
+    background: rgba(230, 126, 34, 0.12);
+    color: #d35400;
+    border-color: rgba(230, 126, 34, 0.3);
+}
+
+.btn-cd-action.rollback:hover {
+    background: #d35400;
+    color: #fff;
+}
+
+@media (max-width: 650px) {
+    .cd-timeline {
+        padding-left: 20px;
+    }
+    .cd-timeline-marker {
+        left: -20px;
+    }
+    .cd-timeline-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
