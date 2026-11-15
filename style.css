@@ -1999,3 +1999,174 @@ button {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* ===== PANEL DE ENTORNOS DE DESPLIEGUE Y ENTREGA CONTINUA (CD) ===== */
+.cd-environments-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin: 20px 0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.cd-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+}
+
+.cd-header h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.cd-header h3 i {
+    color: #00b894;
+}
+
+.cd-env-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 18px;
+}
+
+.cd-env-card {
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cd-env-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.cd-env-card.production {
+    border-left: 4px solid #2ecc71;
+}
+
+.cd-env-card.staging {
+    border-left: 4px solid #3498db;
+}
+
+.cd-env-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cd-env-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-main);
+}
+
+.cd-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 14px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.cd-status-chip.live {
+    background: #e8f7ee;
+    color: #1f7a42;
+    border: 1px solid #b7e4c7;
+}
+
+.cd-status-chip.deploying {
+    background: #fff5e5;
+    color: #9a6100;
+    border: 1px solid #fde68a;
+}
+
+.cd-status-chip.failed {
+    background: #fdeaea;
+    color: #a12828;
+    border: 1px solid #f5c6c6;
+}
+
+.cd-pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    display: inline-block;
+}
+
+.cd-status-chip.live .cd-pulse-dot {
+    animation: cd-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes cd-pulse {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+.cd-release-details {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-secondary, #718096);
+    background: var(--surface);
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.cd-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cd-release-tag {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: #336791;
+    background: rgba(51, 103, 145, 0.1);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.cd-commit-hash {
+    font-family: 'Courier New', monospace;
+    color: var(--text-secondary, #a0aec0);
+}
+
+.cd-env-url {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: #2980b9;
+    text-decoration: none;
+    word-break: break-all;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.cd-env-url:hover {
+    color: #1a5276;
+    text-decoration: underline;
+}
