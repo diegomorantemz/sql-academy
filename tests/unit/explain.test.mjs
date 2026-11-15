@@ -7,7 +7,7 @@ import handler, {
     getGeminiErrorCode,
     getModeSystemPrompt,
     resolveModel
-} from '../netlify/functions/explain.mjs';
+} from '../../netlify/functions/explain.mjs';
 
 test('ALLOWED_MODES contiene todos los modos del asistente', () => {
     assert.deepEqual(

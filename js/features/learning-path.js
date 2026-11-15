@@ -514,10 +514,6 @@ function getActiveCourse() {
         || null;
 }
 
-function getActiveCourseLessons() {
-    return getCourseLessons(getActiveCourse());
-}
-
 function getCourseModuleForLesson(course, lessonId) {
     return (course?.modules || []).find(module => (module.lessonIds || []).includes(lessonId)) || null;
 }
@@ -798,18 +794,6 @@ function isNoSQLCourseLessonCompleted(id, datasetName = getNoSQLActiveDatasetNam
     return Boolean(nosqlCourseProgress[datasetName]?.[id]?.completed);
 }
 
-function markNoSQLCourseLessonCompleted(id) {
-    const now = new Date().toISOString();
-    const entry = getNoSQLCourseProgressEntry(id);
-    entry.theoryReadAt ||= now;
-    entry.practiceCompletedAt ||= now;
-    entry.quizPassedAt ||= now;
-    entry.completed = true;
-    entry.completedAt ||= now;
-    saveNoSQLCourseProgress();
-    renderLearningProgressDashboard();
-}
-
 function loadLearningPathProgress() {
     const stored = readStoredJSON(STORAGE_KEYS.learningPath, {});
     learningPathProgress = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
@@ -825,10 +809,6 @@ function getLearningDatasetProgressFor(datasetName = getLearningDatasetName()) {
         learningPathProgress[datasetName] = {};
     }
     return learningPathProgress[datasetName];
-}
-
-function getLearningDatasetProgress() {
-    return getLearningDatasetProgressFor(getLearningDatasetName());
 }
 
 function getLearningProgressEntry(id, datasetName = getLearningDatasetName(), create = true) {

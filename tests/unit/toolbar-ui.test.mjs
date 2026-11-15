@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readProjectFile } from './helpers/app.mjs';
+import { readProjectFile } from '../helpers/app.mjs';
 
 const html = readProjectFile('index.html');
 const script = readProjectFile('js/app.js');

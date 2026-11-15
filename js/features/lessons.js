@@ -324,11 +324,6 @@ function runLessonDemo() {
     }
 }
 
-function renderLearningPath() {
-    renderLearningPathList();
-    renderLearningLessonDetail();
-}
-
 function refreshLearningPath(options = {}) {
     const course = getActiveCourse();
     if (!course) {
@@ -504,15 +499,6 @@ function submitLessonQuiz(event) {
     renderLearningPathList();
     renderLearningLessonDetail();
     showToast('success', '¡Lección completada!');
-}
-
-function showLearningNext(lesson) {
-    const container = document.getElementById('pathNext');
-    if (!container) return;
-    const course = getActiveCourse();
-    const lessons = course ? getCourseLessons(course) : getLearningLessons();
-    container.hidden = false;
-    container.innerHTML = getCourseNextMarkup(course, lessons, lesson);
 }
 
 function runNoSQLCourseLesson() {

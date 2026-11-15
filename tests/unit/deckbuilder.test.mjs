@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { CORE_SCRIPTS, createAppDom } from './helpers/app.mjs';
+import { CORE_SCRIPTS, createAppDom } from '../helpers/app.mjs';
 
 const pureDom = createAppDom({ scripts: [...CORE_SCRIPTS, 'js/games/deckbuilder.js'] });
 const internals = pureDom.window.DeckbuilderInternals;

@@ -1,7 +1,7 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createAppDom, projectFile, readProjectFile } from './helpers/app.mjs';
+import { createAppDom, projectFile, readProjectFile } from '../helpers/app.mjs';
 
 const dom = createAppDom({
     html: readProjectFile('index.html'),

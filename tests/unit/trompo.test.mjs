@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { createAppDom, projectFile } from './helpers/app.mjs';
+import { createAppDom, projectFile } from '../helpers/app.mjs';
 
 const html = `<!DOCTYPE html>
 <html lang="es">

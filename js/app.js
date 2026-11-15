@@ -632,3 +632,5 @@ document.addEventListener('keydown', function(e) {
         clearEditor();
     }
 });
+
+window.getSQLModule = () => SQLModule;

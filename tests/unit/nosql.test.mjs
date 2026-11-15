@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { readProjectFile } from './helpers/app.mjs';
+import { readProjectFile } from '../helpers/app.mjs';
 
 function createRuntime() {
     const context = vm.createContext({

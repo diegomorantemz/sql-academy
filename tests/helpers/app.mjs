@@ -46,7 +46,6 @@ export const APP_SCRIPTS = [
     'js/features/autocomplete.js',
     'js/games/deckbuilder.js',
     'js/games/trompo.js',
-    'js/global-exports.js'
 ];
 
 export const STYLE_FILES = [

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync } from 'node:fs';
-import { APP_SCRIPTS, STYLE_FILES, projectFile, readProjectFile } from './helpers/app.mjs';
+import { APP_SCRIPTS, STYLE_FILES, projectFile, readProjectFile } from '../helpers/app.mjs';
 
 function localScripts(html) {
     return [...html.matchAll(/<script\s+[^>]*src="([^"]+)"/g)]

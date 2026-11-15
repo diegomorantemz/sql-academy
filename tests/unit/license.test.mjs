@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { projectFile, readProjectFile } from './helpers/app.mjs';
+import { projectFile, readProjectFile } from '../helpers/app.mjs';
 
 const readText = path => readProjectFile(path);
 const readJson = path => JSON.parse(readText(path));

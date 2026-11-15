@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CORE_SCRIPTS, createAppDom } from './helpers/app.mjs';
+import { CORE_SCRIPTS, createAppDom } from '../helpers/app.mjs';
 
 const dom = createAppDom({
     html: `<!doctype html><html><body>
