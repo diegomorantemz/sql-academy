@@ -47,6 +47,34 @@ test('Monte Mamut corre, salta, ataca y pausa sin afectar Torre de Datos', async
     await expect(page.locator('#gameTrompoPanel')).toBeHidden();
 });
 
+test('mantener S agachado no reinicia el golpe de aplastamiento', async ({ page }, testInfo) => {
+    test.skip(!['mobile-390', 'desktop-1280'].includes(testInfo.project.name), 'Prueba en móvil y escritorio');
+
+    await openGame(page);
+    await page.locator('#gameModeTrompoBtn').click();
+    await page.locator('[data-trompo-action="start"]').click();
+    await page.keyboard.down('s');
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() => window.Trompo.getState().stompTimer)).toBe(0);
+
+    await page.evaluate(() => {
+        for (let index = 0; index < 10; index += 1) {
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 's',
+                repeat: true,
+                bubbles: true,
+                cancelable: true
+            }));
+        }
+    });
+    expect(await page.evaluate(() => window.Trompo.getState().stompTimer)).toBe(0);
+    expect(await page.evaluate(() => window.Trompo.getState().ducking)).toBe(true);
+
+    await page.keyboard.up('s');
+    await page.waitForTimeout(100);
+    expect(await page.evaluate(() => window.Trompo.getState().ducking)).toBe(false);
+});
+
 test('Monte Mamut completa un nivel y avanza al siguiente', async ({ page }, testInfo) => {
     test.skip(!['mobile-390', 'desktop-1280'].includes(testInfo.project.name), 'Prueba en móvil y escritorio');
 

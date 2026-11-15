@@ -2834,6 +2834,7 @@ function drawMoth(insect) {
         if (key === 'ArrowDown' || key === 's' || key === 'S') {
             event.preventDefault();
             keyDuckHeld = true;
+            if (event.repeat) return;
             stomp();
             return;
         }
@@ -2998,6 +2999,8 @@ function drawMoth(insect) {
             health: game ? game.health : 100,
             shield: game ? game.shield : 0,
             onGround: game ? game.onGround : true,
+            ducking: game ? game.ducking : false,
+            stompTimer: game ? game.stompTimer : 0,
             playerY: game ? game.playerY : GROUND_Y,
             insects: game ? game.insects : 0,
             flightTimer: game ? game.flightTimer : 0,
