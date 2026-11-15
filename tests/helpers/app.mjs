@@ -6,9 +6,11 @@ const PROJECT_ROOT = new URL('../../', import.meta.url);
 const DEFAULT_HTML = '<!doctype html><html><body></body></html>';
 
 export const CORE_SCRIPTS = [
+    'js/core/state.js',
     'js/core/storage.js',
     'js/core/dom.js',
-    'js/core/format.js'
+    'js/core/format.js',
+    'js/core/database.js'
 ];
 
 export const APP_SCRIPTS = [
@@ -21,10 +23,30 @@ export const APP_SCRIPTS = [
     'js/data/checkpoint-content.js',
     'js/features/nosql/engine.js',
     'js/app.js',
+    'js/app/navigation.js',
+    'js/features/onboarding.js',
+    'js/features/nosql/challenges.js',
+    'js/features/fair-tour.js',
+    'js/features/progress.js',
+    'js/features/donations.js',
+    'js/features/database-managers.js',
+    'js/features/learn-library.js',
+    'js/features/challenges.js',
+    'js/features/debug-challenges.js',
+    'js/features/skill-test.js',
+    'js/features/learning-path.js',
+    'js/features/courses.js',
+    'js/features/dashboard.js',
+    'js/features/lessons.js',
+    'js/features/assistant.js',
+    'js/features/results.js',
+    'js/features/explorer.js',
+    'js/features/examples.js',
     'js/features/nosql/ui.js',
     'js/features/autocomplete.js',
     'js/games/deckbuilder.js',
-    'js/games/trompo.js'
+    'js/games/trompo.js',
+    'js/global-exports.js'
 ];
 
 export const APP_DATA_SCRIPTS = [

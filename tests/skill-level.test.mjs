@@ -61,7 +61,7 @@ const dom = createAppDom({
         <select id="datasetSelector"></select>
         <input id="safeModeToggle" type="checkbox">
     </body></html>`,
-    scripts: ['js/data/datasets.js', 'js/data/nosql-datasets.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js'],
+    scripts: ['js/data/datasets.js', 'js/data/nosql-datasets.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js', 'js/app/navigation.js', 'js/features/nosql/challenges.js', 'js/features/progress.js', 'js/features/fair-tour.js', 'js/features/learn-library.js', 'js/features/challenges.js', 'js/features/debug-challenges.js', 'js/features/skill-test.js', 'js/features/learning-path.js', 'js/features/courses.js', 'js/features/dashboard.js', 'js/features/lessons.js', 'js/features/assistant.js', 'js/features/results.js', 'js/features/explorer.js', 'js/features/examples.js'],
     beforeLoad(window) {
         window.confirm = () => true;
     }
@@ -234,7 +234,7 @@ test('el recorrido guiado avanza por los pasos y se puede cerrar', () => {
 });
 
 test('el recorrido de feria cubre las secciones principales', () => {
-    const source = readProjectFile('js/app.js');
+    const source = readProjectFile('js/features/fair-tour.js');
     for (const section of ['learn', 'practice', 'path', 'nosql', 'challenges', 'game', 'analyze']) {
         assert.match(source, new RegExp(`section: '${section}'`));
     }

@@ -5,7 +5,7 @@ import { createAppDom, projectFile, readProjectFile } from './helpers/app.mjs';
 
 const dom = createAppDom({
     html: readProjectFile('index.html'),
-    scripts: ['js/data/datasets.js', 'js/data/install-guides.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js'],
+    scripts: ['js/data/datasets.js', 'js/data/install-guides.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js', 'js/app/navigation.js', 'js/features/nosql/challenges.js', 'js/features/database-managers.js', 'js/features/learn-library.js', 'js/features/challenges.js', 'js/features/debug-challenges.js', 'js/features/skill-test.js', 'js/features/learning-path.js', 'js/features/courses.js', 'js/features/dashboard.js', 'js/features/lessons.js', 'js/features/assistant.js', 'js/features/results.js', 'js/features/explorer.js', 'js/features/examples.js'],
     beforeLoad(window) {
         window.confirm = () => true;
         window.requestAnimationFrame = () => 0;

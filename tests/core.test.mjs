@@ -22,7 +22,7 @@ const dom = createAppDom({
         <select id="categorySelector"></select>
         <span id="sqlExampleStatus"></span>
     </body></html>`,
-    scripts: ['js/data/datasets.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js'],
+    scripts: ['js/data/datasets.js', 'js/data/courses.js', 'js/data/course-content.js', 'js/data/checkpoint-content.js', 'js/app.js', 'js/app/navigation.js', 'js/features/nosql/challenges.js', 'js/features/learn-library.js', 'js/features/challenges.js', 'js/features/debug-challenges.js', 'js/features/skill-test.js', 'js/features/learning-path.js', 'js/features/courses.js', 'js/features/dashboard.js', 'js/features/lessons.js', 'js/features/assistant.js', 'js/features/results.js', 'js/features/explorer.js', 'js/features/examples.js'],
     beforeLoad(window) {
         window.confirm = () => true;
     }
@@ -230,7 +230,7 @@ function createDebugDatabase(datasetName) {
 
     // Escuela se crea directamente en script.js. Extraemos sus sentencias
     // estáticas para probar los retos contra el esquema real.
-    const scriptSource = readProjectFile('js/app.js');
+    const scriptSource = readProjectFile('js/core/database.js');
     const statements = [...scriptSource.matchAll(/db\.run\(`([\s\S]*?)`\);/g)]
         .map(match => match[1])
         .filter(sql => !sql.includes('${') && /^\s*(CREATE TABLE|INSERT INTO)/i.test(sql));
