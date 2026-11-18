@@ -1,4 +1,4 @@
-﻿# Sistema operativo
+# Sistema operativo
 .DS_Store
 Thumbs.db
 desktop.ini
@@ -13,18 +13,23 @@ desktop.ini
 *.log
 npm-debug.log*
 
-# Dependencias (si se agregan en el futuro)
+# Dependencias
 node_modules/
-package-lock.json
 
 # Archivos de construccion
 dist/
 build/
+.netlify/
 
 # Variables de entorno
 .env
-.env.local
+.env.*
+!.env.example
 
 # Temporales
 *.tmp
 *.bak
+
+# Playwright
+playwright-report/
+test-results/

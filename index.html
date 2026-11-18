@@ -4,7 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aprende SQL y NoSQL desde cero, practica con una base de datos real y comprueba tus resultados en el navegador.">
+    <meta name="theme-color" content="#123b61">
     <title>SQL Academy</title>
+
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/icon-32.png">
+    <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
+    <script>
+        try {
+            const savedPreferences = JSON.parse(localStorage.getItem('sql-academy-preferences-v1') || '{}');
+            if (savedPreferences.theme === 'dark') {
+                document.documentElement.dataset.theme = 'dark';
+            }
+        } catch (error) {
+            // Si localStorage está bloqueado, se usa el tema claro.
+        }
+    </script>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -12,237 +29,758 @@
     <!-- Estilos -->
     <link rel="stylesheet" href="style.css">
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
+    <a class="skip-link" href="#mainContent">Saltar al contenido principal</a>
     <div class="app-container">
         <!-- ===== HEADER ===== -->
         <header class="app-header">
             <div class="header-content">
-                <!-- Logo c -->
                 <div class="logo">
-                    <i class="fas fa-terminal" style="color:#99b9e9; font-size:1em;"></i>
+                    <img class="logo-mark" src="assets/icons/logo-mark.svg" alt="" aria-hidden="true">
                     <span>SQL Academy</span>
                 </div>
-                <nav class="main-nav">
+                <nav class="main-nav" aria-label="Navegación principal">
                     <button class="nav-btn active" data-section="learn">
                         <i class="fas fa-book"></i> Aprender
+                    </button>
+                    <button class="nav-btn" data-section="path">
+                        <i class="fas fa-graduation-cap"></i> Cursos
+                    </button>
+                    <button class="nav-btn" data-section="game">
+                        <i class="fas fa-gamepad"></i> Juego
                     </button>
                     <button class="nav-btn" data-section="practice">
                         <i class="fas fa-laptop-code"></i> Practicar
                     </button>
+                    <button class="nav-btn" data-section="nosql">
+                        <i class="fas fa-leaf"></i> NoSQL
+                    </button>
+                    <button class="nav-btn" data-section="challenges">
+                        <i class="fas fa-trophy"></i> Retos
+                    </button>
                     <button class="nav-btn" data-section="analyze">
                         <i class="fas fa-chart-pie"></i> Analizar
                     </button>
-                    <button class="nav-btn" data-section="concepts">
-                        <i class="fas fa-graduation-cap"></i> Conceptos
-                    </button>
                 </nav>
                 <div class="header-actions">
-  
+                    <button id="installAppBtn" class="header-icon-btn" type="button" hidden onclick="installApp()" aria-label="Instalar SQL Academy" title="Instalar app">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button id="themeToggle" class="header-icon-btn" type="button" onclick="toggleTheme()" aria-label="Activar modo oscuro" aria-pressed="false" title="Cambiar tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
                 </div>
             </div>
         </header>
 
+        <main id="mainContent">
         <!-- ===== SECCIÓN: APRENDER ===== -->
         <section id="section-learn" class="section active">
             <div class="section-header">
                 <h2><i class="fas fa-book"></i> Aprende sobre Bases de Datos</h2>
-                <p>Conoce los gestores SQL y NoSQL, sus conceptos y mejores practicas</p>
+                <p>Explora guías, compara motores y domina los conceptos clave con ejemplos y práctica</p>
             </div>
 
-            <!-- ===== GESTORES SQL ===== -->
-            <div class="db-group">
-                <h3 class="db-group-title"><i class="fas fa-database" style="color:#336791;"></i> Gestores SQL
-                    (Relacionales)</h3>
-                <p class="db-group-subtitle">Sistemas de gestión de bases de datos basados en el modelo relacional y
-                    lenguaje SQL</p>
+            <div class="path-cta">
+                <div>
+                    <span class="path-cta-eyebrow"><i class="fas fa-graduation-cap"></i> Cursos guiados</span>
+                    <h3>Aprende SQL y NoSQL con misiones cortas</h3>
+                    <p>Cuatro cursos con teoría breve, práctica, quiz, checkpoints y proyecto final. Elige Escuela, Tienda o Biblioteca y avanza desde cero hasta CTE, rankings y documentos.</p>
+                </div>
+                <button type="button" id="pathCtaBtn" class="btn-primary" onclick="openLearningPath()">
+                    Explorar cursos <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
 
-                <div class="learn-grid">
-                    <div class="learn-card" onclick="openDBInfo('postgresql')">
-                        <div class="learn-card-icon">
-                            <img src="logos/postgresql.png" alt="PostgreSQL">
-                        </div>
-                        <h3>PostgreSQL</h3>
-                        <p>El sistema relacional mas avanzado</p>
-                        <span class="learn-tag">Open Source</span>
-                        <span class="learn-tag">ACID</span>
+            <div class="fair-tour-card">
+                <div>
+                    <span class="fair-tour-eyebrow"><i class="fas fa-chalkboard-user"></i> Modo feria</span>
+                    <h3>Recorrido de 5 minutos</h3>
+                    <p>Una guía rápida por el test de nivel, la práctica, NoSQL, los retos y tu progreso.</p>
+                </div>
+                <button type="button" class="btn-secondary" onclick="startDemoTour()">
+                    <i class="fas fa-play"></i> Comenzar recorrido
+                </button>
+            </div>
+
+            <div class="learn-tabs" role="tablist" aria-label="Biblioteca de aprendizaje">
+                <button type="button" id="learnGuidesTab" class="learn-tab active" data-learn-tab="guides" role="tab" aria-selected="true" aria-controls="learnGuidesPanel">
+                    <i class="fas fa-compass"></i> Guías
+                </button>
+                <button type="button" id="learnConceptsTab" class="learn-tab" data-learn-tab="concepts" role="tab" aria-selected="false" aria-controls="learnConceptsPanel">
+                    <i class="fas fa-graduation-cap"></i> Conceptos
+                </button>
+                <button type="button" id="learnInstallTab" class="learn-tab" data-learn-tab="install" role="tab" aria-selected="false" aria-controls="learnInstallPanel">
+                    <i class="fas fa-download"></i> Instalación
+                </button>
+            </div>
+
+            <div id="learnGuidesPanel" class="learn-tab-panel active" role="tabpanel" aria-labelledby="learnGuidesTab">
+                <div class="library-toolbar">
+                    <label class="library-search" for="guideSearch">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input id="guideSearch" type="search" placeholder="Buscar motor, tecnología o caso de uso..." oninput="filterLearnGuides()">
+                    </label>
+                    <div class="library-filters" role="group" aria-label="Filtrar guías">
+                        <button type="button" class="library-filter active" data-guide-filter="all" onclick="setGuideFilter('all')">Todos</button>
+                        <button type="button" class="library-filter" data-guide-filter="sql" onclick="setGuideFilter('sql')">SQL</button>
+                        <button type="button" class="library-filter" data-guide-filter="nosql" onclick="setGuideFilter('nosql')">NoSQL</button>
+                        <button type="button" class="library-filter" data-guide-filter="open-source" onclick="setGuideFilter('open-source')">Open Source</button>
+                        <button type="button" class="library-filter" data-guide-filter="comercial" onclick="setGuideFilter('comercial')">Comercial</button>
+                        <button type="button" class="library-filter" data-guide-filter="documental" onclick="setGuideFilter('documental')">Documental</button>
                     </div>
+                </div>
 
-                    <div class="learn-card" onclick="openDBInfo('mysql')">
-                        <div class="learn-card-icon">
-                            <img src="logos/mysql.png" alt="MySQL">
+                <div class="motor-finder" id="motorFinder">
+                    <div class="motor-finder-head">
+                        <div>
+                            <span class="motor-finder-eyebrow"><i class="fas fa-compass"></i> Asistente de decisión</span>
+                            <h3>¿Qué motor me conviene?</h3>
+                            <p>Responde cuatro preguntas y te propongo un motor con sus pros y contras.</p>
                         </div>
-                        <h3>MySQL</h3>
-                        <p>La base de datos mas popular</p>
-                        <span class="learn-tag">Open Source</span>
-                        <span class="learn-tag">Rapido</span>
+                        <button type="button" class="btn-primary" id="motorFinderToggle" onclick="toggleMotorFinder()">
+                            Abrir asistente <i class="fas fa-chevron-down"></i>
+                        </button>
                     </div>
-
-                    <div class="learn-card" onclick="openDBInfo('sqlserver')">
-                        <div class="learn-card-icon">
-                            <img src="logos/sqlserver.png" alt="SQL Server">
+                    <div id="motorFinderBody" class="motor-finder-body" hidden>
+                        <div class="motor-finder-grid">
+                            <label for="motorFinderType">Tipo de datos
+                                <select id="motorFinderType">
+                                    <option value="structured">Tablas y transacciones</option>
+                                    <option value="documents">Documentos flexibles</option>
+                                    <option value="keyvalue">Clave-valor / caché</option>
+                                    <option value="graph">Relaciones y grafos</option>
+                                    <option value="search">Búsqueda y analítica</option>
+                                </select>
+                            </label>
+                            <label for="motorFinderTransactions">¿Transacciones estrictas?
+                                <select id="motorFinderTransactions">
+                                    <option value="yes">Sí</option>
+                                    <option value="no">No</option>
+                                </select>
+                            </label>
+                            <label for="motorFinderScale">¿Escalabilidad horizontal?
+                                <select id="motorFinderScale">
+                                    <option value="no">No</option>
+                                    <option value="yes">Sí</option>
+                                </select>
+                            </label>
+                            <label for="motorFinderRealtime">¿Tiempo real?
+                                <select id="motorFinderRealtime">
+                                    <option value="no">No</option>
+                                    <option value="yes">Sí</option>
+                                </select>
+                            </label>
                         </div>
-                        <h3>SQL Server</h3>
-                        <p>El sistema de Microsoft para empresas</p>
-                        <span class="learn-tag">Comercial</span>
-                        <span class="learn-tag">.NET</span>
+                        <button type="button" class="btn-primary" onclick="recommendMotor()">
+                            <i class="fas fa-wand-magic-sparkles"></i> Recomendar motor
+                        </button>
+                        <div id="motorFinderResult" class="motor-finder-result" hidden></div>
                     </div>
+                </div>
 
-                    <div class="learn-card" onclick="openDBInfo('oracle')">
-                        <div class="learn-card-icon">
-                            <img src="logos/oracle.png" alt="Oracle">
+                <div id="guideEmptyState" class="library-empty" hidden>
+                    <i class="fas fa-magnifying-glass"></i>
+                    <p>No hay guías que coincidan con la búsqueda.</p>
+                </div>
+
+                <!-- ===== GESTORES SQL ===== -->
+                <div class="db-group">
+                    <h3 class="db-group-title"><i class="fas fa-database" style="color:#336791;"></i> Gestores SQL
+                        (Relacionales)</h3>
+                    <p class="db-group-subtitle">Sistemas de gestión de bases de datos basados en el modelo relacional y
+                        lenguaje SQL</p>
+
+                    <div class="learn-grid">
+                        <div class="learn-card" data-guide-card data-tags="sql open-source acid" data-search="postgresql sistema relacional avanzado open source acid" onclick="openDBInfo('postgresql')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/postgresql.png" alt="PostgreSQL">
+                            </div>
+                            <h3>PostgreSQL</h3>
+                            <p>El sistema relacional más avanzado</p>
+                            <span class="learn-tag">Open Source</span>
+                            <span class="learn-tag">ACID</span>
                         </div>
-                        <h3>Oracle</h3>
-                        <p>El gigante empresarial</p>
-                        <span class="learn-tag">Comercial</span>
-                        <span class="learn-tag">Seguro</span>
+
+                        <div class="learn-card" data-guide-card data-tags="sql open-source" data-search="mysql base de datos popular open source rapida" onclick="openDBInfo('mysql')">
+                            <div class="learn-card-icon has-dark-logo">
+                                <img class="db-logo-light" src="assets/logos/mysql.png" alt="MySQL">
+                                <img class="db-logo-dark" src="assets/logos/mysql-dark.png" alt="" aria-hidden="true">
+                            </div>
+                            <h3>MySQL</h3>
+                            <p>La base de datos más popular</p>
+                            <span class="learn-tag">Open Source</span>
+                            <span class="learn-tag">Rápido</span>
+                        </div>
+
+                        <div class="learn-card" data-guide-card data-tags="sql comercial" data-search="sql server microsoft empresas comercial net" onclick="openDBInfo('sqlserver')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/sqlserver.png" alt="SQL Server">
+                            </div>
+                            <h3>SQL Server</h3>
+                            <p>El sistema de Microsoft para empresas</p>
+                            <span class="learn-tag">Comercial</span>
+                            <span class="learn-tag">.NET</span>
+                        </div>
+
+                        <div class="learn-card" data-guide-card data-tags="sql comercial" data-search="oracle gigante empresarial comercial seguro" onclick="openDBInfo('oracle')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/oracle.png" alt="Oracle">
+                            </div>
+                            <h3>Oracle</h3>
+                            <p>El gigante empresarial</p>
+                            <span class="learn-tag">Comercial</span>
+                            <span class="learn-tag">Seguro</span>
+                        </div>
+
+                        <div class="learn-card" data-guide-card data-tags="sql open-source" data-search="mariadb fork mysql open source rapido" onclick="openDBInfo('mariadb')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/mariadb.png" alt="MariaDB">
+                            </div>
+                            <h3>MariaDB</h3>
+                            <p>El fork avanzado de MySQL</p>
+                            <span class="learn-tag">Open Source</span>
+                            <span class="learn-tag">Rápido</span>
+                        </div>
+
+                        <div class="learn-card" data-guide-card data-tags="sql open-source" data-search="sqlite base de datos ligera embebida open source" onclick="openDBInfo('sqlite')">
+                            <div class="learn-card-icon has-dark-logo">
+                                <img class="db-logo-light" src="assets/logos/sqlite.png" alt="SQLite">
+                                <img class="db-logo-dark" src="assets/logos/sqlite-dark.png" alt="" aria-hidden="true">
+                            </div>
+                            <h3>SQLite</h3>
+                            <p>La base de datos ligera</p>
+                            <span class="learn-tag">Open Source</span>
+                            <span class="learn-tag">Ligero</span>
+                        </div>
                     </div>
+                </div>
 
-                    <div class="learn-card" onclick="openDBInfo('mariadb')">
-                        <div class="learn-card-icon">
-                            <img src="logos/mariadb.png" alt="MariaDB">
+                <!-- ===== GESTORES NoSQL ===== -->
+                <div class="db-group" style="margin-top: 40px;">
+                    <h3 class="db-group-title db-group-title-nosql"><i class="fas fa-database"></i>
+                        Gestores NoSQL (No Relacionales)</h3>
+                    <p class="db-group-subtitle">Sistemas de gestión de bases de datos diseñados para grandes volúmenes de
+                        datos no estructurados</p>
+
+                    <div class="learn-grid">
+                        <div class="learn-card" data-guide-card data-tags="nosql documental open-source" data-search="mongodb base de datos documental documentos json open source" onclick="openDBInfo('mongodb')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/mongodb.png" alt="MongoDB">
+                            </div>
+                            <h3>MongoDB</h3>
+                            <p>La base de datos documental más popular</p>
+                            <span class="learn-tag">Documental</span>
+                            <span class="learn-tag">NoSQL</span>
                         </div>
-                        <h3>MariaDB</h3>
-                        <p>El fork avanzado de MySQL</p>
-                        <span class="learn-tag">Open Source</span>
-                        <span class="learn-tag">Rapido</span>
+
+                        <div class="learn-card" data-guide-card data-tags="nosql documental tiempo-real" data-search="firebase google tiempo real documental" onclick="openDBInfo('firebase')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/firebase.png" alt="Firebase">
+                            </div>
+                            <h3>Firebase</h3>
+                            <p>La plataforma de Google para tiempo real</p>
+                            <span class="learn-tag">Tiempo Real</span>
+                            <span class="learn-tag">NoSQL</span>
+                        </div>
+
+                        <div class="learn-card" data-guide-card data-tags="nosql clave-valor open-source" data-search="redis clave valor cache open source rapido" onclick="openDBInfo('redis')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/redis.png" alt="Redis">
+                            </div>
+                            <h3>Redis</h3>
+                            <p>La base de datos clave-valor más rápida</p>
+                            <span class="learn-tag">Clave-Valor</span>
+                            <span class="learn-tag">NoSQL</span>
+                        </div>
+
+                        <div class="learn-card" data-guide-card data-tags="nosql columnar open-source" data-search="cassandra columnar apache open source big data" onclick="openDBInfo('cassandra')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/cassandra.png" alt="Cassandra">
+                            </div>
+                            <h3>Cassandra</h3>
+                            <p>La base de datos columnar de Apache</p>
+                            <span class="learn-tag">Columnar</span>
+                            <span class="learn-tag">NoSQL</span>
+                        </div>
+
+                        <div class="learn-card" data-guide-card data-tags="nosql grafos" data-search="neo4j grafos relaciones redes" onclick="openDBInfo('neo4j')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/neo4j.png" alt="Neo4j">
+                            </div>
+                            <h3>Neo4j</h3>
+                            <p>La base de datos de grafos líder</p>
+                            <span class="learn-tag">Grafos</span>
+                            <span class="learn-tag">NoSQL</span>
+                        </div>
+
+                        <div class="learn-card" data-guide-card data-tags="nosql busqueda open-source" data-search="elasticsearch motor busqueda analisis open source" onclick="openDBInfo('elasticsearch')">
+                            <div class="learn-card-icon">
+                                <img src="assets/logos/elasticsearch.png" alt="Elasticsearch">
+                            </div>
+                            <h3>Elasticsearch</h3>
+                            <p>El motor de búsqueda y análisis</p>
+                            <span class="learn-tag">Búsqueda</span>
+                            <span class="learn-tag">NoSQL</span>
+                        </div>
                     </div>
+                </div>
 
-                    <div class="learn-card" onclick="openDBInfo('sqlite')">
-                        <div class="learn-card-icon">
-                            <img src="logos/sqlite.png" alt="SQLite">
-                        </div>
-                        <h3>SQLite</h3>
-                        <p>La base de datos ligera</p>
-                        <span class="learn-tag">Open Source</span>
-                        <span class="learn-tag">Ligero</span>
+                <!-- ===== COMPARATIVA ===== -->
+                <div class="comparison-wrapper" data-guide-card data-tags="sql nosql comparativa" data-search="comparativa sql nosql acid escalabilidad esquema lenguaje">
+                    <h3><i class="fas fa-chart-bar"></i> Comparativa de Gestores SQL vs NoSQL</h3>
+                    <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="Tabla comparativa de gestores">
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Característica</th>
+                                    <th>SQL (Relacionales)</th>
+                                    <th>NoSQL (No Relacionales)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Modelo de datos</strong></td>
+                                    <td>Tablas con filas y columnas</td>
+                                    <td>Documentos, Clave-Valor, Columnas, Grafos</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Esquema</strong></td>
+                                    <td>Fijo (requiere definición previa)</td>
+                                    <td>Flexible (schema-less)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Escalabilidad</strong></td>
+                                    <td>Vertical (más recursos en un servidor)</td>
+                                    <td>Horizontal (distribución en múltiples servidores)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>ACID</strong></td>
+                                    <td><i class="fas fa-check-circle text-success"></i> Soporte completo</td>
+                                    <td><i class="fas fa-triangle-exclamation text-warning"></i> Variable: algunos motores ofrecen transacciones; otros priorizan disponibilidad</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Lenguaje</strong></td>
+                                    <td>SQL (Structured Query Language)</td>
+                                    <td>APIs específicas (JSON, REST, etc.)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Mejor para</strong></td>
+                                    <td>Datos estructurados, transacciones complejas</td>
+                                    <td>Grandes volúmenes, datos no estructurados, tiempo real</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ejemplos</strong></td>
+                                    <td>PostgreSQL, MySQL, SQL Server, Oracle</td>
+                                    <td>MongoDB, Firebase, Redis, Cassandra, Neo4j</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
 
-            <!-- ===== GESTORES NoSQL ===== -->
-            <div class="db-group" style="margin-top: 40px;">
-                <h3 class="db-group-title" style="color:#73bed7;"><i class="fas fa-database" style="color:#73bed7;"></i>
-                    Gestores NoSQL (No Relacionales)</h3>
-                <p class="db-group-subtitle">Sistemas de gestión de bases de datos diseñados para grandes volumenes de
-                    datos no estructurados</p>
+            <div id="learnConceptsPanel" class="learn-tab-panel" role="tabpanel" aria-labelledby="learnConceptsTab" hidden>
+                <div class="concept-progress">
+                    <div class="challenge-progress-head">
+                        <span>Conceptos dominados</span>
+                        <strong id="conceptProgressText">0 de 14</strong>
+                    </div>
+                    <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de conceptos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="conceptProgressTrack">
+                        <div id="conceptProgressBar"></div>
+                    </div>
+                    <p class="concept-progress-hint">Completa el mini-quiz de cada ficha para marcarla como dominada.</p>
+                </div>
 
-                <div class="learn-grid">
-                    <div class="learn-card" onclick="openDBInfo('mongodb')">
-                        <div class="learn-card-icon">
-                            <img src="logos/mongodb.png" alt="MongoDB">
-                        </div>
-                        <h3>MongoDB</h3>
-                        <p>La base de datos documental mas popular</p>
-                        <span class="learn-tag">Documental</span>
-                        <span class="learn-tag">NoSQL</span>
+                <div class="library-toolbar">
+                    <label class="library-search" for="conceptSearch">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input id="conceptSearch" type="search" placeholder="Buscar concepto, tecnología o tema..." oninput="filterConcepts()">
+                    </label>
+                    <div class="library-filters" role="group" aria-label="Filtrar conceptos">
+                        <button type="button" class="library-filter active" data-concept-filter="all" onclick="setConceptFilter('all')">Todos</button>
+                        <button type="button" class="library-filter" data-concept-filter="sql" onclick="setConceptFilter('sql')">SQL</button>
+                        <button type="button" class="library-filter" data-concept-filter="nosql" onclick="setConceptFilter('nosql')">NoSQL</button>
+                        <button type="button" class="library-filter" data-concept-filter="diseno" onclick="setConceptFilter('diseno')">Diseño</button>
+                        <button type="button" class="library-filter" data-concept-filter="transacciones" onclick="setConceptFilter('transacciones')">Transacciones</button>
+                        <button type="button" class="library-filter" data-concept-filter="rendimiento" onclick="setConceptFilter('rendimiento')">Rendimiento</button>
+                        <button type="button" class="library-filter" data-concept-filter="basico" onclick="setConceptFilter('basico')">Básico</button>
+                        <button type="button" class="library-filter" data-concept-filter="intermedio" onclick="setConceptFilter('intermedio')">Intermedio</button>
+                        <button type="button" class="library-filter" data-concept-filter="avanzado" onclick="setConceptFilter('avanzado')">Avanzado</button>
+                    </div>
+                </div>
+
+                <div id="conceptEmptyState" class="library-empty" hidden>
+                    <i class="fas fa-magnifying-glass"></i>
+                    <p>No hay conceptos que coincidan con la búsqueda.</p>
+                </div>
+
+                <div class="concepts-grid" id="conceptsGrid">
+                    <!-- ===== CONCEPTOS SQL ===== -->
+                    <div class="concept-card" data-concept-card data-concept-key="mer" data-tags="sql diseno basico" data-level="basico" data-search="modelo entidad relacion mer entidades atributos relaciones cardinalidad diseno" onclick="openConcept('mer')">
+                        <span class="concept-complete-badge" data-concept-badge="mer" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-sitemap"></i></div>
+                        <h3>Modelo Entidad-Relación</h3>
+                        <p>Diseño conceptual de bases de datos</p>
+                        <span class="concept-tag sql-tag">SQL</span>
+                        <span class="concept-tag">Diseño</span>
+                        <span class="concept-level-tag">Básico</span>
                     </div>
 
-                    <div class="learn-card" onclick="openDBInfo('firebase')">
-                        <div class="learn-card-icon">
-                            <img src="logos/firebase.png" alt="Firebase">
-                        </div>
-                        <h3>Firebase</h3>
-                        <p>La plataforma de Google para tiempo real</p>
-                        <span class="learn-tag">Tiempo Real</span>
-                        <span class="learn-tag">NoSQL</span>
+                    <div class="concept-card" data-concept-card data-concept-key="normalizacion" data-tags="sql diseno intermedio" data-level="intermedio" data-search="normalizacion 1fn 2fn 3fn bcnf redundancia integridad diseno" onclick="openConcept('normalizacion')">
+                        <span class="concept-complete-badge" data-concept-badge="normalizacion" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-layer-group"></i></div>
+                        <h3>Normalización</h3>
+                        <p>Elimina redundancia, mejora integridad</p>
+                        <span class="concept-tag sql-tag">SQL</span>
+                        <span class="concept-tag">Diseño</span>
+                        <span class="concept-level-tag">Intermedio</span>
                     </div>
 
-                    <div class="learn-card" onclick="openDBInfo('redis')">
-                        <div class="learn-card-icon">
-                            <img src="logos/redis.png" alt="Redis">
-                        </div>
-                        <h3>Redis</h3>
-                        <p>La base de datos clave-valor mas rapida</p>
-                        <span class="learn-tag">Clave-Valor</span>
-                        <span class="learn-tag">NoSQL</span>
+                    <div class="concept-card" data-concept-card data-concept-key="llaves" data-tags="sql estructura basico" data-level="basico" data-search="tipos de llaves primary key foreign key unique composite pk fk" onclick="openConcept('llaves')">
+                        <span class="concept-complete-badge" data-concept-badge="llaves" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-key"></i></div>
+                        <h3>Tipos de Llaves</h3>
+                        <p>PK, FK, Unique, Composite</p>
+                        <span class="concept-tag sql-tag">SQL</span>
+                        <span class="concept-tag">Estructura</span>
+                        <span class="concept-level-tag">Básico</span>
                     </div>
 
-                    <div class="learn-card" onclick="openDBInfo('cassandra')">
-                        <div class="learn-card-icon">
-                            <img src="logos/cassandra.png" alt="Cassandra">
-                        </div>
-                        <h3>Cassandra</h3>
-                        <p>La base de datos columnar de Apache</p>
-                        <span class="learn-tag">Columnar</span>
-                        <span class="learn-tag">NoSQL</span>
+                    <div class="concept-card" data-concept-card data-concept-key="sql" data-tags="sql consultas basico" data-level="basico" data-search="comandos sql ddl dml dcl tcl select insert update delete" onclick="openConcept('sql')">
+                        <span class="concept-complete-badge" data-concept-badge="sql" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-code"></i></div>
+                        <h3>Comandos SQL</h3>
+                        <p>DDL, DML, DCL, TCL</p>
+                        <span class="concept-tag sql-tag">SQL</span>
+                        <span class="concept-tag">Consultas</span>
+                        <span class="concept-level-tag">Básico</span>
                     </div>
 
-                    <div class="learn-card" onclick="openDBInfo('neo4j')">
-                        <div class="learn-card-icon">
-                            <img src="logos/neo4j.png" alt="Neo4j">
-                        </div>
-                        <h3>Neo4j</h3>
-                        <p>La base de datos de grafos lider</p>
-                        <span class="learn-tag">Grafos</span>
-                        <span class="learn-tag">NoSQL</span>
+                    <div class="concept-card" data-concept-card data-concept-key="acid" data-tags="sql transacciones intermedio" data-level="intermedio" data-search="propiedades acid atomicidad consistencia aislamiento durabilidad transacciones" onclick="openConcept('acid')">
+                        <span class="concept-complete-badge" data-concept-badge="acid" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-shield-halved"></i></div>
+                        <h3>Propiedades ACID</h3>
+                        <p>Atomicidad, Consistencia, Aislamiento, Durabilidad</p>
+                        <span class="concept-tag sql-tag">SQL</span>
+                        <span class="concept-tag">Transacciones</span>
+                        <span class="concept-level-tag">Intermedio</span>
                     </div>
 
-                    <div class="learn-card" onclick="openDBInfo('elasticsearch')">
-                        <div class="learn-card-icon">
-                            <img src="logos/elasticsearch.png" alt="Elasticsearch">
-                        </div>
-                        <h3>Elasticsearch</h3>
-                        <p>El motor de busqueda y analisis</p>
-                        <span class="learn-tag">Busqueda</span>
-                        <span class="learn-tag">NoSQL</span>
+                    <div class="concept-card" data-concept-card data-concept-key="indices" data-tags="sql rendimiento intermedio" data-level="intermedio" data-search="indices b-tree hash full text optimizacion consultas rendimiento" onclick="openConcept('indices')">
+                        <span class="concept-complete-badge" data-concept-badge="indices" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-list"></i></div>
+                        <h3>Índices</h3>
+                        <p>Optimización de consultas</p>
+                        <span class="concept-tag sql-tag">SQL</span>
+                        <span class="concept-tag">Rendimiento</span>
+                        <span class="concept-level-tag">Intermedio</span>
+                    </div>
+
+                    <div class="concept-card" data-concept-card data-concept-key="joins" data-tags="sql consultas intermedio" data-level="intermedio" data-search="tipos de join inner left right full cross outer combinaciones tablas" onclick="openConcept('joins')">
+                        <span class="concept-complete-badge" data-concept-badge="joins" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-link"></i></div>
+                        <h3>Tipos de JOIN</h3>
+                        <p>Inner, Left, Right, Full, Cross</p>
+                        <span class="concept-tag sql-tag">SQL</span>
+                        <span class="concept-tag">Consultas</span>
+                        <span class="concept-level-tag">Intermedio</span>
+                    </div>
+
+                    <!-- ===== CONCEPTOS NoSQL ===== -->
+                    <div class="concept-card" data-concept-card data-concept-key="nosql" data-tags="nosql big-data basico" data-level="basico" data-search="bases de datos nosql not only sql documentos clave valor columnas grafos" onclick="openConcept('nosql')">
+                        <span class="concept-complete-badge" data-concept-badge="nosql" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-database"></i></div>
+                        <h3>Bases de Datos NoSQL</h3>
+                        <p>Alternativas a SQL para grandes volúmenes</p>
+                        <span class="concept-tag nosql-tag">NoSQL</span>
+                        <span class="concept-tag">Big Data</span>
+                        <span class="concept-level-tag">Básico</span>
+                    </div>
+
+                    <div class="concept-card" data-concept-card data-concept-key="documentales" data-tags="nosql documentos basico" data-level="basico" data-search="bases de datos documentales documentos json bson mongodb firestore" onclick="openConcept('documentales')">
+                        <span class="concept-complete-badge" data-concept-badge="documentales" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-file-lines"></i></div>
+                        <h3>Bases de Datos Documentales</h3>
+                        <p>Almacenamiento en documentos JSON</p>
+                        <span class="concept-tag nosql-tag">NoSQL</span>
+                        <span class="concept-tag">Documentos</span>
+                        <span class="concept-level-tag">Básico</span>
+                    </div>
+
+                    <div class="concept-card" data-concept-card data-concept-key="clave-valor" data-tags="nosql cache basico" data-level="basico" data-search="bases de datos clave valor redis cache sesiones pares" onclick="openConcept('clave-valor')">
+                        <span class="concept-complete-badge" data-concept-badge="clave-valor" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-key"></i></div>
+                        <h3>Bases de Datos Clave-Valor</h3>
+                        <p>Alto rendimiento con pares clave-valor</p>
+                        <span class="concept-tag nosql-tag">NoSQL</span>
+                        <span class="concept-tag">Cache</span>
+                        <span class="concept-level-tag">Básico</span>
+                    </div>
+
+                    <div class="concept-card" data-concept-card data-concept-key="columnas" data-tags="nosql analitica intermedio" data-level="intermedio" data-search="bases de datos por columnas columnar analitica olap cassandra hbase" onclick="openConcept('columnas')">
+                        <span class="concept-complete-badge" data-concept-badge="columnas" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-table-cells"></i></div>
+                        <h3>Bases de Datos por Columnas</h3>
+                        <p>Optimizadas para análisis de datos</p>
+                        <span class="concept-tag nosql-tag">NoSQL</span>
+                        <span class="concept-tag">Analítica</span>
+                        <span class="concept-level-tag">Intermedio</span>
+                    </div>
+
+                    <div class="concept-card" data-concept-card data-concept-key="grafos" data-tags="nosql redes intermedio" data-level="intermedio" data-search="bases de datos de grafos neo4j nodos aristas relaciones redes sociales" onclick="openConcept('grafos')">
+                        <span class="concept-complete-badge" data-concept-badge="grafos" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-share-nodes"></i></div>
+                        <h3>Bases de Datos de Grafos</h3>
+                        <p>Ideal para relaciones complejas</p>
+                        <span class="concept-tag nosql-tag">NoSQL</span>
+                        <span class="concept-tag">Redes</span>
+                        <span class="concept-level-tag">Intermedio</span>
+                    </div>
+
+                    <div class="concept-card" data-concept-card data-concept-key="tiempo-real" data-tags="nosql tiempo-real intermedio" data-level="intermedio" data-search="bases de datos en tiempo real firebase sincronizacion eventos streams" onclick="openConcept('tiempo-real')">
+                        <span class="concept-complete-badge" data-concept-badge="tiempo-real" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-bolt"></i></div>
+                        <h3>Bases de Datos en Tiempo Real</h3>
+                        <p>Sincronización instantánea</p>
+                        <span class="concept-tag nosql-tag">NoSQL</span>
+                        <span class="concept-tag">Tiempo Real</span>
+                        <span class="concept-level-tag">Intermedio</span>
+                    </div>
+
+                    <div class="concept-card" data-concept-card data-concept-key="cap" data-tags="nosql distribucion avanzado" data-level="avanzado" data-search="teorema cap consistencia disponibilidad particion distribucion sistemas distribuidos" onclick="openConcept('cap')">
+                        <span class="concept-complete-badge" data-concept-badge="cap" hidden><i class="fas fa-check"></i> Dominado</span>
+                        <div class="concept-icon"><i class="fas fa-circle-nodes"></i></div>
+                        <h3>Teorema CAP</h3>
+                        <p>Consistencia, disponibilidad y particiones</p>
+                        <span class="concept-tag nosql-tag">NoSQL</span>
+                        <span class="concept-tag">Distribución</span>
+                        <span class="concept-level-tag">Avanzado</span>
                     </div>
                 </div>
             </div>
 
-            <!-- ===== COMPARATIVA ===== -->
-            <div class="comparison-wrapper">
-                <h3><i class="fas fa-chart-bar"></i> Comparativa de Gestores SQL vs NoSQL</h3>
-                <div class="comparison-table-wrap">
-                    <table class="comparison-table">
-                        <thead>
-                            <tr>
-                                <th>Caracteristica</th>
-                                <th>SQL (Relacionales)</th>
-                                <th>NoSQL (No Relacionales)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>Modelo de datos</strong></td>
-                                <td>Tablas con filas y columnas</td>
-                                <td>Documentos, Clave-Valor, Columnas, Grafos</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Esquema</strong></td>
-                                <td>Fijo (requiere definicion previa)</td>
-                                <td>Flexible (schema-less)</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Escalabilidad</strong></td>
-                                <td>Vertical (mas recursos en un servidor)</td>
-                                <td>Horizontal (distribucion en multiples servidores)</td>
-                            </tr>
-                            <tr>
-                                <td><strong>ACID</strong></td>
-                                <td><i class="fas fa-check-circle text-success"></i> Soporte completo</td>
-                                <td><i class="fas fa-times-circle text-danger"></i> Consistencia eventual</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Lenguaje</strong></td>
-                                <td>SQL (Structure Query Language)</td>
-                                <td>APIs especificas (JSON, REST, etc)</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Mejor para</strong></td>
-                                <td>Datos estructurados, transacciones complejas</td>
-                                <td>Grandes volumenes, datos no estructurados, tiempo real</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Ejemplos</strong></td>
-                                <td>PostgreSQL, MySQL, SQL Server, Oracle</td>
-                                <td>MongoDB, Firebase, Redis, Cassandra, Neo4j</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div id="learnInstallPanel" class="learn-tab-panel" role="tabpanel" aria-labelledby="learnInstallTab" hidden>
+                <div class="install-callout">
+                    <span class="install-callout-icon"><i class="fas fa-lightbulb"></i></span>
+                    <div>
+                        <strong>No necesitas instalar nada para practicar aquí</strong>
+                        <p>SQL Academy incluye una base SQLite real en el navegador. Estas guías son para cuando quieras instalar un gestor en tu equipo.</p>
+                    </div>
+                </div>
+
+                <div class="library-toolbar">
+                    <label class="library-search" for="installSearch">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input id="installSearch" type="search" placeholder="Buscar gestor o sistema operativo..." oninput="filterInstallGuides()">
+                    </label>
+                    <div class="library-filters" role="group" aria-label="Filtrar guías de instalación">
+                        <button type="button" class="library-filter active" data-install-filter="all" onclick="setInstallFilter('all')">Todos</button>
+                        <button type="button" class="library-filter" data-install-filter="sql" onclick="setInstallFilter('sql')">SQL</button>
+                        <button type="button" class="library-filter" data-install-filter="nosql" onclick="setInstallFilter('nosql')">NoSQL</button>
+                        <button type="button" class="library-filter" data-install-filter="recomendado" onclick="setInstallFilter('recomendado')">Recomendados</button>
+                    </div>
+                    <label class="install-os-filter" for="installOsFilter">
+                        <span>Sistema</span>
+                        <select id="installOsFilter" onchange="filterInstallGuides()">
+                            <option value="all">Todos</option>
+                            <option value="windows">Windows</option>
+                            <option value="macos">macOS</option>
+                            <option value="linux">Linux</option>
+                            <option value="docker">Docker</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div id="installGuideGrid" class="install-guide-grid"></div>
+
+                <div id="installEmptyState" class="library-empty" hidden>
+                    <i class="fas fa-magnifying-glass"></i>
+                    <p>No hay guías que coincidan con los filtros.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: RUTA DE APRENDIZAJE ===== -->
+        <section id="section-path" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-graduation-cap"></i> Cursos</h2>
+                <p>Itinerarios de SQL y NoSQL con teoría breve, demostraciones, práctica y comprobaciones</p>
+            </div>
+
+            <div class="course-dataset-toolbar">
+                <label class="course-dataset-control" for="courseSqlDatasetSelector">
+                    <span><i class="fas fa-database"></i> Dataset SQL</span>
+                    <select id="courseSqlDatasetSelector" onchange="changeCourseSqlDataset(this.value)">
+                        <option value="escuela">Escuela</option>
+                        <option value="tienda">Tienda</option>
+                        <option value="biblioteca">Biblioteca</option>
+                    </select>
+                </label>
+                <label class="course-dataset-control" for="courseNoSQLDatasetSelector">
+                    <span><i class="fas fa-leaf"></i> Dataset NoSQL</span>
+                    <select id="courseNoSQLDatasetSelector" onchange="changeCourseNoSQLDataset(this.value)">
+                        <option value="escuela">Escuela</option>
+                        <option value="tienda">Tienda</option>
+                        <option value="biblioteca">Biblioteca</option>
+                    </select>
+                </label>
+                <span class="course-dataset-hint">El curso y su progreso se adaptan al dataset elegido.</span>
+            </div>
+
+            <div class="path-tabs" role="tablist" aria-label="Cursos y progreso">
+                <button type="button" id="pathLessonsTab" class="path-tab active" data-path-tab="lessons" role="tab" aria-selected="true" aria-controls="pathLessonsPanel">
+                    <i class="fas fa-layer-group"></i> Cursos
+                </button>
+                <button type="button" id="pathProgressTab" class="path-tab" data-path-tab="progress" role="tab" aria-selected="false" aria-controls="pathProgressPanel">
+                    <i class="fas fa-chart-simple"></i> Mi progreso
+                </button>
+            </div>
+
+            <div id="pathLessonsPanel" class="path-tab-panel active" role="tabpanel" aria-labelledby="pathLessonsTab">
+                <div id="courseCatalogView" class="course-catalog-view"></div>
+
+                <div id="courseDetailView" class="course-detail-view" hidden></div>
+
+                <div id="coursePlayerView" class="course-player-view" hidden>
+                    <div id="coursePlayerBreadcrumb" class="course-breadcrumb" aria-label="Ubicación del curso"></div>
+                    <div class="challenges-layout">
+                        <aside class="challenge-list-panel" aria-label="Lecciones del curso">
+                            <div class="challenge-progress">
+                                <div class="challenge-progress-head">
+                                    <span id="pathCourseProgressLabel">Tu progreso</span>
+                                    <strong id="pathProgressText">0 de 4</strong>
+                                </div>
+                                <div class="challenge-progress-track" role="progressbar" aria-label="Progreso del curso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pathProgressTrack">
+                                    <div id="pathProgressBar"></div>
+                                </div>
+                            </div>
+
+                            <p id="pathDatasetLabel" class="path-dataset-label">Dataset SQL: Escuela</p>
+                            <div id="pathLessonList" class="challenge-list"></div>
+
+                            <button type="button" onclick="resetLearningProgress()" class="btn-secondary challenge-reset-btn">
+                                <i class="fas fa-rotate-left"></i> Reiniciar curso
+                            </button>
+                        </aside>
+
+                        <div class="challenge-play-panel">
+                            <div id="pathLessonDetail" class="challenge-detail">
+                                <div class="challenge-empty">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <h3>Cargando curso...</h3>
+                                    <p>Preparando las lecciones para el dataset activo.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pathProgressPanel" class="path-tab-panel" role="tabpanel" aria-labelledby="pathProgressTab" hidden>
+                <div id="learningProgressDashboard"></div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: JUEGO ===== -->
+        <section id="section-game" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-gamepad"></i> Torre de Datos</h2>
+                <p>Construye consultas SQL con cartas, supera los pisos y amplía tu mazo</p>
+            </div>
+
+            <div class="deckbuilder-layout">
+                <aside class="deckbuilder-sidebar">
+                    <div class="game-hud">
+                        <div class="game-hud-item">
+                            <span>Piso</span>
+                            <strong id="gameFloorLabel">1 / 6</strong>
+                        </div>
+                        <div class="game-hud-item">
+                            <span>Puntuación</span>
+                            <strong id="gameScoreLabel">0</strong>
+                        </div>
+                        <div class="game-hud-item">
+                            <span>Recompensas</span>
+                            <strong id="gameDeckLabel">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="game-panel">
+                        <div class="game-panel-head">
+                            <h3>La torre</h3>
+                            <span class="game-panel-tag">6 pisos</span>
+                        </div>
+                        <div id="gameTower" class="game-tower"></div>
+                    </div>
+
+                    <button type="button" class="btn-secondary game-reset-btn" data-game-focus onclick="Deckbuilder.resetGame()">
+                        <i class="fas fa-rotate-left"></i> Reiniciar partida
+                    </button>
+
+                    <div class="game-panel game-help-panel">
+                        <div class="game-panel-head">
+                            <h3>Cómo jugar</h3>
+                        </div>
+                        <p>Coloca cartas en orden para formar una consulta SQL. Si el resultado coincide con el objetivo, superas el piso.</p>
+                        <ul class="game-controls-list">
+                            <li><span>Ratón</span> clic en cartas y botones</li>
+                            <li><span>Teclado</span> <kbd>Tab</kbd> / <kbd>Enter</kbd> · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> ejecutar · <kbd>Backspace</kbd> deshacer</li>
+                            <li><span>Mando</span> D-pad/stick para moverte · <kbd>A</kbd> elegir · <kbd>B</kbd> deshacer · <kbd>X</kbd> ejecutar · <kbd>Y</kbd> pista</li>
+                        </ul>
+                    </div>
+
+                    <div id="gamepadStatus" class="gamepad-status" hidden>
+                        <i class="fas fa-gamepad"></i> Mando conectado
+                    </div>
+                </aside>
+
+                <div class="deckbuilder-main">
+                    <div id="gameEncounter" class="game-encounter">
+                        <div class="game-encounter-empty">
+                            <i class="fas fa-hourglass-half"></i>
+                            <h3>Cargando la torre...</h3>
+                            <p>Preparando el motor de datos.</p>
+                        </div>
+                    </div>
+
+                    <div id="gameQueryPanel" class="game-query-panel">
+                        <div class="game-panel-head">
+                            <h3><i class="fas fa-code"></i> Tu consulta</h3>
+                            <span id="gameQueryStatus">0 cartas</span>
+                        </div>
+                        <div id="gameQueryBoard" class="game-query-board"></div>
+                        <div id="gameQueryPreview" class="game-query-preview">Selecciona cartas para construir tu consulta.</div>
+                    </div>
+
+                    <div id="gameFeedback" class="game-feedback" role="status" aria-live="polite" hidden></div>
+
+                    <div id="gameActions" class="game-actions">
+                        <button type="button" id="gameRunBtn" class="btn-primary" data-game-focus onclick="Deckbuilder.runQuery()">
+                            <i class="fas fa-play"></i> Ejecutar consulta
+                        </button>
+                        <button type="button" class="btn-secondary" data-game-focus onclick="Deckbuilder.undo()">
+                            <i class="fas fa-rotate-left"></i> Deshacer
+                        </button>
+                        <button type="button" class="btn-secondary" data-game-focus onclick="Deckbuilder.clearQuery()">
+                            <i class="fas fa-eraser"></i> Limpiar
+                        </button>
+                        <button type="button" class="btn-secondary" data-game-focus onclick="Deckbuilder.showHint()">
+                            <i class="fas fa-lightbulb"></i> Ver pista
+                        </button>
+                    </div>
+
+                    <div id="gameReward" class="game-reward" hidden></div>
+
+                    <div id="gameHandPanel" class="game-hand-panel">
+                        <div class="game-panel-head">
+                            <h3><i class="fas fa-layer-group"></i> Cartas disponibles</h3>
+                            <span id="gameHandCount">0 cartas</span>
+                        </div>
+                        <div id="gameHand" class="game-hand"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -252,6 +790,29 @@
             <div class="section-header">
                 <h2><i class="fas fa-laptop-code"></i> Practica SQL</h2>
                 <p>Escribe consultas SQL y ve los resultados en tiempo real</p>
+            </div>
+
+            <div id="sqlLevelBar" class="level-bar is-onboarding" role="region" aria-label="Nivel SQL">
+                <div class="level-bar-copy" aria-live="polite" aria-atomic="true">
+                    <span class="level-bar-eyebrow"><i class="fas fa-signal"></i> Tu nivel SQL</span>
+                    <strong id="sqlLevelLabel">Nivel estimado: Básico</strong>
+                    <p id="sqlLevelDescription">Aún no has hecho el test. Empezamos por lo básico.</p>
+                </div>
+                <div class="level-bar-actions">
+                    <label class="level-select-label" for="sqlLevelSelect">Nivel</label>
+                    <select id="sqlLevelSelect" onchange="setSkillLevel('sql', this.value)" aria-label="Nivel de ejemplos SQL">
+                        <option value="basico">Básico</option>
+                        <option value="intermedio">Intermedio</option>
+                        <option value="avanzado">Avanzado</option>
+                        <option value="all">Ver todo</option>
+                    </select>
+                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('sql')" aria-haspopup="dialog" aria-controls="skillTestModal">
+                        <i class="fas fa-clipboard-question"></i> Test de nivel
+                    </button>
+                    <button type="button" class="btn-ghost level-skip-btn" onclick="setSkillLevel('sql', 'basico')">
+                        Empezar desde cero
+                    </button>
+                </div>
             </div>
 
             <div class="practice-layout">
@@ -267,93 +828,373 @@
 
                 <!-- Panel derecho: Editor y resultados -->
                 <div class="practice-main">
+                    <div class="example-bar" aria-label="Ejemplos guiados SQL">
+                        <div class="example-bar-copy">
+                            <span class="example-bar-eyebrow"><i class="fas fa-wand-magic-sparkles"></i> Ejemplos guiados</span>
+                            <p>Elige una categoría y la consulta se cargará en el editor. Pulsa «Ejecutar» para ver los resultados.</p>
+                        </div>
+                        <div class="example-bar-controls">
+                            <select id="categorySelector" onchange="showExampleByCategory()" aria-label="Categoría de ejemplos SQL del dataset activo">
+                                <option value="basicos">Básicos</option>
+                                <option value="filtros">Filtros</option>
+                                <option value="orden">Ordenamiento</option>
+                                <option value="agregacion">Agregaciones</option>
+                                <option value="groupby">Agrupaciones</option>
+                                <option value="having">HAVING</option>
+                                <option value="join" selected>JOIN</option>
+                                <option value="subconsultas">Subconsultas</option>
+                                <option value="operadores">Operadores</option>
+                                <option value="avanzado">Avanzadas</option>
+                                <option value="modificacion">Modificación</option>
+                                <option value="aleatorio">Aleatorio</option>
+                            </select>
+                            <button type="button" onclick="showExampleByCategory()" class="btn-primary">
+                                <i class="fas fa-bolt"></i> Siguiente ejemplo
+                            </button>
+                        </div>
+                        <span id="sqlExampleStatus" class="example-status" role="status" aria-live="polite">Elige una categoría para empezar</span>
+                    </div>
+
                     <div class="editor-wrapper">
-                        <textarea id="sqlEditor" rows="6"
-                            placeholder='Escribe tu consulta sql o Selecciona un ejemplo del menú y presiona "▶"'></textarea>
+                        <textarea id="sqlEditor" rows="6" aria-label="Editor de consultas SQL" spellcheck="false"
+                            placeholder="Escribe una consulta o elige un ejemplo para empezar"></textarea>
 
                         <div class="editor-toolbar">
-                            <button id="executeBtn" onclick="runQuery()">
-                                <i class="fas fa-play"></i> Ejecutar (Ctrl+Enter)
-                            </button>
-                            <button onclick="clearEditor()" class="btn-secondary">
-                                <i class="fas fa-eraser"></i> Limpiar
-                            </button>
-                            <button onclick="resetDatabase()" class="btn-secondary">
-                                <i class="fas fa-rotate"></i> Reiniciar BD
-                            </button>
-                            <button onclick="exportDatabase()" class="btn-secondary" title="Exportar BD">
-                        <i class="fas fa-download"></i>
-                    </button>
-                            <button onclick="openSQLGuide()" class="btn-secondary" title="Guía de primeros pasos en SQL">
-    <i class="fas fa-graduation-cap"></i> Guía SQL
-</button>
-
-                            <div class="example-selector">
-                                <select id="categorySelector">
-                                    <option value="basicos">Basicos</option>
-                                    <option value="filtros">Filtros</option>
-                                    <option value="orden">Ordenamiento</option>
-                                    <option value="agregacion">Agregaciones</option>
-                                    <option value="groupby">Agrupaciones</option>
-                                    <option value="join" selected>JOIN</option>
-                                    <option value="subconsultas">Subconsultas</option>
-                                    <option value="avanzado">Avanzadas</option>
-                                    <option value="modificacion">Modificacion</option>
-                                    <option value="aleatorio">Aleatorio</option>
-                                </select>
-                                <button onclick="showExampleByCategory()" class="btn-secondary">
-                                    <i class="fas fa-play"></i>
+                            <div class="toolbar-group toolbar-group-primary">
+                                <button id="executeBtn" onclick="runQuery()">
+                                    <i class="fas fa-play"></i> Ejecutar
+                                    <span class="btn-shortcut">Ctrl+Enter</span>
+                                </button>
+                                <button onclick="formatEditorSql()" class="btn-secondary" title="Formatear SQL (Ctrl+Shift+F)">
+                                    <i class="fas fa-align-left"></i> Formatear
+                                </button>
+                                <button onclick="clearEditor()" class="btn-secondary">
+                                    <i class="fas fa-eraser"></i> Limpiar
                                 </button>
                             </div>
 
-                            <button onclick="clearHistory()" class="btn-secondary">
-                                <i class="fas fa-trash"></i> Limpiar historial
-                            </button>
+                            <div class="toolbar-group toolbar-group-secondary">
+                                <label class="toolbar-select-label" for="datasetSelector">Dataset</label>
+                                <select id="datasetSelector" class="dataset-selector" onchange="loadDataset(this.value)" aria-label="Dataset de práctica">
+                                    <option value="escuela" selected>Escuela</option>
+                                    <option value="tienda">Tienda</option>
+                                    <option value="biblioteca">Biblioteca</option>
+                                </select>
+                                <button id="aiHelpBtn" onclick="openAIHelp('manual')" class="btn-secondary btn-ai" title="Explicar tu consulta con IA">
+                                    <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
+                                </button>
+                                <details class="toolbar-more" id="sqlMoreMenu">
+                                    <summary class="btn-secondary toolbar-more-toggle" title="Más acciones">
+                                        <i class="fas fa-ellipsis"></i> Más
+                                    </summary>
+                                    <div class="toolbar-more-menu" role="menu" aria-label="Más acciones de práctica">
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); resetDatabase()">
+                                            <i class="fas fa-rotate"></i> Reiniciar base
+                                        </button>
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); exportDatabase()">
+                                            <i class="fas fa-download"></i> Exportar base
+                                        </button>
+                                        <button type="button" class="toolbar-more-item" role="menuitem" onclick="closeToolbarMore(); openSQLGuide()">
+                                            <i class="fas fa-graduation-cap"></i> Guía de primeros pasos
+                                        </button>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+                        <div class="editor-statusbar">
+                            <span id="persistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite" title="La base de datos se guarda en este navegador (IndexedDB)">
+                                <i class="fas fa-hard-drive"></i> Guardado local
+                            </span>
+                            <label class="safe-mode-toggle" title="Pide confirmación antes de ejecutar consultas destructivas">
+                                <input type="checkbox" id="safeModeToggle" checked onchange="toggleSafeMode(this.checked)">
+                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                            </label>
                         </div>
                     </div>
 
                     <!-- Historial -->
                     <div class="history-wrapper">
-                        <h4><i class="fas fa-clock-rotate-left"></i> Historial</h4>
+                        <div class="panel-heading">
+                            <h4><i class="fas fa-clock-rotate-left"></i> Historial</h4>
+                            <button type="button" onclick="clearHistory()" class="btn-ghost btn-sm">
+                                <i class="fas fa-trash"></i> Limpiar
+                            </button>
+                        </div>
                         <ul id="historyList">
-                            <li class="empty-history">No hay consultas aun</li>
+                            <li class="empty-history">No hay consultas todavía</li>
                         </ul>
                     </div>
 
                     <!-- Resultados -->
                     <div class="results-wrapper">
-                        <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
-                        <div id="resultOutput" class="result-placeholder">
-                            <i class="fas fa-lightbulb placeholder-icon"></i>
-                            <p>Escribe una consulta y presiona "Ejecutar"</p>
+                        <div class="panel-heading">
+                            <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
+                            <span class="panel-hint"><i class="fas fa-keyboard"></i> Ctrl+Enter para ejecutar</span>
+                        </div>
+                        <div id="resultOutput" class="result-placeholder" aria-live="polite">
+                            <i class="fas fa-play placeholder-icon"></i>
+                            <p>Ejecuta una consulta para ver los resultados</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Editor de tablas -->
-            <div class="table-editor">
-                <h4><i class="fas fa-pen-to-square"></i> Editor de Tablas</h4>
-                <div class="table-editor-controls">
-                    <select id="tableSelector" onchange="loadTableEditor()">
-                        <option value="estudiantes">Estudiantes</option>
-                        <option value="cursos">Cursos</option>
-                        <option value="inscripciones">Inscripciones</option>
+        </section>
+
+        <!-- ===== SECCIÓN: NOSQL ===== -->
+        <section id="section-nosql" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-leaf"></i> Laboratorio NoSQL</h2>
+                <p>Practica con documentos JSON y una consola tipo MongoDB, directamente en el navegador</p>
+            </div>
+
+            <div id="nosqlLevelBar" class="level-bar is-onboarding" role="region" aria-label="Nivel NoSQL">
+                <div class="level-bar-copy" aria-live="polite" aria-atomic="true">
+                    <span class="level-bar-eyebrow"><i class="fas fa-signal"></i> Tu nivel NoSQL</span>
+                    <strong id="nosqlLevelLabel">Nivel estimado: Básico</strong>
+                    <p id="nosqlLevelDescription">Aún no has hecho el test. Empezamos por lo básico.</p>
+                </div>
+                <div class="level-bar-actions">
+                    <label class="level-select-label" for="nosqlLevelSelect">Nivel</label>
+                    <select id="nosqlLevelSelect" onchange="setSkillLevel('nosql', this.value)" aria-label="Nivel de ejemplos NoSQL">
+                        <option value="basico">Básico</option>
+                        <option value="intermedio">Intermedio</option>
+                        <option value="avanzado">Avanzado</option>
+                        <option value="all">Ver todo</option>
                     </select>
-                    <button onclick="loadTableEditor()" class="btn-secondary">
-                        <i class="fas fa-rotate"></i> Refrescar
+                    <button type="button" class="btn-secondary level-test-btn" onclick="openSkillTest('nosql')" aria-haspopup="dialog" aria-controls="skillTestModal">
+                        <i class="fas fa-clipboard-question"></i> Test de nivel
                     </button>
-                    <button onclick="addRow(document.getElementById('tableSelector').value)" class="btn-secondary">
-                        <i class="fas fa-plus"></i> Agregar fila
-                    </button>
-                    <button onclick="saveTableChanges(document.getElementById('tableSelector').value)" class="btn-save">
-                        <i class="fas fa-save"></i> Guardar cambios
+                    <button type="button" class="btn-ghost level-skip-btn" onclick="setSkillLevel('nosql', 'basico')">
+                        Empezar desde cero
                     </button>
                 </div>
-                <div id="tableEditorContent">
-                    <p class="text-muted" style="text-align:center;padding:20px;">
-                        <i class="fas fa-spinner fa-spin"></i> Cargando...
-                    </p>
+            </div>
+
+            <div class="nosql-layout">
+                <aside class="nosql-sidebar">
+                    <div class="info-panel nosql-collections-panel">
+                        <h3><i class="fas fa-layer-group"></i> Colecciones</h3>
+                        <p id="nosqlCollectionSummary" class="nosql-muted">Cargando documentos...</p>
+                        <div id="nosqlCollectionList" class="nosql-collection-list"></div>
+                        <div class="nosql-sidebar-actions">
+                            <select id="nosqlDatasetSelector" class="dataset-selector" onchange="changeNoSQLDataset(this.value)" aria-label="Dataset NoSQL">
+                                <option value="escuela" selected>Dataset: Escuela</option>
+                                <option value="tienda">Dataset: Tienda</option>
+                                <option value="biblioteca">Dataset: Biblioteca</option>
+                            </select>
+                            <button type="button" onclick="resetNoSQLDatabase()" class="btn-secondary">
+                                <i class="fas fa-rotate"></i> Reiniciar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="info-panel nosql-help-panel">
+                        <h3><i class="fas fa-circle-info"></i> Sintaxis rápida</h3>
+                        <p>Usa una consola simplificada de MongoDB. No se ejecuta JavaScript arbitrario.</p>
+                        <div id="nosqlQuickSyntax" class="nosql-quick-syntax" tabindex="0" role="region" aria-label="Sintaxis rápida NoSQL"></div>
+                        <p id="nosqlQuickOperators" class="nosql-muted"></p>
+                    </div>
+                </aside>
+
+                <div class="nosql-main">
+                    <div class="example-bar example-bar-nosql" aria-label="Ejemplos guiados NoSQL">
+                        <div class="example-bar-copy">
+                            <span class="example-bar-eyebrow"><i class="fas fa-lightbulb"></i> Ejemplos NoSQL</span>
+                            <p>Elige un ejemplo y el comando se cargará en el editor. Pulsa «Ejecutar» para ver los documentos.</p>
+                        </div>
+                        <div class="example-bar-controls">
+                            <select id="nosqlExampleSelector" onchange="loadNoSQLExample()" aria-label="Ejemplos NoSQL"></select>
+                            <button type="button" onclick="loadNextNoSQLExample()" class="btn-primary">
+                                <i class="fas fa-forward"></i> Siguiente ejemplo
+                            </button>
+                        </div>
+                        <span id="nosqlExampleStatus" class="example-status" role="status" aria-live="polite">Elige un ejemplo para empezar</span>
+                    </div>
+
+                    <div class="editor-wrapper">
+                        <textarea id="nosqlEditor" rows="6" aria-label="Editor de comandos NoSQL" spellcheck="false"
+                            placeholder="Escribe un comando, por ejemplo: db.estudiantes.find({})"></textarea>
+
+                        <div class="editor-toolbar nosql-toolbar">
+                            <div class="toolbar-group toolbar-group-primary">
+                                <button id="nosqlExecuteBtn" onclick="runNoSQLQuery()">
+                                    <i class="fas fa-play"></i> Ejecutar
+                                    <span class="btn-shortcut">Ctrl+Enter</span>
+                                </button>
+                                <button type="button" onclick="clearNoSQLQuery()" class="btn-secondary" title="Limpiar el editor NoSQL">
+                                    <i class="fas fa-eraser"></i> Limpiar
+                                </button>
+                            </div>
+
+                            <div class="toolbar-group toolbar-group-secondary">
+                                <button type="button" onclick="openNoSQLAIHelp()" class="btn-secondary btn-ai" title="Explicar tu comando con IA">
+                                    <i class="fas fa-wand-magic-sparkles"></i> Ayudante IA
+                                </button>
+                            </div>
+                        </div>
+                        <div class="editor-statusbar">
+                            <span id="nosqlPersistenceStatus" class="persistence-status is-saved" role="status" aria-live="polite">
+                                <i class="fas fa-hard-drive"></i> Guardado local
+                            </span>
+                            <label class="safe-mode-toggle" title="Pide confirmación antes de operaciones destructivas">
+                                <input type="checkbox" id="nosqlSafeModeToggle" checked onchange="toggleNoSQLSafeMode(this.checked)">
+                                <span><i class="fas fa-shield-halved"></i> Modo seguro</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="history-wrapper">
+                        <div class="panel-heading">
+                            <h4><i class="fas fa-clock-rotate-left"></i> Historial NoSQL</h4>
+                            <button type="button" onclick="clearNoSQLHistory()" class="btn-ghost btn-sm">
+                                <i class="fas fa-trash"></i> Limpiar
+                            </button>
+                        </div>
+                        <ul id="nosqlHistoryList">
+                            <li class="empty-history">Todavía no hay comandos ejecutados</li>
+                        </ul>
+                    </div>
+
+                    <div class="results-wrapper">
+                        <div class="panel-heading">
+                            <h4><i class="fas fa-rectangle-list"></i> Resultados</h4>
+                            <div class="panel-heading-actions">
+                                <span class="panel-hint"><i class="fas fa-keyboard"></i> Ctrl+Enter para ejecutar</span>
+                                <button type="button" onclick="clearNoSQLResult()" class="btn-ghost btn-sm">
+                                    <i class="fas fa-eraser"></i> Limpiar resultados
+                                </button>
+                            </div>
+                        </div>
+                        <div id="nosqlResultOutput" class="result-placeholder" aria-live="polite">
+                            <i class="fas fa-play placeholder-icon"></i>
+                            <p>Ejecuta un comando para ver los documentos</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECCIÓN: RETOS ===== -->
+        <section id="section-challenges" class="section">
+            <div class="section-header">
+                <h2><i class="fas fa-trophy"></i> Retos</h2>
+                <p>Practica con consultas SQL, el laboratorio NoSQL o encuentra el error en una consulta rota</p>
+            </div>
+
+            <div class="challenge-tabs" role="tablist" aria-label="Tipo de retos">
+                <button type="button" id="sqlChallengesTab" class="challenge-tab active" data-challenge-tab="sql" role="tab" aria-selected="true" aria-controls="sqlChallengesPanel">
+                    <i class="fas fa-database"></i> Retos SQL
+                </button>
+                <button type="button" id="nosqlChallengesTab" class="challenge-tab" data-challenge-tab="nosql" role="tab" aria-selected="false" aria-controls="nosqlChallengesPanel">
+                    <i class="fas fa-leaf"></i> Retos NoSQL
+                </button>
+                <button type="button" id="debugChallengesTab" class="challenge-tab" data-challenge-tab="debug" role="tab" aria-selected="false" aria-controls="debugChallengesPanel">
+                    <i class="fas fa-bug"></i> Depuración
+                </button>
+            </div>
+
+            <div id="sqlChallengesPanel" class="challenge-tab-panel active" role="tabpanel" aria-labelledby="sqlChallengesTab">
+                <div class="challenges-layout">
+                    <aside class="challenge-list-panel" aria-label="Lista de retos SQL">
+                        <div class="challenge-progress">
+                            <div class="challenge-progress-head">
+                                <span>Tu progreso SQL</span>
+                                <strong id="challengeProgressText">0 de 0</strong>
+                            </div>
+                            <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de retos SQL" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="challengeProgressTrack">
+                                <div id="challengeProgressBar"></div>
+                            </div>
+                        </div>
+
+                        <div id="challengeList" class="challenge-list">
+                            <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando retos...</p>
+                        </div>
+
+                        <button type="button" onclick="resetChallengeProgress()" class="btn-secondary challenge-reset-btn">
+                            <i class="fas fa-rotate-left"></i> Reiniciar progreso del dataset
+                        </button>
+                    </aside>
+
+                    <div class="challenge-play-panel">
+                        <div id="challengeDetail" class="challenge-detail">
+                            <div class="challenge-empty">
+                                <i class="fas fa-trophy"></i>
+                                <h3>Elige un reto para empezar</h3>
+                                <p>Los retos validan el resultado de tu consulta, no el texto exacto. Puedes resolverlos de varias formas.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="nosqlChallengesPanel" class="challenge-tab-panel" role="tabpanel" aria-labelledby="nosqlChallengesTab" hidden>
+                <div class="nosql-hub-head">
+                    <div>
+                        <h3><i class="fas fa-leaf"></i> Retos NoSQL</h3>
+                        <p id="nosqlHubDatasetLabel" class="text-muted">Dataset NoSQL: Escuela</p>
+                    </div>
+                    <div class="nosql-hub-progress">
+                        <span>Tu progreso NoSQL</span>
+                        <strong id="nosqlHubProgressText">0 de 0</strong>
+                    </div>
+                </div>
+
+                <div class="challenges-layout">
+                    <aside class="challenge-list-panel" aria-label="Lista de retos NoSQL">
+                        <div id="nosqlHubChallengeList" class="challenge-list"></div>
+
+                        <button type="button" onclick="openNoSQLLab()" class="btn-secondary challenge-reset-btn">
+                            <i class="fas fa-flask"></i> Abrir laboratorio NoSQL
+                        </button>
+                        <button type="button" onclick="resetNoSQLChallengeProgress()" class="btn-secondary challenge-reset-btn">
+                            <i class="fas fa-rotate-left"></i> Reiniciar progreso NoSQL
+                        </button>
+                    </aside>
+
+                    <div class="challenge-play-panel">
+                        <div id="nosqlHubChallengeDetail" class="challenge-detail">
+                            <div class="challenge-empty">
+                                <i class="fas fa-leaf"></i>
+                                <h3>Elige un reto NoSQL</h3>
+                                <p>Selecciona un reto de la lista para ver su descripción y abrirlo en el laboratorio.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="debugChallengesPanel" class="challenge-tab-panel" role="tabpanel" aria-labelledby="debugChallengesTab" hidden>
+                <div class="challenges-layout">
+                    <aside class="challenge-list-panel" aria-label="Lista de retos de depuración">
+                        <div class="challenge-progress">
+                            <div class="challenge-progress-head">
+                                <span>Tu progreso de depuración</span>
+                                <strong id="debugProgressText">0 de 0</strong>
+                            </div>
+                            <div class="challenge-progress-track" role="progressbar" aria-label="Progreso de retos de depuración" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="debugProgressTrack">
+                                <div id="debugProgressBar"></div>
+                            </div>
+                        </div>
+
+                        <div id="debugChallengeList" class="challenge-list">
+                            <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando depuraciones...</p>
+                        </div>
+
+                        <button type="button" onclick="resetDebugChallengeProgress()" class="btn-secondary challenge-reset-btn">
+                            <i class="fas fa-rotate-left"></i> Reiniciar progreso de depuración
+                        </button>
+                    </aside>
+
+                    <div class="challenge-play-panel">
+                        <div id="debugChallengeDetail" class="challenge-detail">
+                            <div class="challenge-empty">
+                                <i class="fas fa-bug"></i>
+                                <h3>Encuentra el error</h3>
+                                <p>Elige una consulta rota, revisa el síntoma y corrige el SQL. La validación compara el resultado, no el texto exacto.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -362,13 +1203,18 @@
         <section id="section-analyze" class="section">
             <div class="section-header">
                 <h2><i class="fas fa-chart-pie"></i> Analiza tus Datos</h2>
-                <p>Visualiza las relaciones y estadisticas de tu base de datos</p>
+                <p>Explora el esquema, revisa la calidad de los datos y entiende las relaciones de tu base de datos</p>
             </div>
 
-            <div class="analyze-grid">
-                <!-- Diagrama ERD -->
-                <div class="analyze-card full-width">
-                    <h3><i class="fas fa-project-diagram"></i> Diagrama de Relaciones (ERD)</h3>
+            <div id="analyzeSummary" class="analyze-summary" aria-live="polite"></div>
+
+            <!-- Diagrama ERD -->
+            <div class="analyze-card analyze-erd-card">
+                <div class="analyze-card-head">
+                    <div>
+                        <h3><i class="fas fa-project-diagram"></i> Diagrama de Relaciones (ERD)</h3>
+                        <p class="analyze-card-subtitle">Vista visual de tablas, columnas y claves foráneas del dataset activo.</p>
+                    </div>
                     <div class="diagram-controls">
                         <button onclick="generateDiagram()" class="btn-secondary">
                             <i class="fas fa-rotate"></i> Actualizar
@@ -377,135 +1223,92 @@
                             <i class="fas fa-expand"></i> Vista completa
                         </button>
                     </div>
-                    <div id="diagramContainer">
-                        <div class="diagram-loading"><i class="fas fa-spinner fa-spin"></i> Generando diagrama...</div>
+                </div>
+                <div id="diagramContainer" tabindex="0" role="region" aria-label="Diagrama de relaciones">
+                    <div class="diagram-loading"><i class="fas fa-spinner fa-spin"></i> Generando diagrama...</div>
+                </div>
+            </div>
+
+            <div class="analyze-grid analyze-grid-data">
+                <!-- Explorador de tablas -->
+                <div class="analyze-card analyze-explorer-card">
+                    <div class="analyze-card-head">
+                        <div>
+                            <h3><i class="fas fa-table-list"></i> Explorador de tablas</h3>
+                            <p class="analyze-card-subtitle">Consulta la estructura, revisa la vista previa y edita los datos cuando lo necesites.</p>
+                        </div>
+                        <div class="analyze-mode-toggle" role="group" aria-label="Modo del explorador de tablas">
+                            <button type="button" class="analyze-mode-btn active" data-analyze-mode="view" aria-pressed="true">
+                                <i class="fas fa-eye"></i> Vista
+                            </button>
+                            <button type="button" class="analyze-mode-btn" data-analyze-mode="edit" aria-pressed="false">
+                                <i class="fas fa-pen"></i> Editar datos
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-explorer">
+                        <div id="analyzeTableList" class="table-explorer-list" role="listbox" aria-label="Tablas del dataset"></div>
+                        <div class="table-explorer-detail">
+                            <div id="analyzeTableDetail">
+                                <div class="analyze-empty-state">
+                                    <i class="fas fa-table"></i>
+                                    <p>Selecciona una tabla para ver su estructura.</p>
+                                </div>
+                            </div>
+
+                            <div id="analyzeTableEditor" class="table-editor analyze-table-editor" hidden>
+                                <div class="analyze-editor-head">
+                                    <div>
+                                        <h4><i class="fas fa-pen-to-square"></i> Editar datos</h4>
+                                        <p class="analyze-editor-table">Tabla: <strong id="analyzeEditorTableName">—</strong></p>
+                                    </div>
+                                    <span id="tableEditorStatus" class="table-editor-status" aria-live="polite" hidden>Cambios sin guardar</span>
+                                </div>
+
+                                <div class="table-editor-warning">
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                    Los cambios que guardes afectan a la base de datos activa y pueden afectar a ejemplos, retos y lecciones.
+                                </div>
+
+                                <div class="table-editor-controls">
+                                    <button type="button" onclick="refreshAnalyzeTableEditor()" class="btn-secondary">
+                                        <i class="fas fa-rotate"></i> Refrescar
+                                    </button>
+                                    <button type="button" onclick="addRow()" class="btn-secondary" data-editor-action="add">
+                                        <i class="fas fa-plus"></i> Agregar fila
+                                    </button>
+                                    <button type="button" onclick="saveTableChanges()" class="btn-save" data-editor-action="save">
+                                        <i class="fas fa-save"></i> Guardar cambios
+                                    </button>
+                                    <button type="button" onclick="restoreAnalyzeDatasetData()" class="btn-secondary analyze-restore-btn" data-editor-action="restore">
+                                        <i class="fas fa-rotate-left"></i> Restaurar datos
+                                    </button>
+                                </div>
+                                <p id="tableEditorNote" class="table-editor-note"></p>
+                                <div id="tableEditorContent">
+                                    <p class="text-muted" style="text-align:center;padding:20px;">
+                                        <i class="fas fa-spinner fa-spin"></i> Cargando...
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Graficos -->
-                <div class="analyze-card">
-                    <h3><i class="fas fa-users"></i> Estudiantes por Carrera</h3>
-                    <div class="chart-box">
-                        <canvas id="chartCarreras"></canvas>
+                <!-- Calidad de datos -->
+                <div class="analyze-card analyze-quality-card">
+                    <div class="analyze-card-head">
+                        <div>
+                            <h3><i class="fas fa-shield-halved"></i> Calidad de datos</h3>
+                            <p class="analyze-card-subtitle">Comprobaciones automáticas del dataset activo.</p>
+                        </div>
                     </div>
-                </div>
-
-                <div class="analyze-card">
-                    <h3><i class="fas fa-chart-line"></i> Promedio por Carrera</h3>
-                    <div class="chart-box">
-                        <canvas id="chartPromedios"></canvas>
-                    </div>
+                    <div id="analyzeQuality" class="quality-list" aria-live="polite"></div>
                 </div>
             </div>
         </section>
 
-        <!-- ===== SECCIÓN: CONCEPTOS ===== -->
-        <section id="section-concepts" class="section">
-            <div class="section-header">
-                <h2><i class="fas fa-graduation-cap"></i> Conceptos Fundamentales</h2>
-                <p>Domina los conceptos clave de las bases de datos relacionales y NoSQL</p>
-            </div>
-
-            <div class="concepts-grid">
-                <!-- ===== CONCEPTOS SQL (6) ===== -->
-                <div class="concept-card" onclick="openConcept('mer')">
-                    <div class="concept-icon"><i class="fas fa-sitemap"></i></div>
-                    <h3>Modelo Entidad-Relacion</h3>
-                    <p>Diseno conceptual de bases de datos</p>
-                    <span class="concept-tag sql-tag">SQL</span>
-                    <span class="concept-tag">Diseño</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('normalizacion')">
-                    <div class="concept-icon"><i class="fas fa-layer-group"></i></div>
-                    <h3>Normalizacion</h3>
-                    <p>Elimina redundancia, mejora integridad</p>
-                    <span class="concept-tag sql-tag">SQL</span>
-                    <span class="concept-tag">Diseño</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('llaves')">
-                    <div class="concept-icon"><i class="fas fa-key"></i></div>
-                    <h3>Tipos de Llaves</h3>
-                    <p>PK, FK, Unique, Composite</p>
-                    <span class="concept-tag sql-tag">SQL</span>
-                    <span class="concept-tag">Estructura</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('sql')">
-                    <div class="concept-icon"><i class="fas fa-code"></i></div>
-                    <h3>Comandos SQL</h3>
-                    <p>DDL, DML, DCL, TCL</p>
-                    <span class="concept-tag sql-tag">SQL</span>
-                    <span class="concept-tag">SQL</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('acid')">
-                    <div class="concept-icon"><i class="fas fa-shield-halved"></i></div>
-                    <h3>Propiedades ACID</h3>
-                    <p>Atomicidad, Consistencia, Aislamiento, Durabilidad</p>
-                    <span class="concept-tag sql-tag">SQL</span>
-                    <span class="concept-tag">Transacciones</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('indices')">
-                    <div class="concept-icon"><i class="fas fa-list"></i></div>
-                    <h3>Indices</h3>
-                    <p>Optimizacion de consultas</p>
-                    <span class="concept-tag sql-tag">SQL</span>
-                    <span class="concept-tag">Rendimiento</span>
-                </div>
-
-                <!-- ===== CONCEPTOS NoSQL (6) ===== -->
-                <div class="concept-card" onclick="openConcept('nosql')">
-                    <div class="concept-icon"><i class="fas fa-database"></i></div>
-                    <h3>Bases de Datos NoSQL</h3>
-                    <p>Alternativas a SQL para grandes volumenes</p>
-                    <span class="concept-tag nosql-tag">NoSQL</span>
-                    <span class="concept-tag">Big Data</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('documentales')">
-                    <div class="concept-icon"><i class="fas fa-file-lines"></i></div>
-                    <h3>Bases de Datos Documentales</h3>
-                    <p>Almacenamiento en documentos JSON</p>
-                    <span class="concept-tag nosql-tag">NoSQL</span>
-                    <span class="concept-tag">Documentos</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('clave-valor')">
-                    <div class="concept-icon"><i class="fas fa-key"></i></div>
-                    <h3>Bases de Datos Clave-Valor</h3>
-                    <p>Alto rendimiento con pares clave-valor</p>
-                    <span class="concept-tag nosql-tag">NoSQL</span>
-                    <span class="concept-tag">Cache</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('columnas')">
-                    <div class="concept-icon"><i class="fas fa-table-cells"></i></div>
-                    <h3>Bases de Datos por Columnas</h3>
-                    <p>Optimizadas para analisis de datos</p>
-                    <span class="concept-tag nosql-tag">NoSQL</span>
-                    <span class="concept-tag">Analisis</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('grafos')">
-                    <div class="concept-icon"><i class="fas fa-share-nodes"></i></div>
-                    <h3>Bases de Datos de Grafos</h3>
-                    <p>Ideal para relaciones complejas</p>
-                    <span class="concept-tag nosql-tag">NoSQL</span>
-                    <span class="concept-tag">Redes</span>
-                </div>
-
-                <div class="concept-card" onclick="openConcept('tiempo-real')">
-                    <div class="concept-icon"><i class="fas fa-bolt"></i></div>
-                    <h3>Bases de Datos en Tiempo Real</h3>
-                    <p>Sincronizacion instantanea</p>
-                    <span class="concept-tag nosql-tag">NoSQL</span>
-                    <span class="concept-tag">Tiempo Real</span>
-                </div>
-            </div>
-        </section>
+        </main>
 
         <!-- ===== FOOTER ===== -->
         <footer class="app-footer">
@@ -525,18 +1328,73 @@
                         <span class="coffee-message">
                             <i class="fas fa-mug-hot"></i> ¿Me invitas un café?
                         </span>
-                        <button onclick="showDonationQR('yape')" class="btn-donation-sm yape">
-                            <i class="fas fa-coins"></i> Yape
+                        <button onclick="showDonationQR()" class="btn-donation-sm support" title="Donación voluntaria">
+                            Apoyar el proyecto
                         </button>
                     </div>
                 </div>
             </div>
         </footer>
+
+        <!-- ===== NAVEGACIÓN MÓVIL ===== -->
+        <nav class="mobile-nav" aria-label="Navegación móvil">
+            <button type="button" class="mobile-nav-btn active" data-mobile-section="learn" aria-current="page">
+                <i class="fas fa-book"></i>
+                <span>Aprender</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="path">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Cursos</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="practice">
+                <i class="fas fa-laptop-code"></i>
+                <span>Practicar</span>
+            </button>
+            <button type="button" class="mobile-nav-btn" data-mobile-section="challenges">
+                <i class="fas fa-trophy"></i>
+                <span>Retos</span>
+            </button>
+            <button type="button" id="mobileMoreBtn" class="mobile-nav-btn" aria-expanded="false" aria-controls="mobileMoreModal" onclick="openMobileMore()">
+                <i class="fas fa-ellipsis"></i>
+                <span>Más</span>
+            </button>
+        </nav>
     </div>
 
     <!-- ===== MODALES ===== -->
+    <!-- Modal de más secciones móviles -->
+    <div id="mobileMoreModal" class="modal mobile-more-modal" role="dialog" aria-modal="true" aria-labelledby="mobileMoreTitle">
+        <div class="modal-content mobile-more-sheet">
+            <div class="modal-header">
+                <div>
+                    <span class="course-eyebrow">Navegación</span>
+                    <h2 id="mobileMoreTitle">Más secciones</h2>
+                </div>
+                <button type="button" class="modal-close" onclick="closeMobileMore()" aria-label="Cerrar más secciones">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="mobile-more-grid">
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="game" onclick="closeMobileMore(); activateSection('game')">
+                        <span class="mobile-more-icon"><i class="fas fa-gamepad"></i></span>
+                        <span><strong>Juego</strong><small>Torre de Datos</small></span>
+                    </button>
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="nosql" onclick="closeMobileMore(); activateSection('nosql')">
+                        <span class="mobile-more-icon"><i class="fas fa-leaf"></i></span>
+                        <span><strong>NoSQL</strong><small>Laboratorio documental</small></span>
+                    </button>
+                    <button type="button" class="mobile-more-item" data-mobile-more-section="analyze" onclick="closeMobileMore(); activateSection('analyze')">
+                        <span class="mobile-more-icon"><i class="fas fa-chart-pie"></i></span>
+                        <span><strong>Analizar</strong><small>Datos, ERD y calidad</small></span>
+                    </button>
+                </div>
+                <button type="button" class="btn-secondary mobile-more-close" onclick="closeMobileMore()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Gestores -->
-    <div id="dbModal" class="modal">
+    <!-- Modal de Gestores -->
+    <div id="dbModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="modalTitle"><i class="fas fa-database"></i> Gestor</h2>
@@ -547,7 +1405,7 @@
     </div>
 
     <!-- Modal de Conceptos -->
-    <div id="conceptModal" class="modal">
+    <div id="conceptModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="conceptModalTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="conceptModalTitle"><i class="fas fa-graduation-cap"></i> Concepto</h2>
@@ -558,20 +1416,73 @@
     </div>
 
     <!-- ===== MODAL DE DONACIONES ===== -->
-    <div id="donationModal" class="modal">
-        <div class="modal-content" style="max-width: 420px;">
+    <div id="donationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="donationModalTitle">
+        <div class="modal-content donation-modal-content">
             <div class="modal-header">
-                <h2><i class="fas fa-laptop-code" style="color:#dc3545;"></i> Apoya el proyecto</h2>
-                <button onclick="closeDonationModal()" class="modal-close">&times;</button>
+                <h2 id="donationModalTitle">Apoyar SQL Academy</h2>
+                <button onclick="closeDonationModal()" class="modal-close" aria-label="Cerrar apoyo">&times;</button>
             </div>
             <div class="modal-body" id="donationModalBody"></div>
         </div>
     </div>
+
+    <!-- ===== MODAL DE TEST DE NIVEL ===== -->
+    <div id="skillTestModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="skillTestTitle">
+        <div class="modal-content skill-test-content">
+            <div class="modal-header">
+                <div>
+                    <span id="skillTestTrackLabel" class="skill-test-eyebrow">SQL</span>
+                    <h2 id="skillTestTitle">Test de nivel</h2>
+                </div>
+                <button type="button" onclick="closeSkillTest()" class="modal-close" aria-label="Cerrar test">&times;</button>
+            </div>
+            <div class="modal-body" id="skillTestBody" aria-live="polite"></div>
+        </div>
+    </div>
+    <!-- ===== MODAL DE REPORTE DE PROGRESO ===== -->
+    <div id="progressReportModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="progressReportTitle">
+        <div class="modal-content report-modal-content">
+            <div class="modal-header">
+                <h2 id="progressReportTitle">Reporte de aprendizaje</h2>
+                <button type="button" onclick="closeProgressReport()" class="modal-close" aria-label="Cerrar reporte">&times;</button>
+            </div>
+            <div class="modal-body" id="progressReportBody"></div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE GUÍA DE INSTALACIÓN ===== -->
+    <div id="installGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="installGuideTitle">
+        <div class="modal-content install-guide-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span id="installGuideEyebrow" class="install-guide-eyebrow">Instalación</span>
+                    <h2 id="installGuideTitle">Guía de instalación</h2>
+                </div>
+                <button type="button" onclick="closeInstallGuide()" class="modal-close" aria-label="Cerrar guía de instalación">&times;</button>
+            </div>
+            <div class="modal-body" id="installGuideBody" aria-live="polite"></div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL DE CHECKPOINT DE MÓDULO ===== -->
+    <div id="checkpointModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="checkpointTitle">
+        <div class="modal-content checkpoint-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span id="checkpointEyebrow" class="install-guide-eyebrow">Checkpoint</span>
+                    <h2 id="checkpointTitle">Checkpoint del módulo</h2>
+                </div>
+                <button type="button" onclick="closeCheckpointModal()" class="modal-close" aria-label="Cerrar checkpoint">&times;</button>
+            </div>
+            <div class="modal-body" id="checkpointBody" aria-live="polite"></div>
+        </div>
+    </div>
+
     <!-- ===== GUÍA DE PRIMEROS PASOS EN SQL ===== -->
-<div id="sqlGuideModal" class="modal">
+<div id="sqlGuideModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="sqlGuideTitle">
     <div class="modal-content" style="max-width: 750px; max-height: 90vh;">
         <div class="modal-header">
-            <h2><i class="fas fa-graduation-cap" style="color: #336791;"></i> Primeros Pasos en SQL</h2>
+            <h2 id="sqlGuideTitle"><i class="fas fa-graduation-cap" style="color: #336791;"></i> Primeros Pasos en SQL</h2>
             <button onclick="closeSQLGuide()" class="modal-close">&times;</button>
         </div>
         <div class="modal-body" id="sqlGuideBody">
@@ -580,9 +1491,84 @@
     </div>
 </div>
 
+    <!-- ===== ASISTENTE IA ===== -->
+    <div id="aiHelpModal" class="modal ai-modal" role="dialog" aria-modal="true" aria-labelledby="aiHelpTitle">
+        <div class="modal-content ai-panel">
+            <div class="modal-header ai-panel-header">
+                <h2 id="aiHelpTitle"><i class="fas fa-wand-magic-sparkles"></i> Asistente SQL</h2>
+                <button type="button" onclick="closeAIHelp()" class="modal-close" aria-label="Cerrar asistente">&times;</button>
+            </div>
+            <div class="ai-panel-body" id="aiHelpBody" aria-live="polite">
+                <div class="ai-empty">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    <h3>Tu ayudante de SQL</h3>
+                    <p>Puedo explicarte qué falló en una consulta y cómo corregirla.</p>
+                    <p class="ai-empty-hint">Escribe una consulta y pulsa “Ayudante IA”, o usa el botón que aparece cuando ocurre un error.</p>
+                </div>
+            </div>
+            <div class="ai-panel-footer">
+                <div class="ai-quick-actions" aria-label="Modos del asistente">
+                    <button type="button" class="btn-secondary" onclick="openAIHelp('hint')">
+                        <i class="fas fa-compass"></i> Pista
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="openAIHelp('review')">
+                        <i class="fas fa-magnifying-glass"></i> Revisar consulta
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="openAIHelp('exercise')">
+                        <i class="fas fa-dumbbell"></i> Generar reto
+                    </button>
+                </div>
+                <p class="ai-privacy">
+                    <i class="fas fa-shield-halved"></i>
+                    Se envían la consulta, el error (si existe) y el esquema de la base. Nunca los datos de los registros.
+                </p>
+                <div class="ai-panel-actions">
+                    <button type="button" id="aiCopyBtn" class="btn-secondary" onclick="copyAIResponse()" disabled>
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <button type="button" id="aiRetryBtn" class="btn-secondary" onclick="retryAIHelp()" hidden>
+                        <i class="fas fa-rotate"></i> Reintentar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="demoTourBar" class="demo-tour-bar" role="region" aria-label="Recorrido guiado" aria-live="polite" hidden>
+        <div class="demo-tour-icon"><i class="fas fa-route"></i></div>
+        <div class="demo-tour-copy">
+            <span id="demoTourStepLabel">Paso 1 de 7</span>
+            <strong id="demoTourTitle"></strong>
+            <p id="demoTourDescription"></p>
+        </div>
+        <div class="demo-tour-actions">
+            <button type="button" class="btn-ghost btn-sm" id="demoTourPrevBtn" onclick="previousDemoTourStep()">Anterior</button>
+            <button type="button" class="btn-primary btn-sm" id="demoTourNextBtn" onclick="nextDemoTourStep()">Siguiente</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="closeDemoTour()" aria-label="Cerrar recorrido">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Datasets de práctica -->
+    <script src="datasets.js"></script>
+    <script src="nosql-datasets.js"></script>
+    <script src="install-guides.js"></script>
+    <script src="courses.js"></script>
+    <script src="course-content.js"></script>
+    <script src="checkpoint-content.js"></script>
+
+    <!-- Motor documental del laboratorio NoSQL -->
+    <script src="nosql-engine.js"></script>
+
     <!-- Cargar sql.js -->
-    <script src="https://sql.js.org/dist/sql-wasm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
     <script src="script.js"></script>
+    <script src="nosql.js"></script>
+    <script src="autocomplete.js"></script>
+    <script src="deckbuilder.js"></script>
 </body>
 
 </html>
